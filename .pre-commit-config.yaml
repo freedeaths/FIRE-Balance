@@ -1,0 +1,70 @@
+repos:
+  # Built-in pre-commit hooks for all file types
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-added-large-files
+      - id: mixed-line-ending
+
+  # Python-specific hooks (for implementations/python/)
+  - repo: https://github.com/PyCQA/autoflake
+    rev: v2.3.1
+    hooks:
+      - id: autoflake
+        args:
+          - --remove-all-unused-imports
+          - --remove-unused-variables
+          - --in-place
+        files: ^implementations/python/
+        exclude: __pycache__
+
+  - repo: https://github.com/PyCQA/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        args: ["--profile", "black"]
+        files: ^implementations/python/
+
+  - repo: https://github.com/psf/black
+    rev: 25.1.0
+    hooks:
+      - id: black
+        language_version: python3.11
+        files: ^implementations/python/
+
+  - repo: https://github.com/PyCQA/flake8
+    rev: 7.1.1
+    hooks:
+      - id: flake8
+        files: ^implementations/python/
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.17.0
+    hooks:
+      - id: mypy
+        files: ^implementations/python/
+        additional_dependencies: [pydantic]
+
+  # Future: TypeScript-specific hooks (for implementations/typescript/)
+  # - repo: https://github.com/pre-commit/mirrors-eslint
+  #   rev: v9.0.0
+  #   hooks:
+  #     - id: eslint
+  #       files: ^implementations/typescript/
+  #       types: [javascript, jsx, ts, tsx]
+  #       additional_dependencies:
+  #         - eslint@^8.0.0
+  #         - typescript@^5.0.0
+
+  # - repo: https://github.com/pre-commit/mirrors-prettier
+  #   rev: v4.0.0
+  #   hooks:
+  #     - id: prettier
+  #       files: ^implementations/typescript/
+  #       types_or: [javascript, jsx, ts, tsx, json, yaml, markdown]
