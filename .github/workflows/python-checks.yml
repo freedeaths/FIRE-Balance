@@ -36,32 +36,32 @@ jobs:
     - name: Remove unused imports (autoflake)
       working-directory: implementations/python
       run: |
-        autoflake --check --remove-all-unused-imports --recursive --remove-unused-variables --exclude=__pycache__ .
+        python -m autoflake --check --remove-all-unused-imports --recursive --remove-unused-variables --exclude=__pycache__ .
 
     - name: Check import sorting (isort)
       working-directory: implementations/python
       run: |
-        isort --check-only --diff .
+        python -m isort --check-only --diff .
 
     - name: Check code formatting (black)
       working-directory: implementations/python
       run: |
-        black --check --diff .
+        python -m black --check --diff .
 
     - name: Lint with flake8
       working-directory: implementations/python
       run: |
-        flake8 .
+        python -m flake8 .
 
     - name: Type check with mypy
       working-directory: implementations/python
       run: |
-        mypy .
+        python -m mypy .
 
     - name: Run tests
       working-directory: implementations/python
       run: |
-        pytest
+        python -m pytest
 
   pre-commit:
     runs-on: ubuntu-latest

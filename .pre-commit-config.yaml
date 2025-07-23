@@ -42,6 +42,7 @@ repos:
     rev: 7.1.1
     hooks:
       - id: flake8
+        args: ["--max-line-length=88"]
         files: ^implementations/python/
 
   - repo: https://github.com/pre-commit/mirrors-mypy
