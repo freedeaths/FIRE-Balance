@@ -160,7 +160,7 @@ class PortfolioConfiguration(BaseModel):
 class UserProfile(BaseModel):
     """Data model for the user's profile."""
 
-    current_age: int = Field(30, description="User's current age")
+    birth_year: int = Field(..., description="User's birth year")
     expected_fire_age: int = Field(50, description="User's expected FIRE age")
     legal_retirement_age: int = Field(
         65, description="Legal retirement age (when eligible for government pension)"
@@ -175,6 +175,27 @@ class UserProfile(BaseModel):
     portfolio: PortfolioConfiguration = Field(
         default_factory=lambda: PortfolioConfiguration(enable_rebalancing=True)
     )
+
+    @property
+    def current_age(self) -> int:
+        """Calculate current age from birth year"""
+        from datetime import datetime
+
+        return datetime.now().year - self.birth_year
+
+    # Birth year validation
+    @model_validator(mode="after")
+    def validate_birth_year(self) -> "UserProfile":
+        """Validate birth year is reasonable"""
+        from datetime import datetime
+
+        current_year = datetime.now().year
+        if self.birth_year < 1950 or self.birth_year > current_year:
+            raise ValueError(
+                f"Birth year must be between 1950 and {current_year}, "
+                f"got {self.birth_year}"
+            )
+        return self
 
     # Age validation using chain comparison
     @model_validator(mode="after")

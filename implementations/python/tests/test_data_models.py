@@ -17,14 +17,14 @@ from core.data_models import (
 def test_user_profile_valid_ages() -> None:
     """Test UserProfile with valid age progression."""
     profile = UserProfile(
-        current_age=30,
+        birth_year=1994,  # current_age would be around 30 in 2024
         expected_fire_age=45,
         legal_retirement_age=65,
         life_expectancy=85,
         current_net_worth=100000.0,
         inflation_rate=3.0,
     )
-    assert profile.current_age == 30
+    assert profile.current_age >= 29  # Flexible since it depends on current year
     assert profile.expected_fire_age == 45
     assert profile.legal_retirement_age == 65
     assert profile.life_expectancy == 85
@@ -34,7 +34,7 @@ def test_user_profile_invalid_age_progression() -> None:
     """Test UserProfile with invalid age progression."""
     with pytest.raises(ValidationError) as exc_info:
         UserProfile(
-            current_age=30,
+            birth_year=1994,  # current_age around 30
             expected_fire_age=25,  # Invalid: before current age
             legal_retirement_age=65,
             life_expectancy=85,
@@ -44,6 +44,49 @@ def test_user_profile_invalid_age_progression() -> None:
 
     error_msg = str(exc_info.value)
     assert "Ages must follow progression" in error_msg
+
+
+def test_user_profile_birth_year_validation() -> None:
+    """Test UserProfile birth year validation."""
+    from datetime import datetime
+
+    current_year = datetime.now().year
+
+    # Valid birth year
+    profile = UserProfile(
+        birth_year=1990,
+        expected_fire_age=45,
+        legal_retirement_age=65,
+        life_expectancy=85,
+        current_net_worth=100000.0,
+        inflation_rate=3.0,
+    )
+    assert profile.birth_year == 1990
+    assert profile.current_age == current_year - 1990
+
+    # Too early birth year
+    with pytest.raises(ValidationError) as exc_info:
+        UserProfile(
+            birth_year=1949,  # Before 1950
+            expected_fire_age=45,
+            legal_retirement_age=65,
+            life_expectancy=85,
+            current_net_worth=100000.0,
+            inflation_rate=3.0,
+        )
+    assert "Birth year must be between 1950" in str(exc_info.value)
+
+    # Future birth year
+    with pytest.raises(ValidationError) as exc_info:
+        UserProfile(
+            birth_year=current_year + 1,  # Future year
+            expected_fire_age=45,
+            legal_retirement_age=65,
+            life_expectancy=85,
+            current_net_worth=100000.0,
+            inflation_rate=3.0,
+        )
+    assert "Birth year must be between 1950" in str(exc_info.value)
 
 
 def test_income_expense_item_creation() -> None:
