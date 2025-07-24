@@ -1,7 +1,8 @@
+import sys
 import uuid
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -21,12 +22,42 @@ class TimeUnit(str, Enum):
     ANNUALLY = "annually"
 
 
+class LiquidityLevel(str, Enum):
+    """Asset liquidity level for cash flow strategy optimization."""
+
+    HIGH = "high"  # Cash, checking accounts, money market funds - immediately available
+    MEDIUM = (
+        "medium"  # Stocks, ETFs - physically liquid but psychologically less frequent
+    )
+    LOW = "low"  # CDs, bonds - early withdrawal may incur penalties
+
+
 class AssetClass(BaseModel):
     """Individual asset class in portfolio."""
 
     name: str = Field(
-        ..., description="Asset class name (e.g., 'Stocks', 'Bonds', 'Savings', 'Cash')"
+        ..., description="Asset class name (e.g., 'stocks', 'bonds', 'savings', 'cash')"
     )
+    display_name: str = Field(
+        default="", description="Original display name for UI (auto-filled if empty)"
+    )
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_name(cls, data: Any) -> Any:
+        """Normalize asset name for internal consistency"""
+        if isinstance(data, dict) and "name" in data:
+            original_name = str(data["name"]).strip()
+            # Store original for display if display_name not provided
+            if not data.get("display_name"):
+                data["display_name"] = original_name
+            # Normalize: lowercase + collapse multiple spaces to single space
+            import re  # noqa: F401 - local import for validation
+
+            normalized_name = re.sub(r"\s+", " ", original_name.lower().strip())
+            data["name"] = normalized_name
+        return data
+
     allocation_percentage: float = Field(
         ..., description="Allocation percentage", ge=0.0, le=100.0
     )
@@ -39,6 +70,10 @@ class AssetClass(BaseModel):
             "Expected volatility/risk (%) - ONLY used for Monte Carlo simulations"
         ),
     )
+    liquidity_level: LiquidityLevel = Field(
+        LiquidityLevel.MEDIUM,
+        description="Asset liquidity level for cash flow optimization",
+    )
 
 
 class PortfolioConfiguration(BaseModel):
@@ -47,28 +82,36 @@ class PortfolioConfiguration(BaseModel):
     asset_classes: list[AssetClass] = Field(
         default_factory=lambda: [
             AssetClass(
-                name="Stocks",
+                name="Stocks",  # Will be normalized to "stocks"
+                display_name="Stocks",
                 allocation_percentage=30.0,
                 expected_return=5.0,
                 volatility=15.0,
+                liquidity_level=LiquidityLevel.MEDIUM,
             ),
             AssetClass(
-                name="Bonds",
+                name="Bonds",  # Will be normalized to "bonds"
+                display_name="Bonds",
                 allocation_percentage=0.0,
                 expected_return=3.0,
                 volatility=5.0,
+                liquidity_level=LiquidityLevel.LOW,
             ),
             AssetClass(
-                name="Savings",
+                name="Savings",  # Will be normalized to "savings"
+                display_name="Savings",
                 allocation_percentage=60.0,
                 expected_return=1.0,
                 volatility=5.0,
+                liquidity_level=LiquidityLevel.LOW,
             ),
             AssetClass(
-                name="Cash",
+                name="Cash",  # Will be normalized to "cash"
+                display_name="Cash",
                 allocation_percentage=10.0,
                 expected_return=0.0,
                 volatility=1.0,
+                liquidity_level=LiquidityLevel.HIGH,
             ),
         ],
         description="List of asset classes in the portfolio",
@@ -77,6 +120,41 @@ class PortfolioConfiguration(BaseModel):
     enable_rebalancing: bool = Field(
         True, description="Whether to rebalance portfolio annually"
     )
+
+    @model_validator(mode="after")
+    def validate_allocation_sum(self) -> "PortfolioConfiguration":
+        """Validate that asset allocations sum to 100% (strict validation)"""
+        total = sum(asset.allocation_percentage for asset in self.asset_classes)
+        # Use sys.float_info.epsilon for machine precision tolerance
+        tolerance = sys.float_info.epsilon
+
+        if abs(total - 100.0) > tolerance:
+            raise ValueError(
+                f"Asset allocation percentages must sum to exactly 100%, "
+                f"got {total}% (difference: {total - 100.0}%)"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def validate_unique_asset_names(self) -> "PortfolioConfiguration":
+        """Validate that asset names are unique within portfolio (case-insensitive)"""
+        names = [
+            asset.name for asset in self.asset_classes
+        ]  # Already normalized to lowercase
+        if len(names) != len(set(names)):
+            duplicates = [name for name in names if names.count(name) > 1]
+            unique_duplicates = list(set(duplicates))
+            # Show display names in error for better UX
+            display_names = [
+                asset.display_name
+                for asset in self.asset_classes
+                if asset.name in unique_duplicates
+            ]
+            raise ValueError(
+                f"Asset names must be unique within portfolio (case-insensitive). "
+                f"Duplicate names found: {display_names}"
+            )
+        return self
 
 
 class UserProfile(BaseModel):
