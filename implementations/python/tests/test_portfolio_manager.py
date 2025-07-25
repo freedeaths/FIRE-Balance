@@ -61,6 +61,7 @@ class TestPortfolioCalculator:
             life_expectancy=85,
             current_net_worth=100000.0,
             inflation_rate=3.0,
+            safety_buffer_months=12.0,
             portfolio=portfolio,
         )
 

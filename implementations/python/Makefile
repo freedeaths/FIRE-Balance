@@ -1,13 +1,14 @@
 # FIRE Balance Calculator - Python Implementation
 # Development tools and commands
 
-.PHONY: help install install-dev check fmt lint test clean
+.PHONY: help install install-dev check fmt lint test clean all
 
 # Default target
 help:
 	@echo "Available commands:"
 	@echo "  install        Install production dependencies"
 	@echo "  install-dev    Install development dependencies"
+	@echo "  all            Run complete development workflow (fmt + lint + test)"
 	@echo "  check          Run all checks (lint + type check)"
 	@echo "  fmt            Format code (autoflake + isort + black)"
 	@echo "  lint           Run linting (flake8 + mypy)"
@@ -61,6 +62,10 @@ clean:
 	find . -type d -name ".mypy_cache" -exec rm -rf {} + 2>/dev/null || true
 	find . -name "*.pyc" -delete 2>/dev/null || true
 	@echo "✅ Cleanup complete!"
+
+# All-in-one development workflow
+all: fmt lint test
+	@echo "🎉 All development tasks complete! (format + lint + test)"
 
 # CI/CD targets (used by GitHub Actions and pre-commit)
 ci-check: lint test

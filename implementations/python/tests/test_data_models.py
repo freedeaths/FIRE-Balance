@@ -23,6 +23,7 @@ def test_user_profile_valid_ages() -> None:
         life_expectancy=85,
         current_net_worth=100000.0,
         inflation_rate=3.0,
+        safety_buffer_months=12.0,
     )
     assert profile.current_age >= 29  # Flexible since it depends on current year
     assert profile.expected_fire_age == 45
@@ -40,6 +41,7 @@ def test_user_profile_invalid_age_progression() -> None:
             life_expectancy=85,
             current_net_worth=100000.0,
             inflation_rate=3.0,
+            safety_buffer_months=12.0,
         )
 
     error_msg = str(exc_info.value)
@@ -60,6 +62,7 @@ def test_user_profile_birth_year_validation() -> None:
         life_expectancy=85,
         current_net_worth=100000.0,
         inflation_rate=3.0,
+        safety_buffer_months=12.0,
     )
     assert profile.birth_year == 1990
     assert profile.current_age == current_year - 1990
@@ -73,6 +76,7 @@ def test_user_profile_birth_year_validation() -> None:
             life_expectancy=85,
             current_net_worth=100000.0,
             inflation_rate=3.0,
+            safety_buffer_months=12.0,
         )
     assert "Birth year must be between 1950" in str(exc_info.value)
 
@@ -85,6 +89,7 @@ def test_user_profile_birth_year_validation() -> None:
             life_expectancy=85,
             current_net_worth=100000.0,
             inflation_rate=3.0,
+            safety_buffer_months=12.0,
         )
     assert "Birth year must be between 1950" in str(exc_info.value)
 
