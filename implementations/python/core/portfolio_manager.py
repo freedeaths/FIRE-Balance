@@ -587,20 +587,46 @@ class PortfolioSimulator:
 
     def __init__(
         self,
-        initial_portfolio: PortfolioState,
-        calculator: PortfolioCalculator,
+        user_profile: UserProfile,
         cash_flow_strategy: Optional[CashFlowStrategy] = None,
     ):
         """
         Args:
-            initial_portfolio: Starting portfolio state
-            calculator: Portfolio calculator for computations
+            user_profile: User profile for portfolio calculations
             cash_flow_strategy: Strategy for handling cash flows
         """
-        self.current_portfolio = initial_portfolio
-        self.calculator = calculator
+        self.calculator = PortfolioCalculator(user_profile)
+        self.current_portfolio = self._create_initial_portfolio(user_profile)
+        # Store initial state for resets
+        self._initial_portfolio = PortfolioState(
+            asset_values=dict(self.current_portfolio.asset_values)
+        )
         self.strategy = cash_flow_strategy or LiquidityAwareFlowStrategy(
-            portfolio_config=calculator.portfolio_config
+            portfolio_config=self.calculator.portfolio_config
+        )
+
+    def _create_initial_portfolio(self, user_profile: UserProfile) -> PortfolioState:
+        """Create initial portfolio state from user profile."""
+        # Get target allocation for current age
+        target_allocation = self.calculator.get_target_allocation(
+            user_profile.current_age
+        )
+
+        # Distribute initial net worth according to target allocation
+        initial_value = Decimal(str(user_profile.current_net_worth))
+        asset_values = {}
+
+        for asset_class in user_profile.portfolio.asset_classes:
+            allocation_pct = target_allocation.get(asset_class.name, 0.0)
+            asset_value = initial_value * Decimal(str(allocation_pct))
+            asset_values[asset_class.name] = asset_value
+
+        return PortfolioState(asset_values=asset_values)
+
+    def reset_to_initial(self) -> None:
+        """Reset portfolio to initial state."""
+        self.current_portfolio = PortfolioState(
+            asset_values=dict(self._initial_portfolio.asset_values)
         )
 
     def simulate_year(

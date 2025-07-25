@@ -1,6 +1,7 @@
 import sys
 import uuid
 from dataclasses import dataclass
+from decimal import Decimal
 from enum import Enum
 from typing import Any, Optional
 
@@ -160,7 +161,7 @@ class PortfolioConfiguration(BaseModel):
 class UserProfile(BaseModel):
     """Data model for the user's profile."""
 
-    current_age: int = Field(30, description="User's current age")
+    birth_year: int = Field(..., description="User's birth year")
     expected_fire_age: int = Field(50, description="User's expected FIRE age")
     legal_retirement_age: int = Field(
         65, description="Legal retirement age (when eligible for government pension)"
@@ -171,10 +172,37 @@ class UserProfile(BaseModel):
     )
     inflation_rate: float = Field(3.0, description="Expected annual inflation rate (%)")
 
+    # Safety buffer configuration
+    safety_buffer_months: float = Field(
+        12.0,
+        description="Safety buffer in months of annual expenses (default: 12 months)",
+    )
+
     # Investment configuration
     portfolio: PortfolioConfiguration = Field(
         default_factory=lambda: PortfolioConfiguration(enable_rebalancing=True)
     )
+
+    @property
+    def current_age(self) -> int:
+        """Calculate current age from birth year"""
+        from datetime import datetime
+
+        return datetime.now().year - self.birth_year
+
+    # Birth year validation
+    @model_validator(mode="after")
+    def validate_birth_year(self) -> "UserProfile":
+        """Validate birth year is reasonable"""
+        from datetime import datetime
+
+        current_year = datetime.now().year
+        if self.birth_year < 1950 or self.birth_year > current_year:
+            raise ValueError(
+                f"Birth year must be between 1950 and {current_year}, "
+                f"got {self.birth_year}"
+            )
+        return self
 
     # Age validation using chain comparison
     @model_validator(mode="after")
@@ -247,28 +275,79 @@ class IncomeExpenseItem(BaseModel):
 
 
 @dataclass
-class YearlyCalculation:
-    """Single year calculation result (all values after-tax)."""
+class YearlyState:
+    """Complete state for a single year in FIRE calculation."""
 
     age: int
     year: int
-    total_after_tax_income: float
-    total_after_tax_expenses: float
-    net_cash_flow: float  # after-tax income - after-tax expenses
-    investment_return: float  # Annual investment return (after capital gains tax)
-    net_worth: float  # Total net worth at end of year
+
+    # Cash flows (from input table)
+    total_income: float
+    total_expense: float
+    net_cash_flow: float  # income - expense
+
+    # Portfolio state
+    portfolio_value: Decimal
+    investment_return: Decimal  # Annual return from portfolio
+
+    # Sustainability metrics (core logic)
+    safety_buffer_amount: float  # Required safety buffer based on annual expenses
+    is_sustainable: (
+        bool  # True if net worth can remain above safety buffer through life expectancy
+    )
+
+    # Traditional FIRE metrics (optional reference)
+    fire_number: float  # 25x annual expenses (4% rule) - for reference only
+    fire_progress: float  # portfolio_value / fire_number (0-1+) - for reference only
 
 
 class FIRECalculationResult(BaseModel):
     """Complete FIRE calculation result."""
 
-    is_fire_achievable: bool
-    fire_net_worth: float = Field(
-        ..., description="Net worth when FIRE target is achieved"
+    # Core sustainability results
+    is_fire_achievable: bool = Field(
+        ..., description="Whether FIRE is achievable based on net worth sustainability"
     )
-    yearly_results: list[YearlyCalculation]
+    fire_net_worth: float = Field(..., description="Net worth at expected FIRE age")
+
+    # Net worth trajectory analysis
+    min_net_worth_after_fire: float = Field(
+        ..., description="Minimum net worth during retirement phase"
+    )
+    final_net_worth: float = Field(
+        ..., description="Net worth at end of life expectancy"
+    )
+
+    # Safety buffer analysis
+    safety_buffer_months: float = Field(
+        ..., description="Configured safety buffer in months"
+    )
+    min_safety_buffer_ratio: float = Field(
+        ..., description="Minimum ratio of net worth to safety buffer (worst case)"
+    )
+
+    # Detailed yearly results
+    yearly_results: list[YearlyState] = Field(
+        ..., description="Year-by-year calculation results"
+    )
+
+    # Traditional FIRE metrics (for reference)
+    traditional_fire_number: float = Field(
+        ..., description="Traditional 4% rule FIRE number (25x expenses)"
+    )
+    traditional_fire_achieved: bool = Field(
+        ..., description="Whether traditional 4% FIRE is achieved"
+    )
+
+    # Risk analysis (will be populated by Monte Carlo)
     fire_success_probability: Optional[float] = Field(
         None, description="Monte Carlo success probability (0-1)"
+    )
+
+    # Summary statistics
+    total_years_simulated: int = Field(..., description="Total years in simulation")
+    retirement_years: int = Field(
+        ..., description="Years from FIRE age to life expectancy"
     )
 
 

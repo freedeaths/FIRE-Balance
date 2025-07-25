@@ -55,12 +55,13 @@ class TestPortfolioCalculator:
         )
 
         return UserProfile(
-            current_age=30,
+            birth_year=1994,  # current_age around 30 in 2024
             expected_fire_age=50,
             legal_retirement_age=65,
             life_expectancy=85,
             current_net_worth=100000.0,
             inflation_rate=3.0,
+            safety_buffer_months=12.0,
             portfolio=portfolio,
         )
 
