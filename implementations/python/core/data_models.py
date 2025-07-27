@@ -1,10 +1,12 @@
 import sys
 import uuid
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from decimal import Decimal
 from enum import Enum
-from typing import Any, Optional
+from typing import Any, Callable, Optional, Tuple
 
+import pandas as pd
 from pydantic import BaseModel, Field, model_validator
 
 
@@ -357,16 +359,42 @@ class FIRECalculationResult(BaseModel):
 
 
 @dataclass
-class BlackSwanEvent:
-    """Black swan event definition (from existing demo)."""
+class BlackSwanEvent(ABC):
+    """Base class for black swan events with self-contained calculation logic."""
 
-    name: str
-    probability: float  # Annual occurrence probability (0-1)
-    impact_type: str  # 'market', 'income', 'expense', 'mixed'
-    severity: float  # Impact magnitude (-1 to 5, negative for adverse effects)
+    event_id: str  # Unique identifier (e.g., 'financial_crisis')
+    annual_probability: float  # Annual occurrence probability (0-1)
     duration_years: int  # Duration of impact in years
     recovery_factor: float  # Recovery factor (0-1, 1 means full recovery)
-    age_range: tuple[int, int] = (18, 100)  # Applicable age range
+    age_range: Tuple[int, int] = (18, 100)  # Applicable age range
+
+    @abstractmethod
+    def apply_impact(
+        self, df: pd.DataFrame, year_idx: int, recovery_multiplier: float = 1.0
+    ) -> pd.DataFrame:
+        """Apply this event's impact to a specific year.
+
+        Args:
+            df: DataFrame to modify
+            year_idx: Year index in the DataFrame
+            recovery_multiplier: Multiplier for recovery (< 1.0 for ongoing events)
+
+        Returns:
+            Modified DataFrame
+        """
+
+    def get_display_name(self, i18n_func: Optional[Callable[[str], str]] = None) -> str:
+        """Get localized display name for this event.
+
+        Args:
+            i18n_func: i18n function, if None returns event_id
+
+        Returns:
+            Localized event name or event_id as fallback
+        """
+        if i18n_func:
+            return i18n_func(f"events.{self.event_id}.name")
+        return self.event_id
 
 
 class SimulationSettings(BaseModel):
@@ -376,18 +404,26 @@ class SimulationSettings(BaseModel):
     confidence_level: float = Field(
         0.95, description="Confidence level for results", ge=0.5, le=0.99
     )
-    include_market_crashes: bool = Field(
-        True, description="Whether to include market crash events"
-    )
-    crash_probability: float = Field(
-        0.1, description="Annual market crash probability", ge=0.0, le=1.0
-    )
-    crash_severity: float = Field(
-        -0.3, description="Market crash loss magnitude", ge=-1.0, le=0.0
-    )
     include_black_swan_events: bool = Field(
-        True, description="Whether to include black swan events"
+        True,
+        description="Whether to include black swan events (including market crashes)",
     )
-    custom_black_swan_events: list[BlackSwanEvent] = Field(
-        default_factory=list, description="Custom black swan events"
+
+    # Base variation parameters (daily fluctuations, excluding major events)
+    # Both use normal distribution with mean=1.0 and configurable standard deviation
+    income_base_volatility: float = Field(
+        0.1, description="Base income volatility (standard deviation)", ge=0.0, le=1.0
+    )
+    income_minimum_factor: float = Field(
+        0.1, description="Minimum income factor (safety net threshold)", ge=0.01, le=1.0
+    )
+
+    expense_base_volatility: float = Field(
+        0.05, description="Base expense volatility (standard deviation)", ge=0.0, le=1.0
+    )
+    expense_minimum_factor: float = Field(
+        0.5,
+        description="Minimum expense factor (prevents expenses going too low)",
+        ge=0.1,
+        le=1.0,
     )
