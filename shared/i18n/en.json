@@ -1,1 +1,62 @@
-{}
+{
+  "planner": {
+    "stages": {
+      "stage1_title": "Profile & Income Setup",
+      "stage1_description": "Set up your profile and add income/expense items",
+      "stage2_title": "Adjust Financial Plan",
+      "stage2_description": "Fine-tune your financial projection table",
+      "stage3_title": "Analysis & Recommendations",
+      "stage3_description": "Review calculations and get optimization recommendations"
+    },
+    "profile": {
+      "birth_year": "Birth Year",
+      "expected_fire_age": "Target FIRE Age",
+      "legal_retirement_age": "Legal Retirement Age",
+      "life_expectancy": "Life Expectancy",
+      "current_net_worth": "Current Net Worth",
+      "inflation_rate": "Inflation Rate (%)",
+      "safety_buffer_months": "Safety Buffer (months)"
+    },
+    "items": {
+      "income_title": "Income Sources",
+      "expense_title": "Expense Categories",
+      "name": "Name",
+      "amount": "Annual Amount",
+      "start_age": "Start Age",
+      "end_age": "End Age",
+      "growth_rate": "Growth Rate (%)",
+      "frequency": "Frequency",
+      "recurring": "Recurring",
+      "one_time": "One-time"
+    },
+    "actions": {
+      "add_income": "Add Income",
+      "add_expense": "Add Expense",
+      "edit": "Edit",
+      "delete": "Delete",
+      "save": "Save",
+      "cancel": "Cancel",
+      "next_stage": "Next Stage",
+      "previous_stage": "Previous Stage",
+      "calculate": "Calculate FIRE Plan",
+      "export_config": "Export Configuration",
+      "import_config": "Import Configuration"
+    },
+    "table": {
+      "age": "Age",
+      "year": "Year",
+      "total_income": "Total Income",
+      "total_expense": "Total Expense",
+      "net_flow": "Net Cash Flow",
+      "portfolio_value": "Portfolio Value",
+      "override": "Override"
+    },
+    "results": {
+      "fire_achievable": "FIRE Goal Achievable",
+      "fire_age": "FIRE Age",
+      "portfolio_at_fire": "Portfolio Value at FIRE",
+      "success_rate": "Monte Carlo Success Rate",
+      "recommendations_title": "Optimization Recommendations"
+    }
+  }
+}

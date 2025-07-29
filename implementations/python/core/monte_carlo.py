@@ -3,7 +3,7 @@
 import random
 import statistics
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -76,8 +76,14 @@ class MonteCarloSimulator:
         # Create personalized black swan events based on user profile
         self.all_events = create_black_swan_events(engine.profile)
 
-    def run_simulation(self) -> MonteCarloResult:
+    def run_simulation(
+        self, progress_callback: Optional[Callable[[int, int], None]] = None
+    ) -> MonteCarloResult:
         """Run complete Monte Carlo simulation.
+
+        Args:
+            progress_callback: Optional callback function
+                (current_simulation, total_simulations)
 
         Returns:
             MonteCarloResult with statistical analysis and black swan analysis
@@ -92,6 +98,12 @@ class MonteCarloSimulator:
         simulation_data = []  # Store detailed data for black swan analysis
 
         for run_id in range(self.settings.num_simulations):
+            # Report progress if callback provided
+            if progress_callback and (
+                run_id % max(1, self.settings.num_simulations // 100) == 0
+            ):
+                progress_callback(run_id, self.settings.num_simulations)
+
             # Generate random scenario with black swan events
             scenario_df, black_swan_events = self._generate_random_scenario()
 
@@ -119,6 +131,12 @@ class MonteCarloSimulator:
                     "fire_success": is_successful,
                     "black_swan_events": black_swan_events,
                 }
+            )
+
+        # Report final progress
+        if progress_callback:
+            progress_callback(
+                self.settings.num_simulations, self.settings.num_simulations
             )
 
         # Calculate basic statistics

@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 from decimal import Decimal
-from typing import List
+from typing import Any, List, Optional
 
 import pandas as pd
 
@@ -26,6 +26,15 @@ class EngineInput:
     # - Overrides from Stage 2 are applied to these final computed values
     # - Engine should use the values directly WITHOUT additional growth/inflation
     # - This design keeps Engine simple and pushes complexity to Planner layer
+
+    # Optional detailed projection for advisor use
+    detailed_projection: pd.DataFrame = None
+    # DataFrame with individual income/expense item columns plus 'age' and 'year'
+    # This allows advisor to manipulate specific income streams (e.g., work income)
+    income_items: Optional[List[Any]] = (
+        None  # List of IncomeExpenseItem objects for income identification
+    )
+    # Note: expense_items removed as current expense logic only uses aggregated totals
 
 
 class FIREEngine:
@@ -138,24 +147,26 @@ class FIREEngine:
         if expected_fire_year_index >= 0 and expected_fire_year_index < len(
             yearly_states
         ):
-            min_net_worth_after_fire = min(
-                float(s.portfolio_value)
-                for s in yearly_states[expected_fire_year_index:]
-            )
+            post_fire_states = yearly_states[expected_fire_year_index:]
+            if post_fire_states:
+                min_net_worth_after_fire = min(
+                    float(s.portfolio_value) for s in post_fire_states
+                )
+            else:
+                min_net_worth_after_fire = fire_net_worth
 
         final_net_worth = (
             float(yearly_states[-1].portfolio_value) if yearly_states else 0.0
         )
 
         # Safety buffer analysis
+        safety_buffer_ratios = [
+            float(s.portfolio_value) / s.safety_buffer_amount
+            for s in yearly_states
+            if s.safety_buffer_amount > 0
+        ]
         min_safety_buffer_ratio = (
-            min(
-                float(s.portfolio_value) / s.safety_buffer_amount
-                for s in yearly_states
-                if s.safety_buffer_amount > 0
-            )
-            if yearly_states
-            else 0.0
+            min(safety_buffer_ratios) if safety_buffer_ratios else 0.0
         )
 
         # Traditional FIRE metrics for reference

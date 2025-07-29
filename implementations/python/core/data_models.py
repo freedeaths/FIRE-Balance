@@ -1,3 +1,4 @@
+import re
 import sys
 import uuid
 from abc import ABC, abstractmethod
@@ -55,8 +56,6 @@ class AssetClass(BaseModel):
             if not data.get("display_name"):
                 data["display_name"] = original_name
             # Normalize: lowercase + collapse multiple spaces to single space
-            import re  # noqa: F401 - local import for validation
-
             normalized_name = re.sub(r"\s+", " ", original_name.lower().strip())
             data["name"] = normalized_name
         return data
@@ -269,6 +268,51 @@ class IncomeExpenseItem(BaseModel):
     category: Optional[str] = Field(
         None, description="Category for grouping (e.g., 'Housing', 'Transportation')"
     )
+
+    # Predefined item type (if this is a template-based item)
+    predefined_type: Optional[str] = Field(
+        None,
+        description="Type of predefined item template (e.g., 'primary_work_income')",
+    )
+
+    def get_effective_age_range(
+        self, profile: "UserProfile"
+    ) -> Tuple[int, Optional[int]]:
+        """Get the effective age range for this item.
+
+        If this is a predefined item, calculates age range based on profile.
+        Otherwise, uses the manually set start_age and end_age.
+
+        Args:
+            profile: User profile containing age milestones
+
+        Returns:
+            Tuple of (start_age, end_age). end_age can be None for lifetime items.
+        """
+        if self.predefined_type == "primary_work_income":
+            return (profile.current_age, profile.expected_fire_age)
+        elif self.predefined_type == "government_pension":
+            return (profile.legal_retirement_age, profile.life_expectancy)
+        elif self.predefined_type == "basic_living_expenses":
+            return (profile.current_age, profile.life_expectancy)
+
+        # Use manual ages (traditional behavior)
+        return (self.start_age, self.end_age)
+
+    def is_predefined_item(self) -> bool:
+        """Check if this is a predefined item template."""
+        return self.predefined_type is not None
+
+    def sync_with_profile(self, profile: "UserProfile") -> None:
+        """Update start_age and end_age based on profile if this is a predefined item.
+
+        This method updates the stored age values to match the current profile.
+        Useful when the profile changes and predefined items need to be updated.
+        """
+        if self.predefined_type:
+            new_start_age, new_end_age = self.get_effective_age_range(profile)
+            self.start_age = new_start_age
+            self.end_age = new_end_age
 
 
 # =============================================================================
