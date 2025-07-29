@@ -31,9 +31,34 @@ This project implements the FIRE calculator in multiple programming languages:
 
 ## 🚀 Quick Start
 
-### Python Version (Streamlit)
+### Python Version
 
-...
+#### Command Line Interface (CLI)
+
+The quickest way to analyze FIRE plans:
+
+```bash
+# Navigate to Python implementation
+cd implementations/python
+
+# Run with default example plan
+python cli/fire_planner.py
+
+# Run with your own plan
+python cli/fire_planner.py /path/to/your/plan.json
+
+# Quick analysis with fewer Monte Carlo simulations
+python cli/fire_planner.py --quick-mc
+
+# Save results to JSON file
+python cli/fire_planner.py --output results.json
+```
+
+**CLI Features:**
+- 📊 Load and analyze FIRE plans from JSON configuration files
+- 🎲 Monte Carlo risk analysis with customizable simulation counts
+- 💾 Export results to JSON format
+- ⚡ Fast execution - perfect for batch analysis or automation
 
 ### React + TypeScript Version
 

@@ -41,7 +41,7 @@ lint:
 	@echo "🔍 Running flake8..."
 	python -m flake8 .
 	@echo "🔍 Running mypy..."
-	python -m mypy .
+	python -m mypy --config-file=pyproject.toml .
 	@echo "✅ Linting complete!"
 
 # Run all checks

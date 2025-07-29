@@ -31,9 +31,34 @@ FIRE Balance 计算器通过将复杂的财务规划过程分解为可管理的�
 
 ## 🚀 快速开始
 
-### Python 版本 (Streamlit)
+### Python 版本
 
-...
+#### 命令行界面 (CLI)
+
+分析 FIRE 计划的最快方式：
+
+```bash
+# 进入 Python 实现目录
+cd implementations/python
+
+# 使用默认示例计划运行
+python cli/fire_planner.py
+
+# 使用你自己的计划文件
+python cli/fire_planner.py /path/to/your/plan.json
+
+# 快速分析（较少的蒙特卡洛模拟次数）
+python cli/fire_planner.py --quick-mc
+
+# 将结果保存到 JSON 文件
+python cli/fire_planner.py --output results.json
+```
+
+**CLI 功能特性：**
+- 📊 从 JSON 配置文件加载和分析 FIRE 计划
+- 🎲 可定制模拟次数的蒙特卡洛风险分析
+- 💾 导出结果到 JSON 格式
+- ⚡ 快速执行 - 适合批量分析或自动化
 
 ### React + TypeScript 版本
 

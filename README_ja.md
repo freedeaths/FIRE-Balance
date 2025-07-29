@@ -31,9 +31,34 @@ FIRE Balance計算機は、複雑なプロセスを管理可能な段階に分�
 
 ## 🚀 クイックスタート
 
-### Pythonバージョン（Streamlit）
+### Pythonバージョン
 
-...
+#### コマンドラインインターフェース（CLI）
+
+FIREプランを分析する最も速い方法：
+
+```bash
+# Python実装ディレクトリに移動
+cd implementations/python
+
+# デフォルトのサンプルプランで実行
+python cli/fire_planner.py
+
+# 独自のプランファイルで実行
+python cli/fire_planner.py /path/to/your/plan.json
+
+# 高速分析（少ないモンテカルロシミュレーション回数）
+python cli/fire_planner.py --quick-mc
+
+# 結果をJSONファイルに保存
+python cli/fire_planner.py --output results.json
+```
+
+**CLI機能：**
+- 📊 JSON設定ファイルからFIREプランを読み込み・分析
+- 🎲 カスタマイズ可能なシミュレーション回数でモンテカルロリスク分析
+- 💾 結果をJSON形式でエクスポート
+- ⚡ 高速実行 - バッチ分析や自動化に最適
 
 ### React + TypeScriptバージョン
 

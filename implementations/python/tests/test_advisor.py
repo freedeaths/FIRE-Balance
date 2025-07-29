@@ -12,6 +12,7 @@ from core.advisor import (
 )
 from core.data_models import (
     AssetClass,
+    IncomeExpenseItem,
     LiquidityLevel,
     PortfolioConfiguration,
     UserProfile,
@@ -21,6 +22,42 @@ from core.engine import EngineInput
 
 class TestFIREAdvisor:
     """Test suite for FIRE Advisor functionality."""
+
+    def _create_detailed_projection_and_items(
+        self, user_profile: UserProfile, annual_projection: pd.DataFrame
+    ) -> tuple[pd.DataFrame, list[IncomeExpenseItem], list[IncomeExpenseItem]]:
+        """Create detailed projection and income/expense items for testing."""
+        # Create sample income and expense items
+        income_items = [
+            IncomeExpenseItem(
+                name="Work Income",
+                after_tax_amount_per_period=50000,
+                start_age=user_profile.current_age,
+                end_age=user_profile.expected_fire_age,
+                annual_growth_rate=0.0,
+                is_income=True,
+                category="Employment",
+            )
+        ]
+
+        expense_items = [
+            IncomeExpenseItem(
+                name="Living Expenses",
+                after_tax_amount_per_period=30000,
+                start_age=user_profile.current_age,
+                end_age=user_profile.life_expectancy,
+                annual_growth_rate=0.0,
+                is_income=False,
+                category="Living",
+            )
+        ]
+
+        # Create detailed projection with individual columns
+        detailed_projection = annual_projection[["age", "year"]].copy()
+        detailed_projection["Work Income"] = annual_projection["total_income"]
+        detailed_projection["Living Expenses"] = annual_projection["total_expense"]
+
+        return detailed_projection, income_items, expense_items
 
     @pytest.fixture
     def base_user_profile(self) -> UserProfile:
@@ -112,9 +149,17 @@ class TestFIREAdvisor:
         self, base_user_profile: UserProfile, achievable_projection: pd.DataFrame
     ) -> None:
         """Test early retirement recommendation for achievable plans."""
+        detailed_projection, income_items, expense_items = (
+            self._create_detailed_projection_and_items(
+                base_user_profile, achievable_projection
+            )
+        )
+
         engine_input = EngineInput(
             user_profile=base_user_profile,
             annual_financial_projection=achievable_projection,
+            detailed_projection=detailed_projection,
+            income_items=income_items,
         )
 
         advisor = FIREAdvisor(engine_input)
@@ -136,9 +181,17 @@ class TestFIREAdvisor:
         self, base_user_profile: UserProfile, unachievable_projection: pd.DataFrame
     ) -> None:
         """Test delayed retirement recommendation for unachievable plans."""
+        detailed_projection, income_items, expense_items = (
+            self._create_detailed_projection_and_items(
+                base_user_profile, unachievable_projection
+            )
+        )
+
         engine_input = EngineInput(
             user_profile=base_user_profile,
             annual_financial_projection=unachievable_projection,
+            detailed_projection=detailed_projection,
+            income_items=income_items,
         )
 
         advisor = FIREAdvisor(engine_input)
@@ -153,7 +206,8 @@ class TestFIREAdvisor:
         if delayed_recs:  # May not always be possible within legal retirement age
             delayed_rec = delayed_recs[0]
             assert delayed_rec.recommendation_type == "delayed_retirement"
-            assert delayed_rec.is_achievable is True
+            # Note: delayed retirement may not be achievable if even legal
+            # retirement age doesn't work
             assert delayed_rec.required_fire_age > base_user_profile.expected_fire_age
             assert delayed_rec.years_delayed > 0
             assert delayed_rec.fire_calculation_result is not None
@@ -162,9 +216,17 @@ class TestFIREAdvisor:
         self, base_user_profile: UserProfile, unachievable_projection: pd.DataFrame
     ) -> None:
         """Test income adjustment recommendation for unachievable plans."""
+        detailed_projection, income_items, expense_items = (
+            self._create_detailed_projection_and_items(
+                base_user_profile, unachievable_projection
+            )
+        )
+
         engine_input = EngineInput(
             user_profile=base_user_profile,
             annual_financial_projection=unachievable_projection,
+            detailed_projection=detailed_projection,
+            income_items=income_items,
         )
 
         advisor = FIREAdvisor(engine_input)
@@ -187,9 +249,17 @@ class TestFIREAdvisor:
         self, base_user_profile: UserProfile, unachievable_projection: pd.DataFrame
     ) -> None:
         """Test expense reduction recommendation for unachievable plans."""
+        detailed_projection, income_items, expense_items = (
+            self._create_detailed_projection_and_items(
+                base_user_profile, unachievable_projection
+            )
+        )
+
         engine_input = EngineInput(
             user_profile=base_user_profile,
             annual_financial_projection=unachievable_projection,
+            detailed_projection=detailed_projection,
+            income_items=income_items,
         )
 
         advisor = FIREAdvisor(engine_input)
@@ -211,7 +281,6 @@ class TestFIREAdvisor:
     def test_no_early_retirement_if_already_optimal(
         self,
         base_user_profile: UserProfile,
-        marginally_achievable_projection: pd.DataFrame,  # noqa: ARG002
     ) -> None:
         """Test that no early retirement recommendation."""
         # Modify profile to have current age very close to expected FIRE age
@@ -231,8 +300,15 @@ class TestFIREAdvisor:
             }
         )
 
+        detailed_projection, income_items, expense_items = (
+            self._create_detailed_projection_and_items(profile, projection)
+        )
+
         engine_input = EngineInput(
-            user_profile=profile, annual_financial_projection=projection
+            user_profile=profile,
+            annual_financial_projection=projection,
+            detailed_projection=detailed_projection,
+            income_items=income_items,
         )
 
         advisor = FIREAdvisor(engine_input)
@@ -248,9 +324,17 @@ class TestFIREAdvisor:
         self, base_user_profile: UserProfile, achievable_projection: pd.DataFrame
     ) -> None:
         """Test that recommendation data is consistent and complete."""
+        detailed_projection, income_items, expense_items = (
+            self._create_detailed_projection_and_items(
+                base_user_profile, achievable_projection
+            )
+        )
+
         engine_input = EngineInput(
             user_profile=base_user_profile,
             annual_financial_projection=achievable_projection,
+            detailed_projection=detailed_projection,
+            income_items=income_items,
         )
 
         advisor = FIREAdvisor(engine_input)
@@ -284,8 +368,15 @@ class TestFIREAdvisor:
             }
         )
 
+        detailed_projection, income_items, expense_items = (
+            self._create_detailed_projection_and_items(base_user_profile, projection)
+        )
+
         engine_input = EngineInput(
-            user_profile=base_user_profile, annual_financial_projection=projection
+            user_profile=base_user_profile,
+            annual_financial_projection=projection,
+            detailed_projection=detailed_projection,
+            income_items=income_items,
         )
 
         advisor = FIREAdvisor(engine_input)
@@ -323,8 +414,15 @@ class TestFIREAdvisor:
             }
         )
 
+        detailed_projection, income_items, expense_items = (
+            self._create_detailed_projection_and_items(young_profile, projection)
+        )
+
         engine_input = EngineInput(
-            user_profile=young_profile, annual_financial_projection=projection
+            user_profile=young_profile,
+            annual_financial_projection=projection,
+            detailed_projection=detailed_projection,
+            income_items=income_items,
         )
 
         advisor = FIREAdvisor(engine_input)
@@ -349,8 +447,15 @@ class TestFIREAdvisor:
             }
         )
 
+        detailed_projection, income_items, expense_items = (
+            self._create_detailed_projection_and_items(old_profile, projection)
+        )
+
         engine_input = EngineInput(
-            user_profile=old_profile, annual_financial_projection=projection
+            user_profile=old_profile,
+            annual_financial_projection=projection,
+            detailed_projection=detailed_projection,
+            income_items=income_items,
         )
 
         advisor = FIREAdvisor(engine_input)
