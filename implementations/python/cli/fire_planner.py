@@ -84,8 +84,8 @@ def run_calculations(planner: Any) -> bool:
     print("🔄 Setting up financial projections...")
 
     try:
-        # Generate projections (equivalent to Stage 2)
-        df = planner.proceed_to_stage2()
+        # Generate projections using new simplified API
+        df = planner.generate_projection_table()
         print(f"✅ Generated projection table with {len(df)} years of data")
     except Exception as e:
         print(f"❌ Error generating projection: {e}")
@@ -110,7 +110,7 @@ def run_analysis(planner: Any) -> bool:
     print(f"Expense Volatility: {settings.expense_base_volatility}")
 
     try:
-        results = planner.proceed_to_stage3(progress_callback)
+        results = planner.calculate_fire_results(progress_callback=progress_callback)
         print("\n✅ Calculations completed successfully")
     except Exception as e:
         print(f"❌ Error during calculations: {e}")
@@ -155,15 +155,52 @@ def run_analysis(planner: Any) -> bool:
 
     print_section("Recommendations")
     if results.recommendations:
-        for i, rec in enumerate(results.recommendations, 1):
-            achievable_status = "✅" if rec.is_achievable else "❌"
-            print(f"{i}. {achievable_status} {rec.title}")
-            print(f"   {rec.description}")
-            if (
-                hasattr(rec, "monte_carlo_success_rate")
-                and rec.monte_carlo_success_rate
-            ):
-                print(f"   Success Rate: {rec.monte_carlo_success_rate:.1%}")
+        for i, rec_dict in enumerate(results.recommendations, 1):
+            achievable_status = "✅" if rec_dict.get("is_achievable", True) else "❌"
+            rec_type = rec_dict["type"]
+            params = rec_dict["params"]
+
+            # Create simple title and description based on type
+            if rec_type == "early_retirement":
+                title = f"Early Retirement at Age {params['age']}"
+                description = (
+                    f"You can retire {params['years']} year(s) earlier "
+                    f"at age {params['age']}."
+                )
+            elif rec_type == "delayed_retirement":
+                title = f"Delayed Retirement to Age {params['age']}"
+                description = (
+                    f"Delay retirement by {params['years']} year(s) "
+                    f"to age {params['age']}."
+                )
+            elif rec_type == "delayed_retirement_not_feasible":
+                title = "Delayed Retirement Not Feasible"
+                description = (
+                    f"Even delaying to legal retirement age "
+                    f"({params['age']}) would not achieve FIRE."
+                )
+            elif rec_type == "increase_income":
+                title = f"Increase Income by {params['percentage']:.1f}%"
+                description = (
+                    f"Increase income by {params['percentage']:.1f}% "
+                    f"(${params['amount']:,.0f} annually)."
+                )
+            elif rec_type == "reduce_expenses":
+                title = f"Reduce Expenses by {params['percentage']:.1f}%"
+                description = (
+                    f"Reduce expenses by {params['percentage']:.1f}% "
+                    f"(${params['amount']:,.0f} annually)."
+                )
+            else:
+                title = f"Unknown recommendation: {rec_type}"
+                description = f"Parameters: {params}"
+
+            print(f"{i}. {achievable_status} {title}")
+            print(f"   {description}")
+
+            monte_carlo_rate = rec_dict.get("monte_carlo_success_rate")
+            if monte_carlo_rate is not None:
+                print(f"   Success Rate: {monte_carlo_rate:.1%}")
     else:
         print("No specific recommendations available")
 

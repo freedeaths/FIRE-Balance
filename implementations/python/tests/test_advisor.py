@@ -3,13 +3,7 @@
 import pandas as pd
 import pytest
 
-from core.advisor import (
-    DelayedRetirementRecommendation,
-    EarlyRetirementRecommendation,
-    ExpenseReductionRecommendation,
-    FIREAdvisor,
-    IncomeAdjustmentRecommendation,
-)
+from core.advisor import FIREAdvisor, SimpleRecommendation
 from core.data_models import (
     AssetClass,
     IncomeExpenseItem,
@@ -167,14 +161,13 @@ class TestFIREAdvisor:
 
         # Should get exactly one recommendation
         assert len(recommendations) == 1
-        assert isinstance(recommendations[0], EarlyRetirementRecommendation)
+        assert isinstance(recommendations[0], SimpleRecommendation)
 
         early_rec = recommendations[0]
-        assert early_rec.recommendation_type == "early_retirement"
+        assert early_rec.type == "early_retirement"
         assert early_rec.is_achievable is True
-        assert early_rec.optimal_fire_age < base_user_profile.expected_fire_age
-        assert early_rec.years_saved > 0
-        assert early_rec.fire_calculation_result is not None
+        assert early_rec.params["age"] < base_user_profile.expected_fire_age
+        assert early_rec.params["years"] > 0
         assert early_rec.monte_carlo_success_rate is not None
 
     def test_delayed_retirement_recommendation(
@@ -200,17 +193,22 @@ class TestFIREAdvisor:
         # Should get multiple recommendations including delayed retirement
         assert len(recommendations) >= 1
         delayed_recs = [
-            r for r in recommendations if isinstance(r, DelayedRetirementRecommendation)
+            r
+            for r in recommendations
+            if r.type in ["delayed_retirement", "delayed_retirement_not_feasible"]
         ]
 
         if delayed_recs:  # May not always be possible within legal retirement age
             delayed_rec = delayed_recs[0]
-            assert delayed_rec.recommendation_type == "delayed_retirement"
+            assert delayed_rec.type in [
+                "delayed_retirement",
+                "delayed_retirement_not_feasible",
+            ]
             # Note: delayed retirement may not be achievable if even legal
             # retirement age doesn't work
-            assert delayed_rec.required_fire_age > base_user_profile.expected_fire_age
-            assert delayed_rec.years_delayed > 0
-            assert delayed_rec.fire_calculation_result is not None
+            if delayed_rec.type == "delayed_retirement":
+                assert delayed_rec.params["age"] > base_user_profile.expected_fire_age
+                assert delayed_rec.params["years"] > 0
 
     def test_income_adjustment_recommendation(
         self, base_user_profile: UserProfile, unachievable_projection: pd.DataFrame
@@ -233,17 +231,14 @@ class TestFIREAdvisor:
         recommendations = advisor.get_all_recommendations()
 
         # Should get income adjustment recommendation
-        income_recs = [
-            r for r in recommendations if isinstance(r, IncomeAdjustmentRecommendation)
-        ]
+        income_recs = [r for r in recommendations if r.type == "increase_income"]
 
         if income_recs:
             income_rec = income_recs[0]
-            assert income_rec.recommendation_type == "income_adjustment"
+            assert income_rec.type == "increase_income"
             assert income_rec.is_achievable is True
-            assert income_rec.required_income_multiplier > 1.0
-            assert income_rec.additional_income_needed > 0
-            assert income_rec.fire_calculation_result is not None
+            assert income_rec.params["percentage"] > 0
+            assert income_rec.params["amount"] > 0
 
     def test_expense_reduction_recommendation(
         self, base_user_profile: UserProfile, unachievable_projection: pd.DataFrame
@@ -266,17 +261,14 @@ class TestFIREAdvisor:
         recommendations = advisor.get_all_recommendations()
 
         # Should get expense reduction recommendation
-        expense_recs = [
-            r for r in recommendations if isinstance(r, ExpenseReductionRecommendation)
-        ]
+        expense_recs = [r for r in recommendations if r.type == "reduce_expenses"]
 
         if expense_recs:
             expense_rec = expense_recs[0]
-            assert expense_rec.recommendation_type == "expense_reduction"
+            assert expense_rec.type == "reduce_expenses"
             assert expense_rec.is_achievable is True
-            assert 0 < expense_rec.required_expense_reduction_rate < 1.0
-            assert expense_rec.annual_savings_needed > 0
-            assert expense_rec.fire_calculation_result is not None
+            assert 0 < expense_rec.params["percentage"] < 100
+            assert expense_rec.params["amount"] > 0
 
     def test_no_early_retirement_if_already_optimal(
         self,
@@ -315,9 +307,7 @@ class TestFIREAdvisor:
         recommendations = advisor.get_all_recommendations()
 
         # Should not get early retirement recommendation if already at retirement age
-        early_recs = [
-            r for r in recommendations if isinstance(r, EarlyRetirementRecommendation)
-        ]
+        early_recs = [r for r in recommendations if r.type == "early_retirement"]
         assert len(early_recs) == 0
 
     def test_recommendation_data_integrity(
@@ -342,15 +332,9 @@ class TestFIREAdvisor:
 
         for rec in recommendations:
             # All recommendations should have required fields
-            assert rec.recommendation_type is not None
-            assert rec.title is not None
-            assert rec.description is not None
+            assert rec.type is not None
+            assert rec.params is not None
             assert isinstance(rec.is_achievable, bool)
-
-            # If achievable, should have calculation result
-            if rec.is_achievable:
-                assert rec.fire_calculation_result is not None
-                assert rec.fire_calculation_result.is_fire_achievable is True
 
     def test_binary_search_precision(self, base_user_profile: UserProfile) -> None:
         """Test that binary search algorithms find reasonable solutions."""
@@ -382,17 +366,15 @@ class TestFIREAdvisor:
         advisor = FIREAdvisor(engine_input)
         recommendations = advisor.get_all_recommendations()
 
-        income_recs = [
-            r for r in recommendations if isinstance(r, IncomeAdjustmentRecommendation)
-        ]
+        income_recs = [r for r in recommendations if r.type == "increase_income"]
 
         if income_recs:
             income_rec = income_recs[0]
-            # Should find a reasonable multiplier (not too extreme)
-            assert 1.0 < income_rec.required_income_multiplier < 5.0
+            # Should find a reasonable percentage (not too extreme)
+            assert 0 < income_rec.params["percentage"] < 400  # 400% = 5x multiplier
 
             # Additional income should be reasonable
-            assert 0 < income_rec.additional_income_needed < 200000
+            assert 0 < income_rec.params["amount"] < 200000
 
     def test_advisor_with_different_age_ranges(
         self, base_user_profile: UserProfile

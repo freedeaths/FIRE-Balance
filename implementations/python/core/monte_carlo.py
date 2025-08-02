@@ -441,7 +441,7 @@ class MonteCarloSimulator:
             from collections import Counter
 
             event_counts = Counter(all_events)
-            impact_analysis["most_frequent_events"] = dict(event_counts.most_common(5))
+            impact_analysis["most_frequent_events"] = dict(event_counts.most_common())
             impact_analysis["total_events_triggered"] = len(all_events)
             impact_analysis["avg_events_per_simulation"] = len(all_events) / len(
                 simulation_data

@@ -6,7 +6,7 @@ from datetime import datetime
 import pandas as pd
 import pytest
 
-from core.advisor import DelayedRetirementRecommendation, FIREAdvisor
+from core.advisor import FIREAdvisor, SimpleRecommendation
 from core.data_models import (
     AssetClass,
     IncomeExpenseItem,
@@ -176,15 +176,20 @@ class TestDelayedRetirementRecommendation:
 
         # Should find a delayed retirement recommendation (but may not be achievable)
         assert delayed_rec is not None
-        assert isinstance(delayed_rec, DelayedRetirementRecommendation)
-        # With low income (60k) and high expenses (40k), even delaying to
+        assert isinstance(delayed_rec, SimpleRecommendation)
+        # With low income (30k) and high expenses (55k), even delaying to
         # legal retirement may not work
-        assert delayed_rec.required_fire_age > base_profile.expected_fire_age
-        assert delayed_rec.years_delayed > 0
-        if delayed_rec.is_achievable:
-            assert "delay retirement" in delayed_rec.description.lower()
-        else:
-            assert "not feasible" in delayed_rec.description.lower()
+        assert delayed_rec.type in [
+            "delayed_retirement",
+            "delayed_retirement_not_feasible",
+        ]
+        if delayed_rec.type == "delayed_retirement":
+            assert delayed_rec.params["age"] > base_profile.expected_fire_age
+            assert delayed_rec.params["years"] > 0
+        assert delayed_rec.is_achievable in [
+            True,
+            False,
+        ]  # May or may not be achievable
 
     def test_all_recommendations_include_delayed_retirement(
         self, base_profile: UserProfile, insufficient_projection: pd.DataFrame
@@ -219,12 +224,12 @@ class TestDelayedRetirementRecommendation:
         delayed_recs = [
             rec
             for rec in recommendations
-            if rec.recommendation_type == "delayed_retirement"
+            if rec.type in ["delayed_retirement", "delayed_retirement_not_feasible"]
         ]
         assert len(delayed_recs) == 1
 
         delayed_rec = delayed_recs[0]
-        assert isinstance(delayed_rec, DelayedRetirementRecommendation)
+        assert isinstance(delayed_rec, SimpleRecommendation)
         # Note: delayed retirement may not be achievable with insufficient
         # income scenario
         # The recommendation will still be provided but marked as not
@@ -289,16 +294,12 @@ class TestDelayedRetirementRecommendation:
         delayed_recs = [
             rec
             for rec in recommendations
-            if rec.recommendation_type == "delayed_retirement"
+            if rec.type in ["delayed_retirement", "delayed_retirement_not_feasible"]
         ]
         assert len(delayed_recs) == 0
 
         # Should have early retirement recommendation instead
-        early_recs = [
-            rec
-            for rec in recommendations
-            if rec.recommendation_type == "early_retirement"
-        ]
+        early_recs = [rec for rec in recommendations if rec.type == "early_retirement"]
         assert len(early_recs) == 1
 
 

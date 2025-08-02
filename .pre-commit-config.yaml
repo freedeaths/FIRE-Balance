@@ -56,6 +56,7 @@ repos:
           - numpy >= 2.3.0
           - types-python-dateutil
           - pytest >= 8.4.0
+          - types-requests
         args:
           - --config-file=implementations/python/pyproject.toml
           - --python-version=3.12
