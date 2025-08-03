@@ -83,10 +83,18 @@ class FIREAdvisor:
             modified_profile = self.profile.model_copy()
             modified_profile.expected_fire_age = test_age
 
+            # Create modified projection with truncated work income
+            modified_detailed_projection = self._truncate_work_income_to_age(test_age)
+            modified_annual_projection = self._create_annual_summary_from_detailed_df(
+                modified_detailed_projection
+            )
+
             # Test this age
             modified_input = EngineInput(
                 user_profile=modified_profile,
-                annual_financial_projection=self.projection_df,
+                annual_financial_projection=modified_annual_projection,
+                detailed_projection=modified_detailed_projection,
+                income_items=self.income_items,
             )
 
             engine = FIREEngine(modified_input)
@@ -102,9 +110,19 @@ class FIREAdvisor:
             # Get calculation results for the optimal age
             optimal_profile = self.profile.model_copy()
             optimal_profile.expected_fire_age = earliest_achievable_age
+
+            # Create projection with truncated income for optimal age
+            optimal_detailed_projection = self._truncate_work_income_to_age(
+                earliest_achievable_age
+            )
+            optimal_annual_projection = self._create_annual_summary_from_detailed_df(
+                optimal_detailed_projection
+            )
             optimal_input = EngineInput(
                 user_profile=optimal_profile,
-                annual_financial_projection=self.projection_df,
+                annual_financial_projection=optimal_annual_projection,
+                detailed_projection=optimal_detailed_projection,
+                income_items=self.income_items,
             )
 
             engine = FIREEngine(optimal_input)
@@ -430,3 +448,47 @@ class FIREAdvisor:
         result_df["net_flow"] = result_df["total_income"] - result_df["total_expense"]
 
         return result_df
+
+    def _truncate_work_income_to_age(self, target_fire_age: int) -> pd.DataFrame:
+        """Create modified detailed projection with truncated work income.
+
+        This method identifies work income items (typically those that end at or after
+        current expected_fire_age) and truncates them at the new target age.
+
+        Args:
+            target_fire_age: New target FIRE age to truncate work income at
+
+        Returns:
+            Modified detailed projection DataFrame with work income truncated at
+            target age
+        """
+        if self.detailed_projection_df is None or not self.income_items:
+            raise ValueError("Detailed projection data required for income truncation")
+
+        truncated_projection = self.detailed_projection_df.copy()
+        current_fire_age = self.profile.expected_fire_age
+
+        # If target age is not earlier than current, return unchanged
+        if target_fire_age >= current_fire_age:
+            return truncated_projection
+
+        # Find income items that end at current FIRE age (work income)
+        work_income_items = [
+            item
+            for item in self.income_items
+            if item.end_age and item.end_age == current_fire_age
+        ]
+
+        if not work_income_items:
+            # No work income to truncate
+            return truncated_projection
+
+        # For each work income item, truncate it at target retirement age
+        for item in work_income_items:
+            # Set income to 0 for ages after target retirement age
+            for age in range(target_fire_age + 1, item.end_age + 1):
+                age_mask = truncated_projection["age"] == age
+                if age_mask.any():
+                    truncated_projection.loc[age_mask, item.name] = 0
+
+        return truncated_projection
