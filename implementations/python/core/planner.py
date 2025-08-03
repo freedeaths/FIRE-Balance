@@ -12,7 +12,12 @@ from uuid import UUID, uuid4
 import pandas as pd
 
 from .advisor import FIREAdvisor
-from .data_models import IncomeExpenseItem, SimulationSettings, UserProfile
+from .data_models import (
+    IncomeExpenseItem,
+    ItemFrequency,
+    SimulationSettings,
+    UserProfile,
+)
 from .engine import EngineInput, FIREEngine
 from .i18n import get_i18n
 from .monte_carlo import MonteCarloSimulator
@@ -21,7 +26,6 @@ from .planner_models import (
     PlannerConfigV1,
     PlannerData,
     PlannerResults,
-    PlannerStage,
 )
 
 
@@ -52,24 +56,13 @@ class FIREPlanner:
         self.i18n = get_i18n()
         self.i18n.set_language(language)
 
-    @property
-    def current_stage(self) -> PlannerStage:
-        """Get current planner stage."""
-        return self.data.current_stage
-
     # ===================
     # Stage 1: Input Collection
     # ===================
 
     def set_user_profile(self, profile: UserProfile) -> None:
-        """Set user profile (only in stage 1)."""
-        if self.data.current_stage != PlannerStage.STAGE1_INPUT:
-            raise ValueError("Can only set profile in stage 1")
-
+        """Set user profile."""
         self.data.user_profile = profile
-
-        # Update predefined items to sync with new profile
-        self._sync_predefined_items_with_profile()
 
         # Clean invalid overrides if age range changed
         self._clean_invalid_overrides()
@@ -77,10 +70,7 @@ class FIREPlanner:
         self.data.update_timestamp()
 
     def add_income_item(self, item: IncomeExpenseItem) -> str:
-        """Add income item and return its ID (only in stage 1)."""
-        if self.data.current_stage != PlannerStage.STAGE1_INPUT:
-            raise ValueError("Can only add income items in stage 1")
-
+        """Add income item and return its ID."""
         # Ensure item has ID
         if not item.id:
             item.id = str(uuid4())
@@ -90,10 +80,7 @@ class FIREPlanner:
         return item.id
 
     def add_expense_item(self, item: IncomeExpenseItem) -> str:
-        """Add expense item and return its ID (only in stage 1)."""
-        if self.data.current_stage != PlannerStage.STAGE1_INPUT:
-            raise ValueError("Can only add expense items in stage 1")
-
+        """Add expense item and return its ID."""
         # Ensure item has ID
         if not item.id:
             item.id = str(uuid4())
@@ -104,13 +91,6 @@ class FIREPlanner:
 
     def remove_income_item(self, item_id: str) -> bool:
         """Remove income item by ID. Returns True if removed."""
-        # Allow removal in stage 1 or 2 for backward compatibility
-        if self.data.current_stage not in [
-            PlannerStage.STAGE1_INPUT,
-            PlannerStage.STAGE2_ADJUSTMENT,
-        ]:
-            raise ValueError("Can only remove income items in stage 1 or 2")
-
         for i, item in enumerate(self.data.income_items):
             if item.id == item_id:
                 del self.data.income_items[i]
@@ -118,9 +98,13 @@ class FIREPlanner:
                 # Clean up related overrides
                 self._remove_overrides_for_item(item_id)
 
-                # If in stage 2, regenerate projection DataFrame
-                if self.data.current_stage == PlannerStage.STAGE2_ADJUSTMENT:
-                    self.data.projection_df = self._generate_initial_projection()
+                # If we had a projection, try to regenerate it
+                if self.data.projection_df is not None:
+                    try:
+                        self.data.projection_df = self._generate_initial_projection()
+                    except Exception:
+                        # If regeneration fails, clear projection
+                        self.data.projection_df = None
 
                 self.data.update_timestamp()
                 return True
@@ -128,13 +112,6 @@ class FIREPlanner:
 
     def remove_expense_item(self, item_id: str) -> bool:
         """Remove expense item by ID. Returns True if removed."""
-        # Allow removal in stage 1 or 2 for backward compatibility
-        if self.data.current_stage not in [
-            PlannerStage.STAGE1_INPUT,
-            PlannerStage.STAGE2_ADJUSTMENT,
-        ]:
-            raise ValueError("Can only remove expense items in stage 1 or 2")
-
         for i, item in enumerate(self.data.expense_items):
             if item.id == item_id:
                 del self.data.expense_items[i]
@@ -142,51 +119,24 @@ class FIREPlanner:
                 # Clean up related overrides
                 self._remove_overrides_for_item(item_id)
 
-                # If in stage 2, regenerate projection DataFrame
-                if self.data.current_stage == PlannerStage.STAGE2_ADJUSTMENT:
-                    self.data.projection_df = self._generate_initial_projection()
+                # If we had a projection, try to regenerate it
+                if self.data.projection_df is not None:
+                    try:
+                        self.data.projection_df = self._generate_initial_projection()
+                    except Exception:
+                        # If regeneration fails, clear projection
+                        self.data.projection_df = None
 
                 self.data.update_timestamp()
                 return True
         return False
-
-    def can_proceed_to_stage2(self) -> bool:
-        """Check if all required data is present for stage 2."""
-        return (
-            self.data.user_profile is not None
-            and len(self.data.income_items) > 0
-            and len(self.data.expense_items) > 0
-        )
-
-    def proceed_to_stage2(self) -> pd.DataFrame:
-        """Generate projection table and move to stage 2 (only from stage 1)."""
-        if self.data.current_stage != PlannerStage.STAGE1_INPUT:
-            raise ValueError("Can only proceed to stage 2 from stage 1")
-
-        if not self.can_proceed_to_stage2():
-            raise ValueError("Missing required data for stage 2")
-
-        # Clean up any invalid overrides from previous stage 1 edits
-        self._clean_invalid_overrides()
-
-        # Generate base projection DataFrame WITHOUT overrides
-        # Overrides will be applied visually in UI, but base df stays clean
-        self.data.projection_df = self._generate_initial_projection()
-
-        self.data.current_stage = PlannerStage.STAGE2_ADJUSTMENT
-        self.data.update_timestamp()
-
-        return self.data.projection_df
 
     # ===================
     # Stage 2: Table Adjustment
     # ===================
 
     def get_projection_dataframe(self) -> Optional[pd.DataFrame]:
-        """Get current projection DataFrame with overrides applied (for stage 2)."""
-        if self.data.current_stage != PlannerStage.STAGE2_ADJUSTMENT:
-            return None
-
+        """Get current projection DataFrame with overrides applied."""
         if self.data.projection_df is None:
             return None
 
@@ -197,15 +147,10 @@ class FIREPlanner:
 
     def get_base_projection_dataframe(self) -> Optional[pd.DataFrame]:
         """Get base projection DataFrame WITHOUT overrides applied."""
-        if self.data.current_stage != PlannerStage.STAGE2_ADJUSTMENT:
-            return None
         return self.data.projection_df
 
     def apply_override(self, age: int, item_id: str, value: float) -> None:
-        """Apply override to specific age and item (only in stage 2)."""
-        if self.data.current_stage != PlannerStage.STAGE2_ADJUSTMENT:
-            raise ValueError("Can only apply overrides in stage 2")
-
+        """Apply override to specific age and item."""
         if self.data.projection_df is None:
             raise ValueError("No projection DataFrame available")
 
@@ -224,10 +169,7 @@ class FIREPlanner:
         self.data.update_timestamp()
 
     def remove_override(self, age: int, item_id: str) -> bool:
-        """Remove override for specific age and item (only in stage 2)."""
-        if self.data.current_stage != PlannerStage.STAGE2_ADJUSTMENT:
-            raise ValueError("Can only remove overrides in stage 2")
-
+        """Remove override for specific age and item."""
         initial_count = len(self.data.overrides)
         self.data.overrides = [
             o
@@ -239,32 +181,6 @@ class FIREPlanner:
             self.data.update_timestamp()
             return True
         return False
-
-    def can_proceed_to_stage3(self) -> bool:
-        """Check if ready for stage 3 calculations."""
-        return (
-            self.data.current_stage == PlannerStage.STAGE2_ADJUSTMENT
-            and self.data.projection_df is not None
-        )
-
-    def proceed_to_stage3(
-        self, progress_callback: Optional[Any] = None
-    ) -> PlannerResults:
-        """Run calculations and move to stage 3 (only from stage 2)."""
-        if self.data.current_stage != PlannerStage.STAGE2_ADJUSTMENT:
-            raise ValueError("Can only proceed to stage 3 from stage 2")
-
-        if not self.can_proceed_to_stage3():
-            raise ValueError("Missing projection data for stage 3")
-
-        # Run all calculations
-        results = self._run_calculations(progress_callback)
-
-        self.data.results = results
-        self.data.current_stage = PlannerStage.STAGE3_ANALYSIS
-        self.data.update_timestamp()
-
-        return results
 
     # ===================
     # Stage 3: Analysis & Recommendations
@@ -305,6 +221,147 @@ class FIREPlanner:
         return results
 
     # ===================
+    # 🚀 New Simplified API (Stage-agnostic)
+    # ===================
+
+    def generate_projection_table(self) -> pd.DataFrame:
+        """Generate base projection table without stage constraints.
+
+        This is the new simplified API that replaces proceed_to_stage2().
+
+        Returns:
+            DataFrame: Base projection table without overrides applied
+        """
+        # Check if we have required data
+        if (
+            self.data.user_profile is None
+            or len(self.data.income_items) == 0
+            or len(self.data.expense_items) == 0
+        ):
+            raise ValueError(
+                "Missing required data: user_profile, income_items, or expense_items"
+            )
+
+        # Clean up any invalid overrides
+        self._clean_invalid_overrides()
+
+        # Generate and store base projection DataFrame
+        projection_df = self._generate_initial_projection()
+        self.data.projection_df = projection_df
+        self.data.update_timestamp()
+
+        return projection_df
+
+    def apply_overrides_to_table(
+        self,
+        base_df: Optional[pd.DataFrame] = None,
+        overrides: Optional[List[Override]] = None,
+    ) -> pd.DataFrame:
+        """Apply overrides to projection table without stage constraints.
+
+        This is the new simplified API that allows flexible override application.
+
+        Args:
+            base_df: Base DataFrame to apply overrides to. If None, uses stored
+                projection_df
+            overrides: List of overrides to apply. If None, uses stored overrides
+
+        Returns:
+            DataFrame: Projection table with overrides applied
+        """
+        if base_df is None:
+            if self.data.projection_df is None:
+                raise ValueError("No base projection DataFrame available")
+            base_df = self.data.projection_df
+
+        if overrides is None:
+            overrides = self.data.overrides
+
+        # Apply overrides to a copy of the DataFrame
+        result_df = base_df.copy()
+
+        # Store the overrides temporarily and apply them using existing method
+        original_overrides = self.data.overrides
+        self.data.overrides = overrides
+        self._apply_overrides_to_df(result_df)
+        self.data.overrides = original_overrides
+
+        return result_df
+
+    def calculate_fire_results(
+        self,
+        projection_df: Optional[pd.DataFrame] = None,
+        progress_callback: Optional[Any] = None,
+        num_simulations: Optional[int] = None,
+    ) -> PlannerResults:
+        """Calculate FIRE results from projection table without stage constraints.
+
+        This is the new simplified API that replaces proceed_to_stage3().
+
+        Args:
+            projection_df: DataFrame to use for calculations. If None, uses stored
+                projection_df
+            progress_callback: Optional progress callback function
+            num_simulations: Optional number of simulations override
+
+        Returns:
+            PlannerResults: Complete FIRE calculation results
+        """
+        if projection_df is None:
+            if self.data.projection_df is None:
+                raise ValueError("No projection DataFrame available for calculation")
+            projection_df = self.data.projection_df
+
+        # Store the DataFrame we're calculating from
+        self.data.projection_df = projection_df
+
+        # Run calculations using the existing internal method
+        results = self._run_calculations(progress_callback, num_simulations)
+
+        # Store results and update timestamp
+        self.data.results = results
+        self.data.update_timestamp()
+
+        return results
+
+    def add_override(self, age: int, item_id: str, value: float) -> None:
+        """Add or update an override without stage constraints.
+
+        Args:
+            age: Age for the override
+            item_id: Item ID to override
+            value: New value
+        """
+        # Remove existing override for same age/item if exists
+        self.data.overrides = [
+            o
+            for o in self.data.overrides
+            if not (o.age == age and o.item_id == item_id)
+        ]
+
+        # Add new override
+        override = Override(age=age, item_id=item_id, value=value)
+        self.data.overrides.append(override)
+        self.data.update_timestamp()
+
+    def get_projection_with_overrides(self) -> Optional[pd.DataFrame]:
+        """Get projection table with all current overrides applied.
+
+        Returns:
+            DataFrame: Projection table with overrides, or None if no base
+                projection exists
+        """
+        if self.data.projection_df is None:
+            return None
+
+        return self.apply_overrides_to_table()
+
+    def clear_overrides(self) -> None:
+        """Clear all overrides."""
+        self.data.overrides = []
+        self.data.update_timestamp()
+
+    # ===================
     # Import/Export Functions
     # ===================
 
@@ -334,46 +391,6 @@ class FIREPlanner:
         # Update i18n language
         self.i18n.set_language(self.data.language)
 
-    def reset_to_stage1(self) -> None:
-        """Reset planner to stage 1 (keep profile and items, clear results)."""
-        self.data.current_stage = PlannerStage.STAGE1_INPUT
-        self.data.projection_df = None
-        self.data.overrides.clear()
-        self.data.results = None
-        self.data.update_timestamp()
-
-    # ===================
-    # Stage Navigation Methods
-    # ===================
-
-    def back_to_stage1(self) -> None:
-        """Go back to stage 1 from stage 2, clearing projection df but
-        preserving overrides."""
-        if self.data.current_stage != PlannerStage.STAGE2_ADJUSTMENT:
-            raise ValueError("Can only go back to stage 1 from stage 2")
-
-        # Clear projection df - will be regenerated when proceeding to stage 2 again
-        self.data.projection_df = None
-
-        self.data.current_stage = PlannerStage.STAGE1_INPUT
-        self.data.results = None  # Clear results when going back
-        self.data.update_timestamp()
-
-    def back_to_stage2(self) -> pd.DataFrame:
-        """Go back to stage 2 from stage 3, preserving projection and overrides."""
-        if self.data.current_stage != PlannerStage.STAGE3_ANALYSIS:
-            raise ValueError("Can only go back to stage 2 from stage 3")
-
-        if self.data.projection_df is None:
-            raise ValueError("No projection data available")
-
-        self.data.current_stage = PlannerStage.STAGE2_ADJUSTMENT
-        self.data.results = None  # Clear results when going back
-        self.data.update_timestamp()
-
-        # Return projection with overrides applied (for display)
-        return self.get_projection_dataframe()
-
     # ===================
     # Internal Helper Methods
     # ===================
@@ -396,173 +413,64 @@ class FIREPlanner:
 
         # Add columns for each income item
         for item in self.data.income_items:
-            # Get effective age range (supports predefined items)
-            effective_start_age, effective_end_age = item.get_effective_age_range(
-                profile
-            )
+            # Use item's actual age range (no more predefined logic)
+            effective_start_age, effective_end_age = item.start_age, item.end_age
 
             column_values: List[float] = []
             for age in ages:
-                if effective_start_age <= age <= (effective_end_age or 999):
-                    years_since_start = age - effective_start_age
-                    growth_factor = (
-                        1 + item.annual_growth_rate / 100
-                    ) ** years_since_start
-                    amount = item.after_tax_amount_per_period * growth_factor
-                    column_values.append(amount)
+                if item.frequency == ItemFrequency.ONE_TIME:
+                    # One-time items only appear at start_age
+                    if age == effective_start_age:
+                        column_values.append(item.after_tax_amount_per_period)
+                    else:
+                        column_values.append(0.0)
                 else:
-                    column_values.append(0.0)
+                    # Recurring items appear in age range with growth
+                    if effective_start_age <= age <= (effective_end_age or 999):
+                        years_since_start = age - effective_start_age
+                        growth_factor = (
+                            1 + item.annual_growth_rate / 100
+                        ) ** years_since_start
+                        amount = item.after_tax_amount_per_period * growth_factor
+                        column_values.append(amount)
+                    else:
+                        column_values.append(0.0)
             data[item.name] = column_values
 
         # Add columns for each expense item (with inflation)
         inflation_rate = profile.inflation_rate / 100
         for item in self.data.expense_items:
-            # Get effective age range (supports predefined items)
-            effective_start_age, effective_end_age = item.get_effective_age_range(
-                profile
-            )
+            # Use item's actual age range (no more predefined logic)
+            effective_start_age, effective_end_age = item.start_age, item.end_age
 
             expense_column_values: List[float] = []
             for age in ages:
-                if effective_start_age <= age <= (effective_end_age or 999):
-                    years_since_start = age - effective_start_age
-                    inflation_factor = (1 + inflation_rate) ** years_since_start
-                    growth_factor = (
-                        1 + item.annual_growth_rate / 100
-                    ) ** years_since_start
-                    amount = (
-                        item.after_tax_amount_per_period
-                        * inflation_factor
-                        * growth_factor
-                    )
-                    expense_column_values.append(amount)
+                if item.frequency == ItemFrequency.ONE_TIME:
+                    # One-time items only appear at start_age (no inflation applied
+                    # to one-time items)
+                    if age == effective_start_age:
+                        expense_column_values.append(item.after_tax_amount_per_period)
+                    else:
+                        expense_column_values.append(0.0)
                 else:
-                    expense_column_values.append(0.0)
+                    # Recurring items appear in age range with inflation and growth
+                    if effective_start_age <= age <= (effective_end_age or 999):
+                        years_since_start = age - effective_start_age
+                        inflation_factor = (1 + inflation_rate) ** years_since_start
+                        growth_factor = (
+                            1 + item.annual_growth_rate / 100
+                        ) ** years_since_start
+                        amount = (
+                            item.after_tax_amount_per_period
+                            * inflation_factor
+                            * growth_factor
+                        )
+                        expense_column_values.append(amount)
+                    else:
+                        expense_column_values.append(0.0)
             data[item.name] = expense_column_values
 
         return pd.DataFrame(data)
-
-    def _sync_predefined_items_with_profile(self) -> None:
-        """Sync all predefined items with current profile."""
-        if not self.data.user_profile:
-            return
-
-        # Update all predefined income items
-        for item in self.data.income_items:
-            if item.is_predefined_item():
-                item.sync_with_profile(self.data.user_profile)
-
-        # Update all predefined expense items
-        for item in self.data.expense_items:
-            if item.is_predefined_item():
-                item.sync_with_profile(self.data.user_profile)
-
-    def create_predefined_income_item(
-        self,
-        predefined_type: str,
-        amount: float,
-        growth_rate: float = 0.0,
-        name: Optional[str] = None,
-    ) -> str:
-        """Create a predefined income item.
-
-        Args:
-            predefined_type: Type of predefined item (e.g., 'primary_work_income')
-            amount: After-tax amount per year
-            growth_rate: Annual growth rate as percentage
-            name: Optional custom name (uses default if not provided)
-
-        Returns:
-            ID of the created item
-        """
-        # Define default names and categories
-        defaults = {
-            "primary_work_income": {
-                "name": "Primary Work Income",
-                "category": "Employment",
-            },
-            "government_pension": {"name": "Government Pension", "category": "Pension"},
-        }
-
-        if predefined_type not in defaults:
-            raise ValueError(f"Invalid predefined income type: {predefined_type}")
-
-        if not self.data.user_profile:
-            raise ValueError(
-                "User profile must be set before creating predefined items"
-            )
-
-        # Create temporary item to get age range
-        temp_item = IncomeExpenseItem(
-            name=name or defaults[predefined_type]["name"],
-            after_tax_amount_per_period=amount,
-            start_age=0,  # Will be overwritten
-            end_age=0,  # Will be overwritten
-            annual_growth_rate=growth_rate,
-            is_income=True,
-            category=defaults[predefined_type]["category"],
-            predefined_type=predefined_type,
-        )
-
-        # Get the correct age range
-        start_age, end_age = temp_item.get_effective_age_range(self.data.user_profile)
-        temp_item.start_age = start_age
-        temp_item.end_age = end_age
-
-        return self.add_income_item(temp_item)
-
-    def create_predefined_expense_item(
-        self,
-        predefined_type: str,
-        amount: float,
-        growth_rate: float = 0.0,
-        name: Optional[str] = None,
-    ) -> str:
-        """Create a predefined expense item.
-
-        Args:
-            predefined_type: Type of predefined item (e.g., 'basic_living_expenses')
-            amount: After-tax amount per year
-            growth_rate: Annual growth rate as percentage
-            name: Optional custom name (uses default if not provided)
-
-        Returns:
-            ID of the created item
-        """
-        # Define default names and categories
-        defaults = {
-            "basic_living_expenses": {
-                "name": "Basic Living Expenses",
-                "category": "Living",
-            },
-        }
-
-        if predefined_type not in defaults:
-            raise ValueError(f"Invalid predefined expense type: {predefined_type}")
-
-        if not self.data.user_profile:
-            raise ValueError(
-                "User profile must be set before creating predefined items"
-            )
-
-        # Create temporary item to get age range
-        temp_item = IncomeExpenseItem(
-            name=name or defaults[predefined_type]["name"],
-            after_tax_amount_per_period=amount,
-            start_age=0,  # Will be overwritten
-            end_age=0,  # Will be overwritten
-            annual_growth_rate=growth_rate,
-            is_income=False,
-            category=defaults[predefined_type]["category"],
-            predefined_type=predefined_type,
-        )
-
-        # Get the correct age range
-        start_age, end_age = temp_item.get_effective_age_range(self.data.user_profile)
-        temp_item.start_age = start_age
-        temp_item.end_age = end_age
-
-        return self.add_expense_item(temp_item)
 
     def _clean_invalid_overrides(self) -> None:
         """Clean up overrides that are no longer valid due to item/age changes."""
@@ -709,11 +617,21 @@ class FIREPlanner:
             # Monte Carlo is optional, don't fail if it errors
             pass
 
-        # Get recommendations
+        # Get simple recommendations
         recommendations = []
         try:
             advisor = FIREAdvisor(engine_input)
-            recommendations = advisor.get_all_recommendations()
+            raw_recommendations = advisor.get_all_recommendations()
+            # Convert SimpleRecommendation objects to dicts for storage
+            recommendations = [
+                {
+                    "type": rec.type,
+                    "params": rec.params,
+                    "is_achievable": rec.is_achievable,
+                    "monte_carlo_success_rate": rec.monte_carlo_success_rate,
+                }
+                for rec in raw_recommendations
+            ]
         except Exception:
             # Recommendations are optional, don't fail if they error
             pass

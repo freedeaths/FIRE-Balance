@@ -41,7 +41,7 @@ class PlannerResults(BaseModel):
 
     fire_calculation: FIRECalculationResult
     monte_carlo_success_rate: Optional[float] = None
-    recommendations: List[Any] = Field(default_factory=list)
+    recommendations: List[Dict[str, Any]] = Field(default_factory=list)
     calculation_timestamp: datetime = Field(default_factory=datetime.now)
 
     class Config:

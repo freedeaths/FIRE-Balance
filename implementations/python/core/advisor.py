@@ -1,109 +1,56 @@
 """FIRE Advisor - Provides optimization suggestions based on calculation results."""
 
 from dataclasses import dataclass
-from typing import Optional, Union
+from typing import Any, Dict, List, Optional
 
 import pandas as pd
 
-from .data_models import FIRECalculationResult, SimulationSettings
+from .data_models import SimulationSettings
 from .engine import EngineInput, FIREEngine
 from .monte_carlo import MonteCarloSimulator
 
-# Type alias for all recommendation types
-AdvisorRecommendationTypes = Union[
-    "EarlyRetirementRecommendation",
-    "DelayedRetirementRecommendation",
-    "IncomeAdjustmentRecommendation",
-    "ExpenseReductionRecommendation",
-]
-
 
 @dataclass
-class AdvisorRecommendation:
-    """Base class for advisor recommendations."""
+class SimpleRecommendation:
+    """Simple recommendation with type and parameters for UI rendering."""
 
-    recommendation_type: str
-    title: str
-    description: str
-    is_achievable: bool
-    fire_calculation_result: Optional[FIRECalculationResult] = None
-    monte_carlo_success_rate: Optional[float] = None
-
-
-@dataclass
-class EarlyRetirementRecommendation:
-    """Recommendation for earlier retirement age."""
-
-    recommendation_type: str
-    title: str
-    description: str
-    is_achievable: bool
-    optimal_fire_age: int
-    years_saved: int
-    fire_calculation_result: Optional[FIRECalculationResult] = None
-    monte_carlo_success_rate: Optional[float] = None
-
-
-@dataclass
-class DelayedRetirementRecommendation:
-    """Recommendation for delayed retirement age."""
-
-    recommendation_type: str
-    title: str
-    description: str
-    is_achievable: bool
-    required_fire_age: int
-    years_delayed: int
-    fire_calculation_result: Optional[FIRECalculationResult] = None
-    monte_carlo_success_rate: Optional[float] = None
-
-
-@dataclass
-class IncomeAdjustmentRecommendation:
-    """Recommendation for income increase."""
-
-    recommendation_type: str
-    title: str
-    description: str
-    is_achievable: bool
-    required_income_multiplier: float
-    additional_income_needed: float  # Total additional annual income
-    fire_calculation_result: Optional[FIRECalculationResult] = None
-    monte_carlo_success_rate: Optional[float] = None
-
-
-@dataclass
-class ExpenseReductionRecommendation:
-    """Recommendation for expense reduction."""
-
-    recommendation_type: str
-    title: str
-    description: str
-    is_achievable: bool
-    required_expense_reduction_rate: float  # Percentage to reduce (0-1)
-    annual_savings_needed: float  # Total annual expense reduction
-    fire_calculation_result: Optional[FIRECalculationResult] = None
+    type: str
+    params: Dict[str, Any]
+    is_achievable: bool = True
     monte_carlo_success_rate: Optional[float] = None
 
 
 class FIREAdvisor:
-    """FIRE Advisor that provides optimization recommendations."""
+    """FIRE Advisor that provides structured optimization recommendations.
 
-    def __init__(self, engine_input: EngineInput):
-        """Initialize advisor with engine input."""
+    This advisor generates language-agnostic structured data that can be
+    dynamically rendered in any language by the UI layer.
+    """
+
+    def __init__(self, engine_input: EngineInput, language: Optional[str] = None):
+        """Initialize advisor with engine input.
+
+        Args:
+            engine_input: Engine input with user profile and projections
+            language: Deprecated parameter, kept for backward compatibility
+        """
         self.engine_input = engine_input
         self.profile = engine_input.user_profile
         self.projection_df = engine_input.annual_financial_projection
         self.detailed_projection_df = engine_input.detailed_projection
         self.income_items = engine_input.income_items
 
-    def get_all_recommendations(self) -> list[AdvisorRecommendationTypes]:
-        """Get all advisor recommendations based on current FIRE feasibility."""
+    def get_all_recommendations(self) -> List[SimpleRecommendation]:
+        """Get all advisor recommendations based on current FIRE feasibility.
+
+        Returns:
+            List of SimpleRecommendation objects with type and parameters
+        """
         # First check if current plan is achievable
         engine = FIREEngine(self.engine_input)
         base_result = engine.calculate()
 
-        recommendations: list[AdvisorRecommendationTypes] = []
+        recommendations: List[SimpleRecommendation] = []
 
         if base_result.is_fire_achievable:
             # Plan is achievable - find earliest possible retirement
@@ -122,7 +69,7 @@ class FIREAdvisor:
 
         return recommendations
 
-    def _find_earliest_retirement(self) -> Optional[EarlyRetirementRecommendation]:
+    def _find_earliest_retirement(self) -> Optional[SimpleRecommendation]:
         """Find the earliest possible retirement age."""
         current_expected_age = self.profile.expected_fire_age
         current_age = self.profile.current_age
@@ -136,10 +83,18 @@ class FIREAdvisor:
             modified_profile = self.profile.model_copy()
             modified_profile.expected_fire_age = test_age
 
+            # Create modified projection with truncated work income
+            modified_detailed_projection = self._truncate_work_income_to_age(test_age)
+            modified_annual_projection = self._create_annual_summary_from_detailed_df(
+                modified_detailed_projection
+            )
+
             # Test this age
             modified_input = EngineInput(
                 user_profile=modified_profile,
-                annual_financial_projection=self.projection_df,
+                annual_financial_projection=modified_annual_projection,
+                detailed_projection=modified_detailed_projection,
+                income_items=self.income_items,
             )
 
             engine = FIREEngine(modified_input)
@@ -155,13 +110,23 @@ class FIREAdvisor:
             # Get calculation results for the optimal age
             optimal_profile = self.profile.model_copy()
             optimal_profile.expected_fire_age = earliest_achievable_age
+
+            # Create projection with truncated income for optimal age
+            optimal_detailed_projection = self._truncate_work_income_to_age(
+                earliest_achievable_age
+            )
+            optimal_annual_projection = self._create_annual_summary_from_detailed_df(
+                optimal_detailed_projection
+            )
             optimal_input = EngineInput(
                 user_profile=optimal_profile,
-                annual_financial_projection=self.projection_df,
+                annual_financial_projection=optimal_annual_projection,
+                detailed_projection=optimal_detailed_projection,
+                income_items=self.income_items,
             )
 
             engine = FIREEngine(optimal_input)
-            optimal_result = engine.calculate()
+            engine.calculate()
 
             # Run Monte Carlo for this optimal age
             optimal_engine = FIREEngine(optimal_input)
@@ -181,18 +146,10 @@ class FIREAdvisor:
 
             years_saved = current_expected_age - earliest_achievable_age
 
-            return EarlyRetirementRecommendation(
-                recommendation_type="early_retirement",
-                title=f"Early Retirement at Age {earliest_achievable_age}",
-                description=(
-                    f"Based on your current financial plan, you can retire "
-                    f"{years_saved} year(s) earlier at age {earliest_achievable_age} "
-                    f"instead of {current_expected_age}."
-                ),
+            return SimpleRecommendation(
+                type="early_retirement",
+                params={"age": earliest_achievable_age, "years": years_saved},
                 is_achievable=True,
-                optimal_fire_age=earliest_achievable_age,
-                years_saved=years_saved,
-                fire_calculation_result=optimal_result,
                 monte_carlo_success_rate=mc_result.success_rate,
             )
 
@@ -200,7 +157,7 @@ class FIREAdvisor:
 
     def _find_required_delayed_retirement(
         self,
-    ) -> Optional[DelayedRetirementRecommendation]:
+    ) -> Optional[SimpleRecommendation]:
         """Find the minimum age required for FIRE to be achievable."""
         current_expected_age = self.profile.expected_fire_age
         legal_retirement_age = self.profile.legal_retirement_age
@@ -255,22 +212,14 @@ class FIREAdvisor:
             )
 
             engine = FIREEngine(required_input)
-            required_result = engine.calculate()
+            engine.calculate()
 
             years_delayed = required_age - current_expected_age
 
-            return DelayedRetirementRecommendation(
-                recommendation_type="delayed_retirement",
-                title=f"Delayed Retirement to Age {required_age}",
-                description=(
-                    f"To achieve FIRE with your current financial plan, "
-                    f"you need to delay retirement by {years_delayed} year(s) "
-                    f"to age {required_age}."
-                ),
+            return SimpleRecommendation(
+                type="delayed_retirement",
+                params={"age": required_age, "years": years_delayed},
                 is_achievable=True,
-                required_fire_age=required_age,
-                years_delayed=years_delayed,
-                fire_calculation_result=required_result,
             )
 
         # If no feasible age found within legal retirement age, return unfeasible
@@ -293,27 +242,19 @@ class FIREAdvisor:
         )
 
         engine = FIREEngine(max_delay_input)
-        max_delay_result = engine.calculate()
+        engine.calculate()
 
         years_delayed = max_delay_age - current_expected_age
 
-        return DelayedRetirementRecommendation(
-            recommendation_type="delayed_retirement",
-            title="Delayed Retirement Not Feasible",
-            description=(
-                f"Even delaying retirement to the legal retirement age "
-                f"({max_delay_age}) would not achieve FIRE. "
-                f"Additional income or expense reduction is needed."
-            ),
+        return SimpleRecommendation(
+            type="delayed_retirement_not_feasible",
+            params={"age": max_delay_age},
             is_achievable=False,
-            required_fire_age=max_delay_age,
-            years_delayed=years_delayed,
-            fire_calculation_result=max_delay_result,
         )
 
     def _find_required_income_increase(
         self,
-    ) -> Optional[IncomeAdjustmentRecommendation]:
+    ) -> Optional[SimpleRecommendation]:
         """Find required income multiplier to achieve FIRE at expected age."""
         # Binary search for the minimum income multiplier
         low, high = 1.0, 5.0  # Search between 1x and 5x income
@@ -354,28 +295,23 @@ class FIREAdvisor:
             )
 
             engine = FIREEngine(final_input)
-            final_result = engine.calculate()
+            engine.calculate()
 
-            return IncomeAdjustmentRecommendation(
-                recommendation_type="income_adjustment",
-                title=f"Increase Income by {(optimal_multiplier - 1) * 100:.1f}%",
-                description=(
-                    f"To achieve FIRE at age {self.profile.expected_fire_age}, "
-                    f"you need to increase your income by "
-                    f"{(optimal_multiplier - 1) * 100:.1f}% "
-                    f"(${additional_income:,.0f} annually)."
-                ),
+            return SimpleRecommendation(
+                type="increase_income",
+                params={
+                    "fire_age": self.profile.expected_fire_age,
+                    "percentage": (optimal_multiplier - 1) * 100,
+                    "amount": additional_income,
+                },
                 is_achievable=True,
-                required_income_multiplier=optimal_multiplier,
-                additional_income_needed=additional_income,
-                fire_calculation_result=final_result,
             )
 
         return None
 
     def _find_required_expense_reduction(
         self,
-    ) -> Optional[ExpenseReductionRecommendation]:
+    ) -> Optional[SimpleRecommendation]:
         """Find required expense reduction to achieve FIRE at expected age."""
         # Binary search for the minimum expense reduction
         low, high = 0.0, 0.8  # Search between 0% and 80% reduction
@@ -417,21 +353,16 @@ class FIREAdvisor:
             )
 
             engine = FIREEngine(final_input)
-            final_result = engine.calculate()
+            engine.calculate()
 
-            return ExpenseReductionRecommendation(
-                recommendation_type="expense_reduction",
-                title=f"Reduce Expenses by {optimal_reduction * 100:.1f}%",
-                description=(
-                    f"To achieve FIRE at age {self.profile.expected_fire_age}, "
-                    f"you need to reduce your expenses by "
-                    f"{optimal_reduction * 100:.1f}% "
-                    f"(${annual_savings:,.0f} annually)."
-                ),
+            return SimpleRecommendation(
+                type="reduce_expenses",
+                params={
+                    "fire_age": self.profile.expected_fire_age,
+                    "percentage": optimal_reduction * 100,
+                    "amount": annual_savings,
+                },
                 is_achievable=True,
-                required_expense_reduction_rate=optimal_reduction,
-                annual_savings_needed=annual_savings,
-                fire_calculation_result=final_result,
             )
 
         return None
@@ -517,3 +448,47 @@ class FIREAdvisor:
         result_df["net_flow"] = result_df["total_income"] - result_df["total_expense"]
 
         return result_df
+
+    def _truncate_work_income_to_age(self, target_fire_age: int) -> pd.DataFrame:
+        """Create modified detailed projection with truncated work income.
+
+        This method identifies work income items (typically those that end at or after
+        current expected_fire_age) and truncates them at the new target age.
+
+        Args:
+            target_fire_age: New target FIRE age to truncate work income at
+
+        Returns:
+            Modified detailed projection DataFrame with work income truncated at
+            target age
+        """
+        if self.detailed_projection_df is None or not self.income_items:
+            raise ValueError("Detailed projection data required for income truncation")
+
+        truncated_projection = self.detailed_projection_df.copy()
+        current_fire_age = self.profile.expected_fire_age
+
+        # If target age is not earlier than current, return unchanged
+        if target_fire_age >= current_fire_age:
+            return truncated_projection
+
+        # Find income items that end at current FIRE age (work income)
+        work_income_items = [
+            item
+            for item in self.income_items
+            if item.end_age and item.end_age == current_fire_age
+        ]
+
+        if not work_income_items:
+            # No work income to truncate
+            return truncated_projection
+
+        # For each work income item, truncate it at target retirement age
+        for item in work_income_items:
+            # Set income to 0 for ages after target retirement age
+            for age in range(target_fire_age + 1, item.end_age + 1):
+                age_mask = truncated_projection["age"] == age
+                if age_mask.any():
+                    truncated_projection.loc[age_mask, item.name] = 0
+
+        return truncated_projection

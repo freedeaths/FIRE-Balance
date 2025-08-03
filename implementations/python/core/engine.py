@@ -79,14 +79,18 @@ class FIREEngine:
             annual_expenses=Decimal(str(total_expense)),
         )
 
-        # Calculate metrics
-        ending_value = portfolio_result.ending_portfolio_value
+        # Calculate financial metrics
+        portfolio_value = portfolio_result.ending_portfolio_value
+
+        # Calculate sustainability metrics
         safety_buffer_amount = total_expense * (
             self.profile.safety_buffer_months / 12.0
         )
         fire_number = total_expense * 25.0
-        fire_progress = float(ending_value) / fire_number if fire_number > 0 else 0.0
-        is_sustainable = float(ending_value) >= safety_buffer_amount
+        fire_progress = float(portfolio_value) / fire_number if fire_number > 0 else 0.0
+        is_sustainable = (
+            portfolio_value >= safety_buffer_amount
+        )  # portfolio_value is net_worth here
 
         return YearlyState(
             age=age,
@@ -94,9 +98,9 @@ class FIREEngine:
             total_income=total_income,
             total_expense=total_expense,
             net_cash_flow=net_cash_flow,
-            portfolio_value=ending_value,
+            portfolio_value=portfolio_value,
+            net_worth=float(portfolio_value),  # portfolio_value is net_worth here
             investment_return=portfolio_result.investment_returns,
-            safety_buffer_amount=safety_buffer_amount,
             is_sustainable=is_sustainable,
             fire_number=fire_number,
             fire_progress=fire_progress,
@@ -105,6 +109,7 @@ class FIREEngine:
     def _calculate_yearly_states(self) -> List[YearlyState]:
         """Calculate all yearly states using atomic single-year calculations."""
         yearly_states: List[YearlyState] = []
+        cumulative_debt = 0.0  # Track accumulated debt when portfolio is depleted
 
         # Reset portfolio simulator to initial state
         self.portfolio_simulator.reset_to_initial()
@@ -117,6 +122,25 @@ class FIREEngine:
                 total_income=float(row["total_income"]),
                 total_expense=float(row["total_expense"]),
             )
+
+            # Calculate true net worth with cumulative debt tracking
+            portfolio_value = float(yearly_state.portfolio_value)
+
+            if portfolio_value > 0:
+                # Portfolio has value - net worth is portfolio value
+                yearly_state.net_worth = portfolio_value
+                cumulative_debt = 0.0  # Reset debt when portfolio recovers
+            else:
+                # Portfolio is depleted - accumulate debt
+                cumulative_debt += (
+                    abs(yearly_state.net_cash_flow)
+                    if yearly_state.net_cash_flow < 0
+                    else 0
+                )
+                yearly_state.net_worth = (
+                    -cumulative_debt
+                )  # Negative net worth indicates debt
+
             yearly_states.append(yearly_state)
 
         return yearly_states
@@ -141,7 +165,7 @@ class FIREEngine:
             yearly_states
         ):
             fire_state = yearly_states[expected_fire_year_index]
-            fire_net_worth = float(fire_state.portfolio_value)
+            fire_net_worth = fire_state.net_worth
         # Minimum net worth from expected FIRE age onwards
         min_net_worth_after_fire = 0.0
         if expected_fire_year_index >= 0 and expected_fire_year_index < len(
@@ -149,22 +173,24 @@ class FIREEngine:
         ):
             post_fire_states = yearly_states[expected_fire_year_index:]
             if post_fire_states:
-                min_net_worth_after_fire = min(
-                    float(s.portfolio_value) for s in post_fire_states
-                )
+                min_net_worth_after_fire = min(s.net_worth for s in post_fire_states)
             else:
                 min_net_worth_after_fire = fire_net_worth
 
-        final_net_worth = (
-            float(yearly_states[-1].portfolio_value) if yearly_states else 0.0
-        )
+        final_net_worth = yearly_states[-1].net_worth if yearly_states else 0.0
 
-        # Safety buffer analysis
-        safety_buffer_ratios = [
-            float(s.portfolio_value) / s.safety_buffer_amount
-            for s in yearly_states
-            if s.safety_buffer_amount > 0
-        ]
+        # Safety buffer analysis - calculate dynamically
+        safety_buffer_ratios = []
+        for s in yearly_states:
+            safety_buffer_amount = s.total_expense * (
+                self.profile.safety_buffer_months / 12.0
+            )
+            if safety_buffer_amount > 0:
+                ratio = (
+                    s.net_worth / safety_buffer_amount
+                )  # Use net_worth instead of portfolio_value
+                safety_buffer_ratios.append(ratio)
+
         min_safety_buffer_ratio = (
             min(safety_buffer_ratios) if safety_buffer_ratios else 0.0
         )

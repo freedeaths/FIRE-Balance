@@ -1,4 +1,5 @@
-"""Concrete black swan event implementations with self-contained calculation logic."""
+"""Concrete black swan event implementations with self-contained calculation logic.
+Manually make all annual_probability *= 0.2."""
 
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Tuple
@@ -22,7 +23,7 @@ class FinancialCrisisEvent(BlackSwanEvent):
     def __init__(self, age_range: Tuple[int, int] = (18, 100)):
         super().__init__(
             event_id="financial_crisis",
-            annual_probability=0.08,
+            annual_probability=0.016,
             duration_years=2,
             recovery_factor=0.8,
             age_range=age_range,
@@ -47,7 +48,7 @@ class EconomicRecessionEvent(BlackSwanEvent):
     def __init__(self, age_range: Tuple[int, int] = (18, 100)):
         super().__init__(
             event_id="economic_recession",
-            annual_probability=0.15,
+            annual_probability=0.03,
             duration_years=1,
             recovery_factor=0.9,
             age_range=age_range,
@@ -72,7 +73,7 @@ class MarketCrashEvent(BlackSwanEvent):
     def __init__(self, age_range: Tuple[int, int] = (18, 100)):
         super().__init__(
             event_id="market_crash",
-            annual_probability=0.1,
+            annual_probability=0.02,
             duration_years=1,
             recovery_factor=0.9,
             age_range=age_range,
@@ -97,7 +98,7 @@ class HyperinflationEvent(BlackSwanEvent):
     def __init__(self, age_range: Tuple[int, int] = (18, 100)):
         super().__init__(
             event_id="hyperinflation",
-            annual_probability=0.05,
+            annual_probability=0.01,
             duration_years=3,
             recovery_factor=0.7,
             age_range=age_range,
@@ -136,7 +137,7 @@ class UnemploymentEvent(BlackSwanEvent):
     def __init__(self, age_range: Tuple[int, int] = (22, 65)):
         super().__init__(
             event_id="unemployment",
-            annual_probability=0.03,
+            annual_probability=0.006,
             duration_years=2,
             recovery_factor=0.4,
             age_range=age_range,
@@ -162,7 +163,7 @@ class IndustryCollapseEvent(BlackSwanEvent):
     def __init__(self, age_range: Tuple[int, int] = (22, 65)):
         super().__init__(
             event_id="industry_collapse",
-            annual_probability=0.01,
+            annual_probability=0.002,
             duration_years=3,
             recovery_factor=0.6,
             age_range=age_range,
@@ -187,7 +188,7 @@ class UnexpectedPromotionEvent(BlackSwanEvent):
     def __init__(self, age_range: Tuple[int, int] = (25, 60)):
         super().__init__(
             event_id="unexpected_promotion",
-            annual_probability=0.02,
+            annual_probability=0.004,
             duration_years=5,
             recovery_factor=1.0,
             age_range=age_range,
@@ -217,7 +218,7 @@ class MajorIllnessEvent(BlackSwanEvent):
     def __init__(self, age_range: Tuple[int, int] = (18, 100)):
         super().__init__(
             event_id="major_illness",
-            annual_probability=0.02,
+            annual_probability=0.004,
             duration_years=2,
             recovery_factor=0.9,
             age_range=age_range,
@@ -242,7 +243,7 @@ class LongTermCareEvent(BlackSwanEvent):
     def __init__(self, age_range: Tuple[int, int] = (65, 100)):
         super().__init__(
             event_id="long_term_care",
-            annual_probability=0.005,
+            annual_probability=0.001,
             duration_years=10,
             recovery_factor=0.5,
             age_range=age_range,
@@ -272,7 +273,7 @@ class RegionalConflictEvent(BlackSwanEvent):
     def __init__(self, age_range: Tuple[int, int] = (18, 100)):
         super().__init__(
             event_id="regional_conflict",
-            annual_probability=0.03,
+            annual_probability=0.006,
             duration_years=2,
             recovery_factor=0.9,
             age_range=age_range,
@@ -306,7 +307,7 @@ class GlobalWarEvent(BlackSwanEvent):
     def __init__(self, age_range: Tuple[int, int] = (18, 100)):
         super().__init__(
             event_id="global_war",
-            annual_probability=0.008,
+            annual_probability=0.0016,
             duration_years=4,
             recovery_factor=0.7,
             age_range=age_range,
@@ -340,7 +341,7 @@ class EconomicSanctionsEvent(BlackSwanEvent):
     def __init__(self, age_range: Tuple[int, int] = (18, 100)):
         super().__init__(
             event_id="economic_sanctions",
-            annual_probability=0.02,
+            annual_probability=0.004,
             duration_years=3,
             recovery_factor=0.8,
             age_range=age_range,
@@ -365,7 +366,7 @@ class EnergyCrisisEvent(BlackSwanEvent):
     def __init__(self, age_range: Tuple[int, int] = (18, 100)):
         super().__init__(
             event_id="energy_crisis",
-            annual_probability=0.04,
+            annual_probability=0.008,
             duration_years=2,
             recovery_factor=0.85,
             age_range=age_range,
@@ -404,7 +405,7 @@ class InheritanceEvent(BlackSwanEvent):
     def __init__(self, age_range: Tuple[int, int] = (30, 70)):
         super().__init__(
             event_id="inheritance",
-            annual_probability=0.008,
+            annual_probability=0.0016,
             duration_years=1,
             recovery_factor=1.0,
             age_range=age_range,
@@ -433,7 +434,7 @@ class InvestmentWindfallEvent(BlackSwanEvent):
     def __init__(self, age_range: Tuple[int, int] = (22, 65)):
         super().__init__(
             event_id="investment_windfall",
-            annual_probability=0.001,
+            annual_probability=0.0002,
             duration_years=1,
             recovery_factor=1.0,
             age_range=age_range,

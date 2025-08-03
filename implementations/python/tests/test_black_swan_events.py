@@ -43,7 +43,7 @@ class TestBlackSwanEventStructure(unittest.TestCase):
         event = FinancialCrisisEvent(age_range=(25, 65))
 
         self.assertEqual(event.event_id, "financial_crisis")
-        self.assertEqual(event.annual_probability, 0.08)
+        self.assertEqual(event.annual_probability, 0.016)
         self.assertEqual(event.duration_years, 2)
         self.assertEqual(event.recovery_factor, 0.8)
         self.assertEqual(event.age_range, (25, 65))

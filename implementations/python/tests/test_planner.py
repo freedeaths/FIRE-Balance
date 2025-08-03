@@ -15,7 +15,6 @@ from core.data_models import (
     UserProfile,
 )
 from core.planner import FIREPlanner
-from core.planner_models import PlannerStage
 
 
 class TestFIREPlanner:
@@ -94,7 +93,6 @@ class TestFIREPlanner:
         """Test planner initialization."""
         planner = FIREPlanner()
 
-        assert planner.current_stage == PlannerStage.STAGE1_INPUT
         assert planner.data.language == "en"
         assert planner.data.user_profile is None
         assert len(planner.data.income_items) == 0
@@ -109,7 +107,6 @@ class TestFIREPlanner:
         planner.set_user_profile(sample_user_profile)
 
         assert planner.data.user_profile == sample_user_profile
-        assert planner.current_stage == PlannerStage.STAGE1_INPUT
 
     def test_stage1_add_income_items(
         self, sample_user_profile: UserProfile, sample_income_item: IncomeExpenseItem
@@ -163,56 +160,6 @@ class TestFIREPlanner:
         assert planner.remove_income_item("non-existent") is False
         assert planner.remove_expense_item("non-existent") is False
 
-    def test_stage1_to_stage2_transition(
-        self,
-        sample_user_profile: UserProfile,
-        sample_income_item: IncomeExpenseItem,
-        sample_expense_item: IncomeExpenseItem,
-    ) -> None:
-        """Test transition from stage 1 to stage 2."""
-        planner = FIREPlanner()
-        planner.set_user_profile(sample_user_profile)
-        planner.add_income_item(sample_income_item)
-        planner.add_expense_item(sample_expense_item)
-
-        # Should be able to proceed
-        assert planner.can_proceed_to_stage2() is True
-
-        # Proceed to stage 2
-        table = planner.proceed_to_stage2()
-
-        assert planner.current_stage == PlannerStage.STAGE2_ADJUSTMENT
-        assert table is not None
-        assert len(table) > 0
-        assert (
-            planner.data.projection_df is not None
-            and planner.data.projection_df.equals(table)
-        )
-
-    def test_stage1_incomplete_data(self, sample_user_profile: UserProfile) -> None:
-        """Test that incomplete data prevents stage 2 transition."""
-        planner = FIREPlanner()
-
-        # No profile
-        assert planner.can_proceed_to_stage2() is False
-
-        # Profile but no items
-        planner.set_user_profile(sample_user_profile)
-        assert planner.can_proceed_to_stage2() is False
-
-        # Profile and income but no expense
-        income_item = IncomeExpenseItem(
-            name="Test Income",
-            after_tax_amount_per_period=50000,
-            frequency="recurring",
-            start_age=30,
-            end_age=60,
-            annual_growth_rate=0.0,
-            is_income=True,
-        )
-        planner.add_income_item(income_item)
-        assert planner.can_proceed_to_stage2() is False
-
     def test_stage2_table_generation(
         self,
         sample_user_profile: UserProfile,
@@ -225,7 +172,7 @@ class TestFIREPlanner:
         planner.add_income_item(sample_income_item)
         planner.add_expense_item(sample_expense_item)
 
-        table = planner.proceed_to_stage2()
+        table = planner.generate_projection_table()
 
         # Verify DataFrame structure for wide format
         assert len(table) > 0
@@ -261,7 +208,7 @@ class TestFIREPlanner:
         planner.add_income_item(sample_income_item)
         planner.add_expense_item(sample_expense_item)
 
-        table = planner.proceed_to_stage2()
+        table = planner.generate_projection_table()
 
         # Find a specific row/column to override
         # Get a test age (use 5th row if available, otherwise first row)
@@ -293,31 +240,6 @@ class TestFIREPlanner:
         # Amount should be back to original (approximately, due to calculation)
         assert abs(final_row[sample_income_item.name].iloc[0] - original_amount) < 1.0
 
-    def test_stage2_to_stage3_transition(
-        self,
-        sample_user_profile: UserProfile,
-        sample_income_item: IncomeExpenseItem,
-        sample_expense_item: IncomeExpenseItem,
-    ) -> None:
-        """Test transition from stage 2 to stage 3."""
-        planner = FIREPlanner()
-        planner.set_user_profile(sample_user_profile)
-        planner.add_income_item(sample_income_item)
-        planner.add_expense_item(sample_expense_item)
-
-        planner.proceed_to_stage2()
-
-        # Should be able to proceed to stage 3
-        assert planner.can_proceed_to_stage3() is True
-
-        # Proceed to stage 3
-        results = planner.proceed_to_stage3()
-
-        assert planner.current_stage == PlannerStage.STAGE3_ANALYSIS
-        assert results is not None
-        assert results.fire_calculation is not None
-        assert planner.data.results == results
-
     def test_stage3_results_access(
         self,
         sample_user_profile: UserProfile,
@@ -330,8 +252,8 @@ class TestFIREPlanner:
         planner.add_income_item(sample_income_item)
         planner.add_expense_item(sample_expense_item)
 
-        planner.proceed_to_stage2()
-        results = planner.proceed_to_stage3()
+        planner.generate_projection_table()
+        results = planner.calculate_fire_results()
 
         # Test getting results
         retrieved_results = planner.get_results()
@@ -441,73 +363,6 @@ class TestFIREPlanner:
 
         finally:
             temp_path.unlink()  # Clean up
-
-    def test_override_cleanup_on_item_removal(
-        self,
-        sample_user_profile: UserProfile,
-        sample_income_item: IncomeExpenseItem,
-        sample_expense_item: IncomeExpenseItem,
-    ) -> None:
-        """Test that overrides are cleaned up when items are removed."""
-        planner = FIREPlanner()
-        planner.set_user_profile(sample_user_profile)
-        planner.add_income_item(sample_income_item)
-        planner.add_expense_item(sample_expense_item)
-
-        # Move to stage 2 and apply overrides
-        table = planner.proceed_to_stage2()
-        test_age = table.iloc[0]["age"]
-
-        planner.apply_override(test_age, sample_income_item.id, 90000)
-        planner.apply_override(test_age, sample_expense_item.id, 60000)
-
-        assert len(planner.data.overrides) == 2
-
-        # Remove the income item - its overrides should be cleaned up
-        removed = planner.remove_income_item(sample_income_item.id)
-        assert removed is True
-        assert len(planner.data.overrides) == 1
-
-        # The remaining override should be for the expense item
-        remaining_override = planner.data.overrides[0]
-        assert remaining_override.item_id == sample_expense_item.id
-        assert remaining_override.value == 60000
-
-        # The table should no longer have the income item column
-        updated_table = planner.get_projection_dataframe()
-        assert updated_table is not None
-        assert sample_income_item.name not in updated_table.columns
-        assert sample_expense_item.name in updated_table.columns
-
-    def test_reset_functionality(
-        self,
-        sample_user_profile: UserProfile,
-        sample_income_item: IncomeExpenseItem,
-        sample_expense_item: IncomeExpenseItem,
-    ) -> None:
-        """Test planner reset functionality."""
-        planner = FIREPlanner()
-        planner.set_user_profile(sample_user_profile)
-        planner.add_income_item(sample_income_item)
-        planner.add_expense_item(sample_expense_item)
-
-        # Progress through all stages
-        planner.proceed_to_stage2()
-        planner.apply_override(40, sample_income_item.id, 90000)
-        planner.proceed_to_stage3()
-
-        # Reset to stage 1
-        planner.reset_to_stage1()
-
-        assert planner.current_stage == PlannerStage.STAGE1_INPUT
-        assert planner.data.projection_df is None
-        assert len(planner.data.overrides) == 0
-        assert planner.data.results is None
-
-        # But user profile and items should remain
-        assert planner.data.user_profile == sample_user_profile
-        assert len(planner.data.income_items) == 1
-        assert len(planner.data.expense_items) == 1
 
     def test_language_setting(self) -> None:
         """Test language setting and i18n integration."""

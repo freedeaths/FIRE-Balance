@@ -86,7 +86,7 @@ class PortfolioConfiguration(BaseModel):
             AssetClass(
                 name="Stocks",  # Will be normalized to "stocks"
                 display_name="Stocks",
-                allocation_percentage=30.0,
+                allocation_percentage=20.0,
                 expected_return=5.0,
                 volatility=15.0,
                 liquidity_level=LiquidityLevel.MEDIUM,
@@ -110,7 +110,7 @@ class PortfolioConfiguration(BaseModel):
             AssetClass(
                 name="Cash",  # Will be normalized to "cash"
                 display_name="Cash",
-                allocation_percentage=10.0,
+                allocation_percentage=20.0,
                 expected_return=0.0,
                 volatility=1.0,
                 liquidity_level=LiquidityLevel.HIGH,
@@ -174,9 +174,9 @@ class UserProfile(BaseModel):
     inflation_rate: float = Field(3.0, description="Expected annual inflation rate (%)")
 
     # Safety buffer configuration
-    safety_buffer_months: float = Field(
-        12.0,
-        description="Safety buffer in months of annual expenses (default: 12 months)",
+    safety_buffer_months: int = Field(
+        6,
+        description="Safety buffer in months of annual expenses (default: 6 months)",
     )
 
     # Investment configuration
@@ -269,51 +269,6 @@ class IncomeExpenseItem(BaseModel):
         None, description="Category for grouping (e.g., 'Housing', 'Transportation')"
     )
 
-    # Predefined item type (if this is a template-based item)
-    predefined_type: Optional[str] = Field(
-        None,
-        description="Type of predefined item template (e.g., 'primary_work_income')",
-    )
-
-    def get_effective_age_range(
-        self, profile: "UserProfile"
-    ) -> Tuple[int, Optional[int]]:
-        """Get the effective age range for this item.
-
-        If this is a predefined item, calculates age range based on profile.
-        Otherwise, uses the manually set start_age and end_age.
-
-        Args:
-            profile: User profile containing age milestones
-
-        Returns:
-            Tuple of (start_age, end_age). end_age can be None for lifetime items.
-        """
-        if self.predefined_type == "primary_work_income":
-            return (profile.current_age, profile.expected_fire_age)
-        elif self.predefined_type == "government_pension":
-            return (profile.legal_retirement_age, profile.life_expectancy)
-        elif self.predefined_type == "basic_living_expenses":
-            return (profile.current_age, profile.life_expectancy)
-
-        # Use manual ages (traditional behavior)
-        return (self.start_age, self.end_age)
-
-    def is_predefined_item(self) -> bool:
-        """Check if this is a predefined item template."""
-        return self.predefined_type is not None
-
-    def sync_with_profile(self, profile: "UserProfile") -> None:
-        """Update start_age and end_age based on profile if this is a predefined item.
-
-        This method updates the stored age values to match the current profile.
-        Useful when the profile changes and predefined items need to be updated.
-        """
-        if self.predefined_type:
-            new_start_age, new_end_age = self.get_effective_age_range(profile)
-            self.start_age = new_start_age
-            self.end_age = new_end_age
-
 
 # =============================================================================
 # Calculation Results
@@ -332,12 +287,12 @@ class YearlyState:
     total_expense: float
     net_cash_flow: float  # income - expense
 
-    # Portfolio state
-    portfolio_value: Decimal
+    # Financial state
+    portfolio_value: Decimal  # Investment portfolio (always >= 0)
+    net_worth: float  # True net worth (can be negative, indicating debt)
     investment_return: Decimal  # Annual return from portfolio
 
     # Sustainability metrics (core logic)
-    safety_buffer_amount: float  # Required safety buffer based on annual expenses
     is_sustainable: (
         bool  # True if net worth can remain above safety buffer through life expectancy
     )
