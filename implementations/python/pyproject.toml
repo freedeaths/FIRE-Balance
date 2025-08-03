@@ -46,8 +46,7 @@ module = [
     "streamlit.*",
     "plotly.*",
     "pandas.*",
-    "numpy.*",
-    "altair.*"
+    "numpy.*"
 ]
 ignore_missing_imports = true
 

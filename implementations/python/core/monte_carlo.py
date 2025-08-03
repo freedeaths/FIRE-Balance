@@ -27,10 +27,21 @@ class MonteCarloResult:
     percentile_5_net_worth: float  # Worst 5% scenario
     percentile_95_net_worth: float  # Best 5% scenario
 
-    # Risk metrics
+    # Risk metrics - final net worth
     worst_case_final_net_worth: float
     best_case_final_net_worth: float
     standard_deviation_final_net_worth: float
+
+    # Risk metrics - minimum net worth (most sensitive indicator)
+    mean_minimum_net_worth: float
+    median_minimum_net_worth: float
+    percentile_5_minimum_net_worth: float  # Worst 5% scenario for minimum
+    percentile_25_minimum_net_worth: float  # 25th percentile for minimum
+    percentile_75_minimum_net_worth: float  # 75th percentile for minimum
+    percentile_95_minimum_net_worth: float  # Best 5% scenario for minimum
+    worst_case_minimum_net_worth: float
+    best_case_minimum_net_worth: float
+    standard_deviation_minimum_net_worth: float
 
     # Black swan analysis results
     black_swan_impact_analysis: Optional[Dict[str, float]] = None
@@ -94,6 +105,7 @@ class MonteCarloSimulator:
             np.random.seed(self.seed)
 
         final_net_worths: List[float] = []
+        minimum_net_worths: List[float] = []
         successful_runs = 0
         simulation_data = []  # Store detailed data for black swan analysis
 
@@ -119,6 +131,14 @@ class MonteCarloSimulator:
 
             # Collect results
             final_net_worths.append(result.final_net_worth)
+
+            # Calculate minimum net worth across entire lifetime
+            minimum_net_worth = result.final_net_worth  # fallback
+            if result.yearly_results:
+                minimum_net_worth = min(
+                    state.net_worth for state in result.yearly_results
+                )
+            minimum_net_worths.append(minimum_net_worth)
             is_successful = result.is_fire_achievable
             if is_successful:
                 successful_runs += 1
@@ -128,6 +148,7 @@ class MonteCarloSimulator:
                 {
                     "run_id": run_id,
                     "final_net_worth": result.final_net_worth,
+                    "minimum_net_worth": minimum_net_worth,
                     "fire_success": is_successful,
                     "black_swan_events": black_swan_events,
                 }
@@ -141,6 +162,7 @@ class MonteCarloSimulator:
 
         # Calculate basic statistics
         final_net_worths_array = np.array(final_net_worths)
+        minimum_net_worths_array = np.array(minimum_net_worths)
 
         # Black swan analysis
         black_swan_analysis = None
@@ -165,6 +187,26 @@ class MonteCarloSimulator:
             worst_case_final_net_worth=float(np.min(final_net_worths_array)),
             best_case_final_net_worth=float(np.max(final_net_worths_array)),
             standard_deviation_final_net_worth=float(np.std(final_net_worths_array)),
+            # Minimum net worth statistics (most sensitive risk indicator)
+            mean_minimum_net_worth=float(np.mean(minimum_net_worths_array)),
+            median_minimum_net_worth=float(np.median(minimum_net_worths_array)),
+            percentile_5_minimum_net_worth=float(
+                np.percentile(minimum_net_worths_array, 5)
+            ),
+            percentile_25_minimum_net_worth=float(
+                np.percentile(minimum_net_worths_array, 25)
+            ),
+            percentile_75_minimum_net_worth=float(
+                np.percentile(minimum_net_worths_array, 75)
+            ),
+            percentile_95_minimum_net_worth=float(
+                np.percentile(minimum_net_worths_array, 95)
+            ),
+            worst_case_minimum_net_worth=float(np.min(minimum_net_worths_array)),
+            best_case_minimum_net_worth=float(np.max(minimum_net_worths_array)),
+            standard_deviation_minimum_net_worth=float(
+                np.std(minimum_net_worths_array)
+            ),
             black_swan_impact_analysis=black_swan_analysis,
             worst_case_scenarios=worst_scenarios,
             resilience_score=resilience_score,

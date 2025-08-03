@@ -166,7 +166,6 @@ def main() -> None:
 
         current_stage: int = st.session_state.stage
         has_validation_errors = st.session_state.get("has_validation_errors", False)
-        st.session_state.get("planner") is not None
 
         # Simple navigation: can only go to adjacent stages (difference of 1)
         # and no errors

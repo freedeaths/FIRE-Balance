@@ -2,8 +2,9 @@
 
 from typing import Any, Callable
 
-import altair as alt
 import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
 import streamlit as st
 
 
@@ -266,72 +267,118 @@ def render_stage2(t: Callable[..., str]) -> None:
         .notna()
     ]
 
-    # Interactive legend selection
-    selection = alt.selection_multi(fields=["Category"], bind="legend")
-
-    # Define a stable color scheme
+    # Create interactive Plotly chart with stacked/individual view toggle
+    # Define consistent color scheme
     all_categories = income_cols + expense_cols
-    color_scale = alt.Scale(domain=all_categories, scheme="tableau20")
+    colors = px.colors.qualitative.Plotly + px.colors.qualitative.Set3
+    color_map = {cat: colors[i % len(colors)] for i, cat in enumerate(all_categories)}
 
-    # --- Create a multi-layered chart for advanced interaction ---
+    # UI controls for chart interaction
+    col1, col2 = st.columns([1, 3])
 
-    # Base chart with selection and initial transforms
-    base_chart = alt.Chart(chart_data).add_selection(selection)
-
-    # Layer 1: Unstacked chart, visible only when 1 item is selected
-    unstacked_chart = base_chart.mark_bar().encode(
-        y=alt.Y("SignedAmount:Q", title=t("chart_amount_label"), stack=None),
-        opacity=alt.condition("datum.selection_count == 1", alt.value(1), alt.value(0)),
-    )
-
-    # Layer 2: Stacked chart, visible only when more than 1 item is selected
-    stacked_chart = base_chart.mark_bar().encode(
-        y=alt.Y("SignedAmount:Q", title=t("chart_amount_label"), stack="zero"),
-        order=alt.Order("selection_id:Q", sort="ascending"),
-        opacity=alt.condition("datum.selection_count > 1", alt.value(1), alt.value(0)),
-    )
-
-    # Create zero reference line
-    zero_line_data = pd.DataFrame({"y": [0]})
-    zero_line = (
-        alt.Chart(zero_line_data)
-        .mark_rule(color="red", strokeDash=[5, 5], strokeWidth=2, opacity=0.7)
-        .encode(y="y:Q")
-    )
-
-    # Combine layers and add shared encodings and transforms
-    main_chart = (
-        alt.layer(unstacked_chart, stacked_chart)
-        .encode(
-            x=alt.X("Age:O", title=t("chart_age_label")),
-            color=alt.condition(
-                selection,
-                alt.Color(
-                    "Category:N", scale=color_scale, title=t("chart_category_label")
-                ),
-                alt.value("lightgray"),
+    with col1:
+        view_mode = st.selectbox(
+            t("chart_view_mode"),
+            ["stacked", "individual"],
+            format_func=lambda x: (
+                t("stacked_view") if x == "stacked" else t("individual_view")
             ),
-            tooltip=[
-                alt.Tooltip("Age", title=t("chart_age_label")),
-                alt.Tooltip("Category", title=t("chart_category_label")),
-                alt.Tooltip("Amount", title=t("chart_amount_label"), format=",.0f"),
-            ],
+            help=t("chart_view_mode_help"),
         )
-        .transform_filter(selection)
-        .transform_window(
-            selection_id="rank()",
-            sort=[alt.SortField("Category", order="ascending")],
-            groupby=["Category"],
+
+    with col2:
+        if view_mode == "individual":
+            selected_category = st.selectbox(
+                t("select_category"), all_categories, help=t("select_category_help")
+            )
+
+    # Create Plotly figure
+    fig = go.Figure()
+
+    if view_mode == "stacked":
+        # Stacked bar chart - all items stack together
+        ages = sorted(chart_data["Age"].unique())
+
+        # Add each category as a separate trace for stacking
+        for category in all_categories:
+            cat_data = chart_data[chart_data["Category"] == category]
+
+            # Create age-value mapping
+            age_values = {}
+            for _, row in cat_data.iterrows():
+                age_values[row["Age"]] = row["SignedAmount"]
+
+            # Create full series with zeros for missing ages
+            y_values = [age_values.get(age, 0) for age in ages]
+
+            fig.add_trace(
+                go.Bar(
+                    x=ages,
+                    y=y_values,
+                    name=category,
+                    marker_color=color_map[category],
+                    hovertemplate=f"<b>{category}</b><br>"
+                    + "Age: %{x}<br>"
+                    + "Amount: %{y:,.0f}<br>"
+                    + "<extra></extra>",
+                )
+            )
+
+    else:  # individual view
+        # Single category bar chart from zero
+        cat_data = chart_data[chart_data["Category"] == selected_category]
+
+        fig.add_trace(
+            go.Bar(
+                x=cat_data["Age"],
+                y=cat_data["SignedAmount"],
+                name=selected_category,
+                marker_color=color_map[selected_category],
+                base=0,  # Force from zero
+                hovertemplate=f"<b>{selected_category}</b><br>"
+                + "Age: %{x}<br>"
+                + "Amount: %{y:,.0f}<br>"
+                + "<extra></extra>",
+            )
         )
-        .transform_window(selection_count="distinct(Category)", frame=[None, None])
+
+    # Add zero reference line
+    fig.add_hline(y=0, line_dash="dash", line_color="red", line_width=2, opacity=0.7)
+
+    # Update layout
+    fig.update_layout(
+        title=dict(
+            text=t("financial_projections_chart_title"), x=0.5, font=dict(size=16)
+        ),
+        xaxis=dict(
+            title=t("chart_age_label"),
+            type="category",
+            showgrid=True,
+            gridwidth=1,
+            gridcolor="lightgray",
+        ),
+        yaxis=dict(
+            title=t("chart_amount_label"),
+            showgrid=True,
+            gridwidth=1,
+            gridcolor="lightgray",
+        ),
+        height=400,
+        hovermode="x unified" if view_mode == "stacked" else "closest",
+        legend=dict(
+            orientation="v",
+            yanchor="top",
+            y=1,
+            xanchor="left",
+            x=1.02,
+            title=t("chart_category_label"),
+        ),
+        margin=dict(r=150),
+        barmode="relative" if view_mode == "stacked" else "group",
     )
 
-    # Combine main chart with zero line
-    chart = alt.layer(main_chart, zero_line).properties(
-        title=t("financial_projections_chart_title"), height=400
-    )
-
-    st.altair_chart(chart, use_container_width=True)
+    # Display the chart
+    st.plotly_chart(fig, use_container_width=True)
 
     # Always show the editing tip at the bottom
     st.info(t("table_edit_tip"))
