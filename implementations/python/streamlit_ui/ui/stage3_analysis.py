@@ -1131,3 +1131,100 @@ def render_stage3(t: Callable[..., str]) -> None:
                 )
 
             st.info(t("risk_management_suggestions"))
+
+    # --- Save Results Section ---
+    st.subheader(t("save_results"))
+    st.write(t("save_results_description"))
+
+    # Single column for HTML report only
+    if st.button(t("save_html_report"), type="primary", use_container_width=True):
+        try:
+            from ..utils.html_report_generator import (
+                generate_collapsible_html_report,
+            )
+
+            # Get Monte Carlo results - try multiple sources
+            report_monte_carlo_result = st.session_state.get("monte_carlo_result", None)
+            black_swan_enabled = st.session_state.get("monte_carlo_black_swan", False)
+            num_simulations = st.session_state.get("monte_carlo_num_simulations", 1000)
+
+            # If no Monte Carlo result in session state, try to run a quick simulation
+            if report_monte_carlo_result is None and results and planner:
+                try:
+                    with st.spinner(t("generating_monte_carlo_for_report")):
+                        from core.engine import EngineInput, FIREEngine
+                        from core.monte_carlo import MonteCarloSimulator
+
+                        # Create engine input from planner data
+                        detailed_projection = planner.get_projection_with_overrides()
+                        annual_summary = planner._create_annual_summary_from_df(
+                            detailed_projection
+                        )
+
+                        engine_input = EngineInput(
+                            user_profile=sim_profile,
+                            annual_financial_projection=annual_summary,
+                            detailed_projection=detailed_projection,
+                            income_items=planner.data.income_items,
+                        )
+
+                        engine = FIREEngine(engine_input)
+
+                        # Run a quick Monte Carlo simulation for the report
+                        simulation_settings = planner.get_simulation_settings()
+                        simulation_settings.num_simulations = (
+                            500  # Reduced for faster report generation
+                        )
+
+                        simulator = MonteCarloSimulator(
+                            engine=engine, settings=simulation_settings
+                        )
+                        report_monte_carlo_result = simulator.run_simulation()
+
+                        # Store for future use
+                        st.session_state.monte_carlo_result = report_monte_carlo_result
+                        st.session_state.monte_carlo_black_swan = (
+                            simulation_settings.include_black_swan_events
+                        )
+                        st.session_state.monte_carlo_num_simulations = (
+                            simulation_settings.num_simulations
+                        )
+
+                        black_swan_enabled = (
+                            simulation_settings.include_black_swan_events
+                        )
+                        num_simulations = simulation_settings.num_simulations
+                except Exception as e:
+                    st.warning(
+                        f"Could not generate Monte Carlo results for report: {str(e)}"
+                    )
+                    report_monte_carlo_result = None
+
+            # Generate HTML report
+            html_content = generate_collapsible_html_report(
+                user_profile=sim_profile,
+                results=results,
+                planner=planner,
+                t=t,
+                chart_df=chart_df,
+                monte_carlo_result=report_monte_carlo_result,
+                black_swan_enabled=black_swan_enabled,
+                num_simulations=num_simulations,
+            )
+
+            # Provide download button
+            st.download_button(
+                label=t("download_html_report"),
+                data=html_content.encode("utf-8"),
+                file_name=(
+                    "fire_analysis_report_"
+                    f"{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.html"
+                ),
+                mime="text/html",
+                help=t("html_report_help"),
+            )
+
+            st.success(t("html_report_generated"))
+
+        except Exception as e:
+            st.error(t("html_generation_error", error=str(e)))
