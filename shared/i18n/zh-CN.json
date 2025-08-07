@@ -275,5 +275,7 @@
   "no_monte_carlo_results": "无蒙特卡罗结果。请运行模拟以生成数据。",
   "generating_monte_carlo_for_report": "正在为报告生成蒙特卡罗分析...",
   "years": "岁",
-  "months": "个月"
+  "months": "个月",
+  "previous": "上一步",
+  "next": "下一步"
 }

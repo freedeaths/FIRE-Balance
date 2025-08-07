@@ -275,5 +275,7 @@
   "no_monte_carlo_results": "モンテカルロ結果がありません。データを生成するためにシミュレーションを実行してください。",
   "generating_monte_carlo_for_report": "レポート用のモンテカルロ分析を生成中...",
   "years": "歳",
-  "months": "ヶ月"
+  "months": "ヶ月",
+  "previous": "前へ",
+  "next": "次へ"
 }
