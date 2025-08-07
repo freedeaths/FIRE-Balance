@@ -47,7 +47,7 @@ def render_top_bar_minimal(i18n: I18nManager) -> None:
 
     with lang_col:
         # Use original selectbox approach for language
-        lang_options = {"English": "en", "简体中文": "zh-CN", "日本語": "ja"}
+        lang_options = {"EN": "en", "中文": "zh-CN", "日本語": "ja"}
         selected_lang_display = st.selectbox(
             label=i18n.t("language"),
             options=list(lang_options.keys()),
@@ -259,14 +259,14 @@ def main() -> None:
         lang_options = {
             "en": {
                 "display": "EN",
-                "alternatives": [("中文", "zh-CN"), ("日本", "ja")],
+                "alternatives": [("中文", "zh-CN"), ("日本語", "ja")],
             },
             "zh-CN": {
                 "display": "中文",
-                "alternatives": [("EN", "en"), ("日本", "ja")],
+                "alternatives": [("EN", "en"), ("日本語", "ja")],
             },
             "ja": {
-                "display": "日本",
+                "display": "日本語",
                 "alternatives": [("EN", "en"), ("中文", "zh-CN")],
             },
         }
