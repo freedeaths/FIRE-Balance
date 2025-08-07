@@ -1,221 +1,402 @@
 /**
- * Tests for FIRE calculation engine
- *
- * These tests ensure our TypeScript engine produces consistent results
- * and maintains compatibility with the Python implementation.
+ * Tests for FIRE calculation engine - Direct port from Python test_engine.py
+ * Ensures identical behavior between TypeScript and Python implementations
  */
 
 import {
+  UserProfile,
+  YearlyState,
+  createUserProfile,
+  createPortfolioConfiguration,
+  getCurrentAge
+} from '../data_models';
+
+import {
   FIREEngine,
+  EngineInput,
+  AnnualFinancialProjection,
   createEngineInput,
-  validateEngineInput
+  createProjectionRow
 } from '../engine';
-import { calculateCurrentAge } from '../../utils/validation';
-import type { UserProfile } from '../../types';
-import { DEFAULT_USER_PROFILE } from '../../types';
 
 describe('FIREEngine', () => {
-  // Sample user profile for testing
-  const testProfile: UserProfile = {
-    ...DEFAULT_USER_PROFILE,
-    birth_year: 1990,
-    expected_fire_age: 45,
-    current_net_worth: 100000,
+  // Create sample user profile fixture
+  const createSampleProfile = (): UserProfile => {
+    const portfolio = createPortfolioConfiguration({
+      asset_classes: [
+        {
+          name: 'Cash',
+          allocation_percentage: 10.0,
+          expected_return: 1.0,
+          volatility: 1.0,
+          liquidity_level: 'high'
+        },
+        {
+          name: 'Stocks',
+          allocation_percentage: 60.0,
+          expected_return: 7.0,
+          volatility: 15.0,
+          liquidity_level: 'medium'
+        },
+        {
+          name: 'Bonds',
+          allocation_percentage: 30.0,
+          expected_return: 3.0,
+          volatility: 5.0,
+          liquidity_level: 'low'
+        }
+      ],
+      enable_rebalancing: true
+    });
+
+    return createUserProfile({
+      birth_year: 1990, // Around 34 years old in 2024
+      expected_fire_age: 50,
+      legal_retirement_age: 65,
+      life_expectancy: 85,
+      current_net_worth: 100000.0,
+      inflation_rate: 3.0,
+      safety_buffer_months: 12.0, // 1 year safety buffer
+      portfolio
+    });
   };
 
-  // Sample projection data
-  const createSampleProjection = (years = 5) => {
-    const currentAge = calculateCurrentAge(testProfile.birth_year);
-    const projectionData = [];
+  // Create sample projection fixture
+  const createSampleProjection = (): AnnualFinancialProjection[] => {
+    const data: AnnualFinancialProjection[] = [];
+    const currentYear = 2024;
+    const startAge = 34;
 
-    for (let i = 0; i < years; i++) {
-      projectionData.push({
-        age: currentAge + i,
-        year: new Date().getFullYear() + i,
-        total_income: 80000 * Math.pow(1.03, i), // 3% growth
-        total_expense: 50000 * Math.pow(1.03, i), // 3% inflation
-      });
+    // Create 5 years of projection data
+    for (let i = 0; i < 5; i++) {
+      const age = startAge + i;
+      const year = currentYear + i;
+
+      // Simple progression: income grows, expenses stable
+      const totalIncome = 80000.0 + (i * 2000); // Growing income
+      const totalExpense = 50000.0; // Stable expenses
+
+      data.push(createProjectionRow(age, year, totalIncome, totalExpense));
     }
 
-    return projectionData;
+    return data;
   };
 
-  describe('Engine Input Validation', () => {
-    test('should validate correct engine input', () => {
-      const projectionData = createSampleProjection();
-      const engineInput = createEngineInput(testProfile, projectionData);
-      const errors = validateEngineInput(engineInput);
+  // Create engine input fixture
+  const createSampleEngineInput = (): EngineInput => {
+    const userProfile = createSampleProfile();
+    const projectionData = createSampleProjection();
 
-      expect(errors).toHaveLength(0);
-    });
+    return createEngineInput(userProfile, projectionData);
+  };
 
-    test('should reject empty projection data', () => {
-      const engineInput = createEngineInput(testProfile, []);
-      const errors = validateEngineInput(engineInput);
+  let fireEngine: FIREEngine;
+  let sampleInput: EngineInput;
 
-      expect(errors).toContain('Annual financial projection data is required');
-    });
-
-    test('should reject malformed projection data', () => {
-      const badProjection = [
-        { age: 30, year: 2024 }, // Missing total_income and total_expense
-      ];
-      const engineInput = createEngineInput(testProfile, badProjection as any);
-      const errors = validateEngineInput(engineInput);
-
-      expect(errors.length).toBeGreaterThan(0);
-      expect(errors[0]).toContain('missing required fields');
-    });
+  beforeEach(() => {
+    sampleInput = createSampleEngineInput();
+    fireEngine = new FIREEngine(sampleInput);
   });
 
-  describe('FIRE Calculations', () => {
-    test('should perform basic FIRE calculation', () => {
-      const projectionData = createSampleProjection(10);
-      const engineInput = createEngineInput(testProfile, projectionData);
-      const engine = new FIREEngine(engineInput);
-
-      const result = engine.calculate();
-
-      // Basic result structure validation
-      expect(result).toHaveProperty('is_fire_achievable');
-      expect(result).toHaveProperty('fire_net_worth');
-      expect(result).toHaveProperty('yearly_results');
-      expect(result.yearly_results).toHaveLength(10);
-
-      // Ensure all yearly results have required properties
-      result.yearly_results.forEach(yearlyState => {
-        expect(yearlyState).toHaveProperty('age');
-        expect(yearlyState).toHaveProperty('year');
-        expect(yearlyState).toHaveProperty('total_income');
-        expect(yearlyState).toHaveProperty('total_expense');
-        expect(yearlyState).toHaveProperty('net_cash_flow');
-        expect(yearlyState).toHaveProperty('portfolio_value');
-        expect(yearlyState).toHaveProperty('net_worth');
-        expect(yearlyState).toHaveProperty('is_sustainable');
-      });
-    });
-
-    test('should calculate net cash flow correctly', () => {
-      const projectionData = [
-        {
-          age: 35,
-          year: 2024,
-          total_income: 100000,
-          total_expense: 60000,
-        },
-      ];
-
-      const engineInput = createEngineInput(testProfile, projectionData);
-      const engine = new FIREEngine(engineInput);
-
-      const yearlyState = engine.calculateSingleYear(35, 2024, 100000, 60000);
-
-      expect(yearlyState.net_cash_flow).toBe(40000); // 100000 - 60000
-      expect(yearlyState.total_income).toBe(100000);
-      expect(yearlyState.total_expense).toBe(60000);
-    });
-
-    test('should handle positive cash flows', () => {
-      const projectionData = [
-        {
-          age: 35,
-          year: 2024,
-          total_income: 100000,
-          total_expense: 50000, // Positive cash flow
-        },
-      ];
-
-      const engineInput = createEngineInput(testProfile, projectionData);
-      const engine = new FIREEngine(engineInput);
-      const result = engine.calculate();
-
-      const firstYear = result.yearly_results[0];
-      expect(firstYear.net_cash_flow).toBeGreaterThan(0);
-      expect(firstYear.portfolio_value).toBeGreaterThan(testProfile.current_net_worth);
-    });
-
-    test('should handle negative cash flows', () => {
-      const projectionData = [
-        {
-          age: 35,
-          year: 2024,
-          total_income: 30000,
-          total_expense: 80000, // Negative cash flow
-        },
-      ];
-
-      const engineInput = createEngineInput(testProfile, projectionData);
-      const engine = new FIREEngine(engineInput);
-      const result = engine.calculate();
-
-      const firstYear = result.yearly_results[0];
-      expect(firstYear.net_cash_flow).toBeLessThan(0);
-      // Portfolio value should decrease or become zero
-      expect(firstYear.portfolio_value).toBeLessThanOrEqual(testProfile.current_net_worth);
-    });
+  test('engine initialization', () => {
+    expect(fireEngine.input).toBeDefined();
+    expect(fireEngine.profile).toBeDefined();
+    expect(fireEngine.projection_df).toBeDefined();
+    expect(fireEngine.portfolio_simulator).toBeDefined();
+    // PortfolioSimulator should be self-contained with internal calculator
+    expect(fireEngine.portfolio_simulator.calculator).toBeDefined();
   });
 
-  describe('Portfolio Integration', () => {
-    test('should apply investment returns', () => {
-      const projectionData = createSampleProjection(2);
-      const engineInput = createEngineInput(testProfile, projectionData);
-      const engine = new FIREEngine(engineInput);
+  test('initial portfolio creation', () => {
+    const portfolioSimulator = fireEngine.portfolio_simulator;
+    const initialPortfolio = portfolioSimulator.getCurrentPortfolio();
 
-      // Get yearly states to check investment returns
-      const yearlyStates = engine.getYearlyStates();
+    // Should have some assets based on user profile
+    expect(Object.keys(initialPortfolio.asset_values).length).toBeGreaterThan(0);
 
-      expect(yearlyStates).toHaveLength(2);
-      yearlyStates.forEach(state => {
-        expect(state).toHaveProperty('investment_return');
-        // Investment return should be a number (could be positive, negative, or zero)
-        expect(typeof state.investment_return).toBe('number');
-      });
-    });
+    // Total value should match current net worth
+    const totalValue = Object.values(initialPortfolio.asset_values).reduce((sum, val) => sum + val, 0);
+    expect(totalValue).toBeCloseTo(fireEngine.profile.current_net_worth, 6);
 
-    test('should calculate traditional FIRE metrics', () => {
-      const projectionData = createSampleProjection(1);
-      const engineInput = createEngineInput(testProfile, projectionData);
-      const engine = new FIREEngine(engineInput);
-
-      const result = engine.calculate();
-      const firstYear = result.yearly_results[0];
-
-      // Traditional FIRE number should be 25x annual expenses
-      const expectedFireNumber = firstYear.total_expense * 25;
-      expect(firstYear.fire_number).toBeCloseTo(expectedFireNumber, 2);
-
-      // FIRE progress should be portfolio_value / fire_number
-      const expectedProgress = firstYear.portfolio_value / expectedFireNumber;
-      expect(firstYear.fire_progress).toBeCloseTo(expectedProgress, 4);
-    });
+    // Test reset functionality
+    const originalValue = totalValue;
+    portfolioSimulator.resetToInitial();
+    const resetValue = Object.values(portfolioSimulator.getCurrentPortfolio().asset_values).reduce((sum, val) => sum + val, 0);
+    expect(resetValue).toBeCloseTo(originalValue, 6);
   });
 
-  describe('Edge Cases', () => {
-    test('should handle zero net worth', () => {
-      const zeroNetWorthProfile: UserProfile = {
-        ...testProfile,
-        current_net_worth: 0,
-      };
+  test('fire calculation basic', () => {
+    const result = fireEngine.calculate();
 
-      const projectionData = createSampleProjection(1);
-      const engineInput = createEngineInput(zeroNetWorthProfile, projectionData);
-      const engine = new FIREEngine(engineInput);
+    // Should return valid result
+    expect(result).toBeDefined();
+    expect(typeof result.is_fire_achievable).toBe('boolean');
+    expect(typeof result.fire_net_worth).toBe('number');
+    expect(result.yearly_results.length).toBe(5); // 5 years of data
 
-      const result = engine.calculate();
+    // Each yearly result should have required fields
+    for (const yearlyResult of result.yearly_results) {
+      expect(yearlyResult.age).toBeGreaterThanOrEqual(34);
+      expect(yearlyResult.year).toBeGreaterThanOrEqual(2024);
+      expect(yearlyResult.total_income).toBeGreaterThan(0);
+      expect(yearlyResult.total_expense).toBeGreaterThan(0);
+      expect(typeof yearlyResult.net_cash_flow).toBe('number');
+      // Check investment return is numeric
+      expect(typeof yearlyResult.investment_return).toBe('number');
+      expect(yearlyResult.portfolio_value).toBeGreaterThanOrEqual(0);
+    }
+  });
 
-      expect(result).toHaveProperty('is_fire_achievable');
-      expect(result.yearly_results).toHaveLength(1);
+  test('yearly states calculation', () => {
+    const yearlyStates = fireEngine.get_yearly_states();
+
+    expect(yearlyStates.length).toBe(5); // 5 years of data
+
+    for (const state of yearlyStates) {
+      expect(state.age).toBeGreaterThanOrEqual(34);
+      expect(state.year).toBeGreaterThanOrEqual(2024);
+
+      // Financial metrics should be calculated
+      expect(typeof state.net_worth).toBe('number');
+      expect(typeof state.is_sustainable).toBe('boolean');
+
+      // Traditional FIRE metrics (for reference)
+      expect(state.fire_number).toBeGreaterThan(0); // 25x expenses
+      expect(typeof state.fire_progress).toBe('number');
+
+      // Portfolio metrics
+      expect(state.portfolio_value).toBeGreaterThanOrEqual(0);
+      expect(typeof state.investment_return).toBe('number');
+    }
+  });
+
+  test('fire number calculation', () => {
+    const yearlyStates = fireEngine.get_yearly_states();
+
+    for (const state of yearlyStates) {
+      const expectedFireNumber = state.total_expense * 25.0;
+      expect(state.fire_number).toBeCloseTo(expectedFireNumber, 6);
+    }
+  });
+
+  test('fire progress calculation', () => {
+    const yearlyStates = fireEngine.get_yearly_states();
+
+    for (const state of yearlyStates) {
+      if (state.fire_number > 0) {
+        const expectedProgress = state.portfolio_value / state.fire_number;
+        expect(state.fire_progress).toBeCloseTo(expectedProgress, 6);
+      } else {
+        expect(state.fire_progress).toBe(0.0);
+      }
+    }
+  });
+
+  test('portfolio integration', () => {
+    const result = fireEngine.calculate();
+
+    // Portfolio should grow over time with positive cash flow
+    const netWorths = result.yearly_results.map(yr => yr.portfolio_value);
+
+    // With positive cash flow and returns, net worth should generally increase
+    const finalNetWorth = netWorths[netWorths.length - 1];
+    const initialNetWorth = fireEngine.profile.current_net_worth;
+
+    expect(finalNetWorth).toBeGreaterThan(initialNetWorth); // Should grow with positive cash flows
+  });
+
+  test('sustainability logic', () => {
+    const yearlyStates = fireEngine.get_yearly_states();
+
+    // Check that each state has sustainability metrics
+    for (const state of yearlyStates) {
+      expect(typeof state.net_worth).toBe('number');
+      expect(typeof state.is_sustainable).toBe('boolean');
+
+      // Safety buffer should be calculated dynamically
+      const expectedBuffer = state.total_expense * (fireEngine.profile.safety_buffer_months / 12.0);
+      // Sustainability should be based on net_worth vs safety buffer
+      const expectedSustainable = state.net_worth >= expectedBuffer;
+      expect(state.is_sustainable).toBe(expectedSustainable);
+
+      // Traditional FIRE metrics should still exist for reference
+      expect(state.fire_number).toBeGreaterThan(0);
+      expect(typeof state.fire_progress).toBe('number');
+    }
+  });
+
+  test('safety buffer configuration', () => {
+    // Test with 6 months buffer
+    const profile6m = createUserProfile({
+      birth_year: 1990,
+      expected_fire_age: 50,
+      legal_retirement_age: 65,
+      life_expectancy: 85,
+      current_net_worth: 100000.0,
+      inflation_rate: 3.0,
+      safety_buffer_months: 6.0, // 6 months
     });
 
-    test('should handle single year projection', () => {
-      const projectionData = createSampleProjection(1);
-      const engineInput = createEngineInput(testProfile, projectionData);
-      const engine = new FIREEngine(engineInput);
+    const engine6m = new FIREEngine(createEngineInput(profile6m, createSampleProjection()));
+    const states6m = engine6m.get_yearly_states();
 
-      const result = engine.calculate();
-
-      expect(result.yearly_results).toHaveLength(1);
-      expect(result.total_years_simulated).toBe(1);
+    // Test with 24 months buffer
+    const profile24m = createUserProfile({
+      birth_year: 1990,
+      expected_fire_age: 50,
+      legal_retirement_age: 65,
+      life_expectancy: 85,
+      current_net_worth: 100000.0,
+      inflation_rate: 3.0,
+      safety_buffer_months: 24.0, // 24 months
     });
+
+    const engine24m = new FIREEngine(createEngineInput(profile24m, createSampleProjection()));
+    const states24m = engine24m.get_yearly_states();
+
+    // Compare safety buffers (calculated dynamically)
+    for (let i = 0; i < Math.min(states6m.length, states24m.length); i++) {
+      const state6m = states6m[i];
+      const state24m = states24m[i];
+
+      // Calculate safety buffers dynamically
+      const buffer6m = state6m.total_expense * (6.0 / 12.0);
+      const buffer24m = state24m.total_expense * (24.0 / 12.0);
+
+      // 24 month buffer should be 4x larger than 6 month buffer
+      const expectedRatio = 24.0 / 6.0;
+      const actualRatio = buffer24m / buffer6m;
+      expect(Math.abs(actualRatio - expectedRatio)).toBeLessThan(0.01);
+
+      // Sustainability logic should be different for different buffers
+      const sustainable6m = state6m.net_worth >= buffer6m;
+      const sustainable24m = state24m.net_worth >= buffer24m;
+      expect(state6m.is_sustainable).toBe(sustainable6m);
+      expect(state24m.is_sustainable).toBe(sustainable24m);
+    }
+  });
+});
+
+describe('EngineInput', () => {
+  test('engine input creation', () => {
+    const profile = createUserProfile({
+      birth_year: 1990,
+      expected_fire_age: 50,
+      legal_retirement_age: 65,
+      life_expectancy: 85,
+      current_net_worth: 50000.0,
+      inflation_rate: 2.5,
+      safety_buffer_months: 12.0,
+    });
+
+    const projectionData: AnnualFinancialProjection[] = [
+      createProjectionRow(34, 2024, 60000.0, 40000.0),
+      createProjectionRow(35, 2025, 62000.0, 41000.0)
+    ];
+
+    const engineInput = createEngineInput(profile, projectionData);
+
+    expect(engineInput.user_profile).toBe(profile);
+    expect(engineInput.annual_financial_projection.length).toBe(2);
+    expect(engineInput.annual_financial_projection[0].age).toBe(34);
+    expect(engineInput.annual_financial_projection[0].year).toBe(2024);
+    expect(engineInput.annual_financial_projection[0].total_income).toBe(60000.0);
+    expect(engineInput.annual_financial_projection[0].total_expense).toBe(40000.0);
+  });
+});
+
+describe('YearlyState', () => {
+  test('yearly state creation', () => {
+    const state: YearlyState = {
+      age: 35,
+      year: 2025,
+      total_income: 70000.0,
+      total_expense: 45000.0,
+      net_cash_flow: 25000.0,
+      portfolio_value: 150000.00,
+      net_worth: 150000.0, // New field: net worth (can be negative)
+      investment_return: 5000.00,
+      is_sustainable: false,
+      fire_number: 1125000.0, // 45000 * 25
+      fire_progress: 0.133, // 150000 / 1125000
+    };
+
+    // Test field access
+    expect(state.age).toBe(35);
+    expect(state.year).toBe(2025);
+    expect(state.total_income).toBe(70000.0);
+    expect(state.total_expense).toBe(45000.0);
+    expect(state.net_cash_flow).toBe(25000.0);
+    expect(state.portfolio_value).toBe(150000.00);
+    expect(state.net_worth).toBe(150000.0); // Test new field
+    expect(state.investment_return).toBe(5000.00);
+    expect(state.is_sustainable).toBe(false);
+    expect(state.fire_number).toBe(1125000.0);
+    expect(state.fire_progress).toBeCloseTo(0.133, 3);
+  });
+
+  test('net worth negative values', () => {
+    // Test state with negative net worth (debt situation)
+    const state: YearlyState = {
+      age: 70,
+      year: 2055,
+      total_income: 30000.0,
+      total_expense: 50000.0,
+      net_cash_flow: -20000.0,
+      portfolio_value: 0.00, // Portfolio depleted
+      net_worth: -10000.0, // In debt
+      investment_return: 0.00,
+      is_sustainable: false,
+      fire_number: 1250000.0, // 50000 * 25
+      fire_progress: 0.0,
+    };
+
+    // Test that negative net worth is properly stored and accessible
+    expect(state.net_worth).toBe(-10000.0);
+    expect(state.net_worth).toBeLessThan(0); // Explicitly test it's negative
+    expect(state.portfolio_value).toBe(0.00);
+    expect(state.is_sustainable).toBe(false);
+    expect(state.net_cash_flow).toBeLessThan(0);
+  });
+
+  test('net worth vs portfolio value', () => {
+    // Case 1: Portfolio has value, net worth should equal portfolio value
+    const statePositive: YearlyState = {
+      age: 40,
+      year: 2030,
+      total_income: 80000.0,
+      total_expense: 60000.0,
+      net_cash_flow: 20000.0,
+      portfolio_value: 500000.00,
+      net_worth: 500000.0,
+      investment_return: 25000.00,
+      is_sustainable: true,
+      fire_number: 1500000.0,
+      fire_progress: 0.333,
+    };
+
+    expect(statePositive.net_worth).toBe(statePositive.portfolio_value);
+    expect(statePositive.net_worth).toBeGreaterThan(0);
+    expect(statePositive.is_sustainable).toBe(true);
+
+    // Case 2: Portfolio depleted, net worth negative
+    const stateNegative: YearlyState = {
+      age: 75,
+      year: 2065,
+      total_income: 20000.0,
+      total_expense: 60000.0,
+      net_cash_flow: -40000.0,
+      portfolio_value: 0.00, // Portfolio depleted
+      net_worth: -100000.0, // Accumulated debt
+      investment_return: 0.00,
+      is_sustainable: false,
+      fire_number: 1500000.0,
+      fire_progress: 0.0,
+    };
+
+    expect(stateNegative.portfolio_value).toBe(0.00);
+    expect(stateNegative.net_worth).toBeLessThan(0);
+    expect(stateNegative.is_sustainable).toBe(false);
+    expect(Math.abs(stateNegative.net_worth)).toBeGreaterThan(0); // Has accumulated debt
   });
 });

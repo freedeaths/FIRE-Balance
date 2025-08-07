@@ -1,140 +1,62 @@
 /**
  * FIRE Planner - Three-stage financial independence planning system
+ * Direct TypeScript port from Python planner.py
  *
- * This is a direct port of the Python FIREPlanner implementation, providing:
- * - Stage 1: User profile and income/expense data collection
- * - Stage 2: Interactive financial projection with override functionality
- * - Stage 3: Monte Carlo analysis and advisor recommendations
- *
- * The planner maintains session state and coordinates between different
- * calculation engines while providing a clean TypeScript API.
+ * Stage 1: Collect user profile and income/expense items
+ * Stage 2: Allow user to adjust financial projection table
+ * Stage 3: Run calculations and provide recommendations
  */
 
 import type {
   UserProfile,
   IncomeExpenseItem,
+  SimulationSettings,
+  FIRECalculationResult,
+} from './data_models';
+
+import { createSimulationSettings, getCurrentAge } from './data_models';
+
+import type {
   PlannerData,
-  PlannerStage,
   PlannerResults,
   Override,
   AnnualProjectionRow,
-  SimulationSettings,
-  LanguageCode,
-  FIRECalculationResult,
-} from '../types';
-import { FIREEngine, createEngineInput } from './engine';
-import { generateUUID, getCurrentTimestamp } from '../utils/helpers';
+  PlannerStage,
+  PlannerConfigV1,
+} from './planner_models';
 
-/**
- * Default simulation settings
- */
-const DEFAULT_SIMULATION_SETTINGS: SimulationSettings = {
-  num_simulations: 1000,
-  confidence_level: 0.95,
-  include_black_swan_events: true,
-  income_base_volatility: 0.1,
-  income_minimum_factor: 0.1,
-  expense_base_volatility: 0.05,
-  expense_minimum_factor: 0.5,
-};
+import {
+  createPlannerData,
+  updatePlannerDataTimestamp,
+  createPlannerResults,
+  configToPlannerData,
+  plannerDataToConfig,
+  PlannerStage as Stage,
+} from './planner_models';
+
+import { FIREEngine, createEngineInput } from './engine';
+import { FIREAdvisor } from './advisor';
+import { MonteCarloSimulator } from './monte_carlo';
+
+// =============================================================================
+// Main FIRE Planner Class
+// =============================================================================
 
 /**
  * Three-stage FIRE planning system
- *
- * This class manages the complete FIRE planning workflow:
- * 1. Stage 1: Data collection and validation
- * 2. Stage 2: Projection generation and user adjustments
- * 3. Stage 3: Analysis, simulation, and recommendations
+ * Direct TypeScript equivalent of Python's FIREPlanner class
  */
 export class FIREPlanner {
-  private data: PlannerData;
+  public data: PlannerData;
+  private currentLanguage: string;
 
-  /**
-   * Create a new FIRE planner instance
-   */
-  constructor(language: LanguageCode = 'en') {
-    const now = getCurrentTimestamp();
-
-    this.data = {
-      current_stage: 'stage1_input' as PlannerStage,
-      user_profile: undefined,
-      income_items: [],
-      expense_items: [],
-      projection_data: undefined,
-      overrides: [],
-      results: undefined,
-      session_id: generateUUID(),
-      created_at: now,
-      updated_at: now,
-      language,
-      simulation_settings: { ...DEFAULT_SIMULATION_SETTINGS },
-    };
+  constructor(language: string = 'en') {
+    this.data = createPlannerData({ language });
+    this.currentLanguage = language;
   }
 
   // =============================================================================
-  // Stage Management
-  // =============================================================================
-
-  /**
-   * Get current stage
-   */
-  getCurrentStage(): PlannerStage {
-    return this.data.current_stage;
-  }
-
-  /**
-   * Advance to the next stage if conditions are met
-   */
-  advanceStage(): boolean {
-    switch (this.data.current_stage) {
-      case 'stage1_input':
-        if (this.isStage1Complete()) {
-          this.data.current_stage = 'stage2_adjustment' as PlannerStage;
-          this.generateProjection();
-          this.updateTimestamp();
-          return true;
-        }
-        return false;
-
-      case 'stage2_adjustment':
-        if (this.isStage2Complete()) {
-          this.data.current_stage = 'stage3_analysis' as PlannerStage;
-          this.updateTimestamp();
-          return true;
-        }
-        return false;
-
-      case 'stage3_analysis':
-        // Stage 3 is the final stage
-        return false;
-
-      default:
-        return false;
-    }
-  }
-
-  /**
-   * Go back to previous stage
-   */
-  goToPreviousStage(): boolean {
-    switch (this.data.current_stage) {
-      case 'stage2_adjustment':
-        this.data.current_stage = 'stage1_input' as PlannerStage;
-        this.updateTimestamp();
-        return true;
-
-      case 'stage3_analysis':
-        this.data.current_stage = 'stage2_adjustment' as PlannerStage;
-        this.updateTimestamp();
-        return true;
-
-      default:
-        return false;
-    }
-  }
-
-  // =============================================================================
-  // Stage 1: Data Collection
+  // Stage 1: Input Collection
   // =============================================================================
 
   /**
@@ -142,141 +64,386 @@ export class FIREPlanner {
    */
   setUserProfile(profile: UserProfile): void {
     this.data.user_profile = profile;
-    this.updateTimestamp();
+
+    // Clean invalid overrides if age range changed
+    this._cleanInvalidOverrides();
+
+    this.data = updatePlannerDataTimestamp(this.data);
   }
 
   /**
-   * Get user profile
+   * Add income item and return its ID
    */
-  getUserProfile(): UserProfile | undefined {
-    return this.data.user_profile;
-  }
-
-  /**
-   * Add income item
-   */
-  addIncomeItem(item: IncomeExpenseItem): void {
-    // Ensure unique ID
-    if (!item.item_id) {
-      item.item_id = generateUUID();
+  addIncomeItem(item: IncomeExpenseItem): string {
+    // Ensure item has ID
+    if (!item.id) {
+      item.id = this._generateUUID();
     }
+
     this.data.income_items.push(item);
-    this.updateTimestamp();
+    this.data = updatePlannerDataTimestamp(this.data);
+    return item.id;
   }
 
   /**
-   * Update income item
+   * Add expense item and return its ID
    */
-  updateIncomeItem(itemId: string, updates: Partial<IncomeExpenseItem>): boolean {
-    const index = this.data.income_items.findIndex(item => item.item_id === itemId);
-    if (index !== -1) {
-      this.data.income_items[index] = { ...this.data.income_items[index], ...updates };
-      this.updateTimestamp();
-      return true;
+  addExpenseItem(item: IncomeExpenseItem): string {
+    // Ensure item has ID
+    if (!item.id) {
+      item.id = this._generateUUID();
     }
-    return false;
+
+    this.data.expense_items.push(item);
+    this.data = updatePlannerDataTimestamp(this.data);
+    return item.id;
   }
 
   /**
-   * Remove income item
+   * Remove income item by ID. Returns true if removed
    */
   removeIncomeItem(itemId: string): boolean {
-    const initialLength = this.data.income_items.length;
-    this.data.income_items = this.data.income_items.filter(item => item.item_id !== itemId);
-    if (this.data.income_items.length < initialLength) {
-      this.updateTimestamp();
+    const index = this.data.income_items.findIndex(item => item.id === itemId);
+    if (index >= 0) {
+      this.data.income_items.splice(index, 1);
+
+      // Clean up related overrides
+      this._removeOverridesForItem(itemId);
+
+      // If we had a projection, try to regenerate it
+      if (this.data.projection_df) {
+        try {
+          this.data.projection_df = this._generateInitialProjection();
+        } catch (error) {
+          // If regeneration fails, clear projection
+          this.data.projection_df = undefined;
+        }
+      }
+
+      this.data = updatePlannerDataTimestamp(this.data);
       return true;
     }
     return false;
   }
 
   /**
-   * Get income items
-   */
-  getIncomeItems(): IncomeExpenseItem[] {
-    return [...this.data.income_items];
-  }
-
-  /**
-   * Add expense item
-   */
-  addExpenseItem(item: IncomeExpenseItem): void {
-    // Ensure unique ID
-    if (!item.item_id) {
-      item.item_id = generateUUID();
-    }
-    this.data.expense_items.push(item);
-    this.updateTimestamp();
-  }
-
-  /**
-   * Update expense item
-   */
-  updateExpenseItem(itemId: string, updates: Partial<IncomeExpenseItem>): boolean {
-    const index = this.data.expense_items.findIndex(item => item.item_id === itemId);
-    if (index !== -1) {
-      this.data.expense_items[index] = { ...this.data.expense_items[index], ...updates };
-      this.updateTimestamp();
-      return true;
-    }
-    return false;
-  }
-
-  /**
-   * Remove expense item
+   * Remove expense item by ID. Returns true if removed
    */
   removeExpenseItem(itemId: string): boolean {
-    const initialLength = this.data.expense_items.length;
-    this.data.expense_items = this.data.expense_items.filter(item => item.item_id !== itemId);
-    if (this.data.expense_items.length < initialLength) {
-      this.updateTimestamp();
+    const index = this.data.expense_items.findIndex(item => item.id === itemId);
+    if (index >= 0) {
+      this.data.expense_items.splice(index, 1);
+
+      // Clean up related overrides
+      this._removeOverridesForItem(itemId);
+
+      // If we had a projection, try to regenerate it
+      if (this.data.projection_df) {
+        try {
+          this.data.projection_df = this._generateInitialProjection();
+        } catch (error) {
+          // If regeneration fails, clear projection
+          this.data.projection_df = undefined;
+        }
+      }
+
+      this.data = updatePlannerDataTimestamp(this.data);
+      return true;
+    }
+    return false;
+  }
+
+  // =============================================================================
+  // Stage 2: Table Adjustment
+  // =============================================================================
+
+  /**
+   * Get current projection DataFrame with overrides applied
+   */
+  getProjectionDataFrame(): AnnualProjectionRow[] | undefined {
+    if (!this.data.projection_df) {
+      return undefined;
+    }
+
+    // Return projection with overrides applied for display
+    const displayData = [...this.data.projection_df];
+    this._applyOverridesToProjection(displayData);
+    return displayData;
+  }
+
+  /**
+   * Add or update override for specific age/item
+   */
+  addOverride(age: number, itemId: string, value: number): void {
+    // Remove existing override for same age/item
+    this.data.overrides = this.data.overrides.filter(
+      o => !(o.age === age && o.item_id === itemId)
+    );
+
+    // Add new override
+    this.data.overrides.push({
+      age,
+      item_id: itemId,
+      value,
+    });
+
+    this.data = updatePlannerDataTimestamp(this.data);
+  }
+
+  /**
+   * Remove override for specific age/item
+   */
+  removeOverride(age: number, itemId: string): boolean {
+    const initialLength = this.data.overrides.length;
+    this.data.overrides = this.data.overrides.filter(
+      o => !(o.age === age && o.item_id === itemId)
+    );
+
+    if (this.data.overrides.length < initialLength) {
+      this.data = updatePlannerDataTimestamp(this.data);
       return true;
     }
     return false;
   }
 
   /**
-   * Get expense items
+   * Clear all overrides
    */
-  getExpenseItems(): IncomeExpenseItem[] {
-    return [...this.data.expense_items];
+  clearAllOverrides(): void {
+    this.data.overrides = [];
+    this.data = updatePlannerDataTimestamp(this.data);
   }
 
   // =============================================================================
-  // Stage 2: Projection and Adjustments
+  // Stage 3: Calculations and Analysis
   // =============================================================================
 
   /**
-   * Generate annual projection data from income/expense items
+   * Get current simulation settings
    */
-  private generateProjection(): void {
+  getSimulationSettings(): SimulationSettings {
+    return this.data.simulation_settings;
+  }
+
+  /**
+   * Update simulation settings
+   */
+  setSimulationSettings(settings: Partial<SimulationSettings>): void {
+    this.data.simulation_settings = createSimulationSettings({
+      ...this.data.simulation_settings,
+      ...settings,
+    });
+    this.data = updatePlannerDataTimestamp(this.data);
+  }
+
+  /**
+   * Run FIRE calculations and update results
+   */
+  runCalculations(
+    progressCallback?: (progress: number) => void,
+    numSimulations?: number
+  ): PlannerResults {
+    if (!this.data.projection_df) {
+      throw new Error('No projection data available for calculation');
+    }
+
+    const results = this._runCalculations(progressCallback, numSimulations);
+    this.data.results = results;
+    this.data = updatePlannerDataTimestamp(this.data);
+
+    return results;
+  }
+
+  // =============================================================================
+  // Simplified API (Stage-agnostic)
+  // =============================================================================
+
+  /**
+   * Generate base projection table without stage constraints
+   */
+  generateProjectionTable(): AnnualProjectionRow[] {
+    // Check if we have required data
+    if (
+      !this.data.user_profile ||
+      this.data.income_items.length === 0 ||
+      this.data.expense_items.length === 0
+    ) {
+      throw new Error(
+        'Missing required data: user_profile, income_items, or expense_items'
+      );
+    }
+
+    // Clean up any invalid overrides
+    this._cleanInvalidOverrides();
+
+    // Generate and store base projection
+    const projectionData = this._generateInitialProjection();
+    this.data.projection_df = projectionData;
+    this.data = updatePlannerDataTimestamp(this.data);
+
+    return projectionData;
+  }
+
+  /**
+   * Apply overrides to projection table without stage constraints
+   */
+  applyOverridesToTable(
+    baseData?: AnnualProjectionRow[],
+    overrides?: Override[]
+  ): AnnualProjectionRow[] {
+    if (!baseData) {
+      if (!this.data.projection_df) {
+        throw new Error('No base projection data available');
+      }
+      baseData = this.data.projection_df;
+    }
+
+    if (!overrides) {
+      overrides = this.data.overrides;
+    }
+
+    // Apply overrides to a copy of the data
+    const resultData = baseData.map(row => ({ ...row }));
+
+    // Store original overrides temporarily
+    const originalOverrides = this.data.overrides;
+    this.data.overrides = overrides;
+    this._applyOverridesToProjection(resultData);
+    this.data.overrides = originalOverrides;
+
+    return resultData;
+  }
+
+  /**
+   * Calculate FIRE results from projection table without stage constraints
+   */
+  calculateFireResults(
+    projectionData?: AnnualProjectionRow[],
+    progressCallback?: (progress: number) => void,
+    numSimulations?: number
+  ): PlannerResults {
+    if (!projectionData) {
+      if (!this.data.projection_df) {
+        throw new Error('No projection data available for calculation');
+      }
+      projectionData = this.data.projection_df;
+    }
+
+    // Store original projection temporarily
+    const originalProjection = this.data.projection_df;
+    this.data.projection_df = projectionData;
+
+    const results = this._runCalculations(progressCallback, numSimulations);
+
+    // Restore original projection
+    this.data.projection_df = originalProjection;
+
+    return results;
+  }
+
+  // =============================================================================
+  // Import/Export
+  // =============================================================================
+
+  /**
+   * Load configuration from JSON
+   */
+  loadFromConfig(config: PlannerConfigV1): void {
+    this.data = configToPlannerData(config);
+    this.currentLanguage = this.data.language;
+  }
+
+  /**
+   * Export current state to configuration
+   */
+  exportToConfig(description: string = ''): PlannerConfigV1 {
+    return plannerDataToConfig(this.data, description);
+  }
+
+  /**
+   * Save configuration to JSON string
+   */
+  saveToJSON(description: string = ''): string {
+    const config = this.exportToConfig(description);
+    return JSON.stringify(config, null, 2);
+  }
+
+  /**
+   * Load configuration from JSON string
+   */
+  loadFromJSON(jsonString: string): void {
+    try {
+      const config = JSON.parse(jsonString) as PlannerConfigV1;
+      this.loadFromConfig(config);
+    } catch (error) {
+      throw new Error(`Failed to parse JSON configuration: ${error}`);
+    }
+  }
+
+  // =============================================================================
+  // Internal Helper Methods
+  // =============================================================================
+
+  /**
+   * Generate initial financial projection in wide format
+   */
+  private _generateInitialProjection(): AnnualProjectionRow[] {
     if (!this.data.user_profile) {
-      throw new Error('User profile is required to generate projection');
+      throw new Error('User profile required');
     }
 
     const profile = this.data.user_profile;
-    const currentAge = new Date().getFullYear() - profile.birth_year;
-    const projectionYears = profile.expected_fire_age - currentAge + 5; // Extra years for analysis
+    const currentYear = new Date().getFullYear();
+    const currentAge = getCurrentAge(profile.birth_year);
 
+    // Create age range from current age to life expectancy
     const projectionData: AnnualProjectionRow[] = [];
 
-    for (let i = 0; i < projectionYears; i++) {
-      const age = currentAge + i;
-      const year = new Date().getFullYear() + i;
+    for (let age = currentAge; age <= profile.life_expectancy; age++) {
+      const year = currentYear + (age - currentAge);
 
-      // Calculate total income for this year
       let totalIncome = 0;
+      let totalExpense = 0;
+
+      // Calculate income for this age
       for (const item of this.data.income_items) {
-        totalIncome += this.calculateItemAmountForAge(item, age);
+        if (this._isItemActiveAtAge(item, age)) {
+          const yearsSinceStart = age - item.start_age;
+          const growthFactor = Math.pow(1 + item.annual_growth_rate / 100, yearsSinceStart);
+
+          if (item.frequency === 'one-time') {
+            // One-time items only appear at start age
+            if (age === item.start_age) {
+              totalIncome += item.after_tax_amount_per_period * growthFactor;
+            }
+          } else {
+            // Recurring items with growth
+            totalIncome += item.after_tax_amount_per_period * growthFactor;
+          }
+        }
       }
 
-      // Calculate total expenses for this year (with inflation)
-      let totalExpense = 0;
+      // Calculate expenses for this age (with inflation)
+      const inflationRate = profile.inflation_rate / 100;
       for (const item of this.data.expense_items) {
-        const baseAmount = this.calculateItemAmountForAge(item, age);
-        // Apply inflation to expenses
-        const inflationMultiplier = Math.pow(1 + profile.inflation_rate / 100, i);
-        totalExpense += baseAmount * inflationMultiplier;
+        if (this._isItemActiveAtAge(item, age)) {
+          const yearsSinceStart = age - item.start_age;
+
+          if (item.frequency === 'one-time') {
+            // One-time expenses only appear at start age
+            if (age === item.start_age) {
+              // Apply both individual growth rate and inflation
+              const itemGrowthFactor = Math.pow(1 + item.annual_growth_rate / 100, yearsSinceStart);
+              const inflationFactor = Math.pow(1 + inflationRate, yearsSinceStart);
+              totalExpense += item.after_tax_amount_per_period * itemGrowthFactor * inflationFactor;
+            }
+          } else {
+            // Recurring expenses with individual growth + inflation
+            const itemGrowthFactor = Math.pow(1 + item.annual_growth_rate / 100, yearsSinceStart);
+            const inflationFactor = Math.pow(1 + inflationRate, yearsSinceStart);
+            totalExpense += item.after_tax_amount_per_period * itemGrowthFactor * inflationFactor;
+          }
+        }
       }
 
       projectionData.push({
@@ -287,224 +454,215 @@ export class FIREPlanner {
       });
     }
 
-    this.data.projection_data = projectionData;
+    return projectionData;
   }
 
   /**
-   * Calculate item amount for specific age (handles age ranges and growth)
+   * Check if an income/expense item is active at a given age
    */
-  private calculateItemAmountForAge(item: IncomeExpenseItem, age: number): number {
-    // Check if item is active at this age
-    if (age < item.start_age || (item.end_age && age > item.end_age)) {
+  private _isItemActiveAtAge(item: IncomeExpenseItem, age: number): boolean {
+    return age >= item.start_age && (item.end_age === undefined || age <= item.end_age);
+  }
+
+  /**
+   * Apply overrides to projection data
+   */
+  private _applyOverridesToProjection(projectionData: AnnualProjectionRow[]): void {
+    for (const override of this.data.overrides) {
+      const rowIndex = projectionData.findIndex(row => row.age === override.age);
+      if (rowIndex >= 0) {
+        // For now, we'll apply overrides to total_income or total_expense
+        // This is a simplification - the Python version has more complex logic
+        const row = projectionData[rowIndex];
+
+        // Determine if this is an income or expense item
+        const incomeItem = this.data.income_items.find(item => item.id === override.item_id);
+        const expenseItem = this.data.expense_items.find(item => item.id === override.item_id);
+
+        if (incomeItem) {
+          // Find the current contribution of this item and replace it
+          const originalContribution = this._calculateItemContributionAtAge(incomeItem, override.age);
+          row.total_income = row.total_income - originalContribution + override.value;
+        } else if (expenseItem) {
+          // Find the current contribution of this item and replace it
+          const originalContribution = this._calculateItemContributionAtAge(expenseItem, override.age);
+          row.total_expense = row.total_expense - originalContribution + override.value;
+        }
+      }
+    }
+  }
+
+  /**
+   * Calculate an item's contribution at a specific age
+   */
+  private _calculateItemContributionAtAge(item: IncomeExpenseItem, age: number): number {
+    if (!this._isItemActiveAtAge(item, age)) {
       return 0;
     }
 
-    // Calculate amount with growth
-    const yearsFromStart = age - item.start_age;
-    const growthMultiplier = Math.pow(1 + item.growth_rate / 100, yearsFromStart);
+    const yearsSinceStart = age - item.start_age;
+    const growthFactor = Math.pow(1 + item.annual_growth_rate / 100, yearsSinceStart);
 
-    // Convert to annual amount
-    let annualAmount = item.after_tax_amount_per_period * growthMultiplier;
+    if (item.frequency === 'one-time') {
+      return age === item.start_age ? item.after_tax_amount_per_period * growthFactor : 0;
+    } else {
+      let contribution = item.after_tax_amount_per_period * growthFactor;
 
-    // Apply frequency conversion
-    switch (item.frequency) {
-      case 'monthly':
-        annualAmount *= 12;
-        break;
-      case 'quarterly':
-        annualAmount *= 4;
-        break;
-      case 'semi_annual':
-        annualAmount *= 2;
-        break;
-      case 'annual':
-        // Already annual
-        break;
-      case 'one_time':
-        // Only apply in the start year
-        if (age !== item.start_age) {
-          annualAmount = 0;
-        }
-        break;
-    }
-
-    return annualAmount;
-  }
-
-  /**
-   * Get projection data with applied overrides
-   */
-  getProjectionData(): AnnualProjectionRow[] | undefined {
-    if (!this.data.projection_data) {
-      return undefined;
-    }
-
-    // Apply overrides
-    const data = [...this.data.projection_data];
-    for (const override of this.data.overrides) {
-      const row = data.find(r => r.age === override.age);
-      if (row) {
-        // For now, we assume overrides apply to total_expense
-        // In a full implementation, we'd track which field the override applies to
-        row.total_expense = override.value;
+      // Apply inflation for expenses
+      if (!item.is_income && this.data.user_profile) {
+        const inflationRate = this.data.user_profile.inflation_rate / 100;
+        const inflationFactor = Math.pow(1 + inflationRate, yearsSinceStart);
+        contribution *= inflationFactor;
       }
-    }
 
-    return data;
+      return contribution;
+    }
   }
 
   /**
-   * Add or update override
+   * Run FIRE calculations and generate recommendations
    */
-  setOverride(age: number, itemId: string, value: number): void {
-    // Remove existing override for this age/item
-    this.data.overrides = this.data.overrides.filter(
-      o => !(o.age === age && o.item_id === itemId)
+  private _runCalculations(
+    progressCallback?: (progress: number) => void,
+    numSimulations?: number
+  ): PlannerResults {
+    if (!this.data.projection_df || !this.data.user_profile) {
+      throw new Error('Missing data for calculations');
+    }
+
+    // Create a copy of projection and apply overrides for calculation
+    const calculationData = [...this.data.projection_df];
+    this._applyOverridesToProjection(calculationData);
+
+    // Create engine input
+    const engineInput = createEngineInput(
+      this.data.user_profile,
+      calculationData,
+      this.data.income_items
     );
 
-    // Add new override
-    this.data.overrides.push({ age, item_id: itemId, value });
-    this.updateTimestamp();
-  }
-
-  /**
-   * Remove override
-   */
-  removeOverride(age: number, itemId: string): boolean {
-    const initialLength = this.data.overrides.length;
-    this.data.overrides = this.data.overrides.filter(
-      o => !(o.age === age && o.item_id === itemId)
-    );
-    if (this.data.overrides.length < initialLength) {
-      this.updateTimestamp();
-      return true;
-    }
-    return false;
-  }
-
-  // =============================================================================
-  // Stage 3: Analysis and Results
-  // =============================================================================
-
-  /**
-   * Run FIRE calculation with current data
-   */
-  async runAnalysis(): Promise<PlannerResults> {
-    if (!this.data.user_profile) {
-      throw new Error('User profile is required for analysis');
-    }
-
-    const projectionData = this.getProjectionData();
-    if (!projectionData || projectionData.length === 0) {
-      throw new Error('Projection data is required for analysis');
-    }
-
-    // Create engine input and run calculation
-    const engineInput = createEngineInput(this.data.user_profile, projectionData);
+    // Run FIRE calculation
     const engine = new FIREEngine(engineInput);
-    const fireCalculation = engine.calculate();
+    const fireResult = engine.calculate();
 
-    // For now, we'll set Monte Carlo success rate to a placeholder
-    // In a full implementation, we'd integrate with the Monte Carlo simulator
-    const monteCarloSuccessRate = this.estimateSuccessRate(fireCalculation);
+    // Run Monte Carlo simulation with custom or default settings
+    let monteCarloSuccessRate: number | undefined = undefined;
+    let recommendations: Record<string, any>[] = [];
 
-    const results: PlannerResults = {
-      fire_calculation: fireCalculation,
-      monte_carlo_success_rate: monteCarloSuccessRate,
-      recommendations: [], // Advisor recommendations would go here
-      calculation_timestamp: getCurrentTimestamp(),
-    };
+    try {
+      progressCallback?.(0.3); // 30% - Basic calculation done
 
-    this.data.results = results;
-    this.updateTimestamp();
+      // Use custom num_simulations or default from settings
+      const simulationSettings = numSimulations
+        ? createSimulationSettings({
+            ...this.data.simulation_settings,
+            num_simulations: numSimulations
+          })
+        : this.data.simulation_settings;
 
-    return results;
-  }
+      const mcSimulator = new MonteCarloSimulator(engine, simulationSettings);
+      const mcResult = mcSimulator.run_simulation();
+      monteCarloSuccessRate = mcResult.success_rate;
 
-  /**
-   * Placeholder for Monte Carlo success rate estimation
-   */
-  private estimateSuccessRate(calculation: FIRECalculationResult): number {
-    // Simple heuristic based on FIRE achievement and safety buffer
-    if (!calculation.is_fire_achievable) {
-      return 0.1; // Very low probability if basic calculation fails
+      progressCallback?.(0.7); // 70% - Monte Carlo done
+
+      // Generate advisor recommendations
+      const advisor = new FIREAdvisor(engineInput);
+      const advisorRecommendations = advisor.get_all_recommendations();
+      recommendations = advisorRecommendations.map(rec => ({
+        type: rec.type,
+        params: rec.params,
+        is_achievable: rec.is_achievable,
+        monte_carlo_success_rate: rec.monte_carlo_success_rate,
+      }));
+
+      progressCallback?.(1.0); // 100% - Complete
+
+    } catch (error) {
+      console.warn('Monte Carlo or advisor analysis failed:', error);
+      // Continue without Monte Carlo/advisor results
     }
 
-    // Higher success rate for higher safety buffer ratios
-    const successRate = Math.min(0.9, 0.5 + calculation.min_safety_buffer_ratio * 0.4);
-    return Math.max(0.1, successRate);
+    return createPlannerResults({
+      fire_calculation: fireResult,
+      monte_carlo_success_rate: monteCarloSuccessRate,
+      recommendations,
+      calculation_timestamp: new Date(),
+    });
   }
 
   /**
-   * Get current results
+   * Clean invalid overrides (when age range changes)
    */
-  getResults(): PlannerResults | undefined {
-    return this.data.results;
-  }
+  private _cleanInvalidOverrides(): void {
+    if (!this.data.user_profile) {
+      return;
+    }
 
-  // =============================================================================
-  // Validation and State Checking
-  // =============================================================================
+    const currentAge = getCurrentAge(this.data.user_profile.birth_year);
+    const maxAge = this.data.user_profile.life_expectancy;
 
-  /**
-   * Check if Stage 1 is complete
-   */
-  private isStage1Complete(): boolean {
-    return (
-      this.data.user_profile !== undefined &&
-      this.data.income_items.length > 0 &&
-      this.data.expense_items.length > 0
+    // Remove overrides outside valid age range
+    this.data.overrides = this.data.overrides.filter(
+      override => override.age >= currentAge && override.age <= maxAge
+    );
+
+    // Remove overrides for non-existent items
+    const allItemIds = new Set([
+      ...this.data.income_items.map(item => item.id!),
+      ...this.data.expense_items.map(item => item.id!),
+    ]);
+
+    this.data.overrides = this.data.overrides.filter(
+      override => allItemIds.has(override.item_id)
     );
   }
 
   /**
-   * Check if Stage 2 is complete
+   * Remove overrides for a specific item
    */
-  private isStage2Complete(): boolean {
-    return (
-      this.data.projection_data !== undefined &&
-      this.data.projection_data.length > 0
+  private _removeOverridesForItem(itemId: string): void {
+    this.data.overrides = this.data.overrides.filter(
+      override => override.item_id !== itemId
     );
   }
 
-  // =============================================================================
-  // Data Management
-  // =============================================================================
-
   /**
-   * Get full planner data (for serialization)
+   * Generate a UUID v4 string (simplified implementation)
    */
-  getData(): PlannerData {
-    return { ...this.data };
+  private _generateUUID(): string {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0;
+      const v = c == 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
   }
+}
 
-  /**
-   * Load data from serialized state
-   */
-  loadData(data: PlannerData): void {
-    this.data = { ...data };
-    this.updateTimestamp();
-  }
+// =============================================================================
+// Factory Functions
+// =============================================================================
 
-  /**
-   * Update the timestamp
-   */
-  private updateTimestamp(): void {
-    this.data.updated_at = getCurrentTimestamp();
-  }
+/**
+ * Create a new FIRE planner instance
+ */
+export function createPlanner(language: string = 'en'): FIREPlanner {
+  return new FIREPlanner(language);
+}
 
-  /**
-   * Export data as JSON
-   */
-  exportToJSON(): string {
-    return JSON.stringify(this.data, null, 2);
-  }
+/**
+ * Create planner from existing configuration
+ */
+export function createPlannerFromConfig(config: PlannerConfigV1): FIREPlanner {
+  const planner = new FIREPlanner(config.metadata?.language ?? 'en');
+  planner.loadFromConfig(config);
+  return planner;
+}
 
-  /**
-   * Import data from JSON
-   */
-  importFromJSON(json: string): void {
-    const data = JSON.parse(json) as PlannerData;
-    this.loadData(data);
-  }
+/**
+ * Create planner from JSON string
+ */
+export function createPlannerFromJSON(jsonString: string): FIREPlanner {
+  const config = JSON.parse(jsonString) as PlannerConfigV1;
+  return createPlannerFromConfig(config);
 }

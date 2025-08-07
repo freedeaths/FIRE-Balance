@@ -1,105 +1,85 @@
 /**
  * FIRE calculation engine with portfolio management integration
+ * Direct TypeScript port from Python engine.py
  *
- * This module contains the core business logic for FIRE (Financial Independence,
- * Retire Early) calculations. It's a direct port of the Python engine.py to ensure
- * identical calculation results across platforms.
- *
- * Key responsibilities:
- * - Process annual financial projections
- * - Integrate with portfolio management
- * - Calculate sustainability metrics
- * - Track net worth progression over time
- *
- * Design principles:
- * - Function-to-function equivalence with Python version
- * - Immutable data flow for predictable results
- * - Type-safe interfaces for error prevention
- * - Clear separation of concerns
+ * This module contains the core FIRE calculation logic that processes yearly
+ * financial data and integrates with the portfolio management system.
  */
 
-import type {
-  UserProfile,
-  FIRECalculationResult,
-  YearlyState,
-  IncomeExpenseItem,
-} from '../types';
-import { PortfolioSimulator, LiquidityAwareFlowStrategy } from './portfolio';
+import type { FIRECalculationResult, UserProfile, YearlyState } from './data_models';
+import { getCurrentAge } from './data_models';
+import { LiquidityAwareFlowStrategy, PortfolioSimulator } from './portfolio';
 
 // =============================================================================
-// Input Types and Interfaces
+// Engine Input Data Structure
 // =============================================================================
 
 /**
- * Annual financial projection data for a single year
- * Represents pre-calculated income/expense values
+ * Input data for FIRE calculation engine
+ * Direct TypeScript equivalent of Python's EngineInput dataclass
  */
-export interface AnnualProjectionRow {
-  /** User's age in this year */
+export interface EngineInput {
+  user_profile: UserProfile;
+  annual_financial_projection: AnnualFinancialProjection[];
+  // DataFrame columns: ['age', 'year', 'total_income', 'total_expense']
+  // IMPORTANT: All values in DataFrame are FINAL computed values:
+  // - total_income: Base income + individual growth_rate applied over years
+  // - total_expense: Base expense + individual growth_rate + inflation_rate applied
+  // - Overrides from Stage 2 are applied to these final computed values
+  // - Engine should use the values directly WITHOUT additional growth/inflation
+  // - This design keeps Engine simple and pushes complexity to Planner layer
+
+  // Optional detailed projection for advisor use
+  detailed_projection?: DetailedProjection[];
+  // DataFrame with individual income/expense item columns plus 'age' and 'year'
+  // This allows advisor to manipulate specific income streams (e.g., work income)
+  income_items?: any[] | null; // List of IncomeExpenseItem objects for income identification
+  // Note: expense_items removed as current expense logic only uses aggregated totals
+}
+
+/**
+ * Annual financial projection row
+ * Direct equivalent to Python DataFrame row
+ */
+export interface AnnualFinancialProjection {
   age: number;
-
-  /** Calendar year */
   year: number;
-
-  /** Total income for the year (final computed value) */
   total_income: number;
-
-  /** Total expenses for the year (final computed value) */
   total_expense: number;
 }
 
 /**
- * Input data for FIRE calculation engine
- * Direct TypeScript equivalent of Python's EngineInput
+ * Detailed projection for advisor use
+ * Contains individual income/expense item columns
  */
-export interface EngineInput {
-  /** User profile with personal and financial preferences */
-  user_profile: UserProfile;
-
-  /**
-   * Annual financial projection data
-   * IMPORTANT: All values are FINAL computed values:
-   * - total_income: Base income + individual growth_rate applied over years
-   * - total_expense: Base expense + individual growth_rate + inflation_rate applied
-   * - Overrides from Stage 2 are applied to these final computed values
-   * - Engine uses these values directly WITHOUT additional growth/inflation
-   */
-  annual_financial_projection: AnnualProjectionRow[];
-
-  /** Optional detailed projection for advisor use */
-  detailed_projection?: Record<string, unknown>[];
-
-  /** List of income items for advisor analysis */
-  income_items?: IncomeExpenseItem[];
+export interface DetailedProjection {
+  age: number;
+  year: number;
+  [key: string]: number; // Individual income/expense columns
 }
 
 // =============================================================================
-// Core FIRE Engine Class
+// FIRE Engine - Core Calculation Logic
 // =============================================================================
 
 /**
  * Core FIRE calculation engine with portfolio management integration
- * Direct TypeScript port of Python's FIREEngine class
+ * Direct TypeScript equivalent of Python's FIREEngine class
  */
 export class FIREEngine {
-  private readonly input: EngineInput;
-  private readonly profile: UserProfile;
-  private readonly projectionData: AnnualProjectionRow[];
-  private readonly portfolioSimulator: PortfolioSimulator;
+  public readonly input: EngineInput;
+  public readonly profile: UserProfile;
+  public readonly projection_df: AnnualFinancialProjection[];
+  public readonly portfolio_simulator: PortfolioSimulator;
 
-  /**
-   * Initialize engine with input data
-   *
-   * @param engineInput - Complete input data for FIRE calculations
-   */
   constructor(engineInput: EngineInput) {
     this.input = engineInput;
     this.profile = engineInput.user_profile;
-    this.projectionData = engineInput.annual_financial_projection;
+    this.projection_df = engineInput.annual_financial_projection;
 
-    // Set up portfolio simulator with liquidity-aware cash flow strategy
+    // Set up portfolio simulator
     const cashFlowStrategy = new LiquidityAwareFlowStrategy();
-    this.portfolioSimulator = new PortfolioSimulator(
+    this.portfolio_simulator = new PortfolioSimulator(
       this.profile,
       cashFlowStrategy
     );
@@ -107,98 +87,78 @@ export class FIREEngine {
 
   /**
    * Run complete FIRE calculation and return results
-   * Main entry point for FIRE analysis
-   *
-   * @returns Complete FIRE calculation result
    */
   calculate(): FIRECalculationResult {
-    // Calculate yearly states using the core calculation logic
-    const yearlyStates = this.calculateYearlyStates();
+    // Get yearly states using the core calculation logic
+    const yearlyStates = this._calculateYearlyStates();
 
     // Create and return complete calculation result
-    return this.createCalculationResult(yearlyStates);
+    return this._createCalculationResult(yearlyStates);
   }
 
   /**
    * Get detailed yearly states for advanced analysis
-   * Useful for debugging and detailed financial planning
-   *
-   * @returns Array of yearly financial states
    */
-  getYearlyStates(): YearlyState[] {
+  get_yearly_states(): YearlyState[] {
     // Re-run calculation to get fresh states
-    return this.calculateYearlyStates();
+    return this._calculateYearlyStates();
   }
 
   /**
    * Calculate state for a single year with pre-computed income/expense values
-   * Core atomic calculation unit - mirrors Python's calculate_single_year exactly
-   *
-   * @param age - User's age in this year
-   * @param year - Calendar year
-   * @param totalIncome - Pre-computed total income for the year
-   * @param totalExpense - Pre-computed total expenses for the year
-   * @returns Complete yearly state
    */
-  calculateSingleYear(
+  calculate_single_year(
     age: number,
     year: number,
-    totalIncome: number,
-    totalExpense: number
+    total_income: number,
+    total_expense: number
   ): YearlyState {
-    const netCashFlow = totalIncome - totalExpense;
+    const net_cash_flow = total_income - total_expense;
 
     // Simulate portfolio for this year
-    const portfolioResult = this.portfolioSimulator.simulateYear(
+    const portfolio_result = this.portfolio_simulator.simulate_year(
       age,
-      netCashFlow,
-      totalExpense
+      net_cash_flow,
+      total_expense
     );
 
-    // Extract portfolio metrics
-    const portfolioValue = portfolioResult.endingPortfolioValue;
-    const investmentReturn = portfolioResult.investmentReturns;
+    // Calculate financial metrics
+    const portfolio_value = portfolio_result.ending_portfolio_value;
 
     // Calculate sustainability metrics
-    const safetyBufferAmount = totalExpense * (this.profile.safety_buffer_months / 12.0);
-    const fireNumber = totalExpense * 25.0; // Traditional 4% rule
-    const fireProgress = fireNumber > 0 ? portfolioValue / fireNumber : 0.0;
-
-    // Sustainability is based on portfolio value being above safety buffer
-    const isSustainable = portfolioValue >= safetyBufferAmount;
+    const safety_buffer_amount = total_expense * (this.profile.safety_buffer_months / 12.0);
+    const fire_number = total_expense * 25.0;
+    const fire_progress = fire_number > 0 ? portfolio_value / fire_number : 0.0;
+    const is_sustainable = portfolio_value >= safety_buffer_amount; // portfolio_value is net_worth here
 
     return {
       age,
       year,
-      total_income: totalIncome,
-      total_expense: totalExpense,
-      net_cash_flow: netCashFlow,
-      portfolio_value: portfolioValue,
-      net_worth: portfolioValue, // Will be adjusted in calculateYearlyStates for debt tracking
-      investment_return: investmentReturn,
-      is_sustainable: isSustainable,
-      fire_number: fireNumber,
-      fire_progress: fireProgress,
+      total_income,
+      total_expense,
+      net_cash_flow,
+      portfolio_value,
+      net_worth: portfolio_value, // portfolio_value is net_worth here
+      investment_return: portfolio_result.investment_returns,
+      is_sustainable,
+      fire_number,
+      fire_progress
     };
   }
 
   /**
    * Calculate all yearly states using atomic single-year calculations
-   * Handles debt accumulation when portfolio is depleted
-   * Direct port of Python's _calculate_yearly_states method
-   *
-   * @returns Array of all yearly states with proper debt tracking
    */
-  private calculateYearlyStates(): YearlyState[] {
-    const yearlyStates: YearlyState[] = [];
-    let cumulativeDebt = 0.0; // Track accumulated debt when portfolio is depleted
+  private _calculateYearlyStates(): YearlyState[] {
+    const yearly_states: YearlyState[] = [];
+    let cumulative_debt = 0.0; // Track accumulated debt when portfolio is depleted
 
     // Reset portfolio simulator to initial state
-    this.portfolioSimulator.resetToInitial();
+    this.portfolio_simulator.reset_to_initial();
 
-    // Process each year atomically - projection data already has final computed values
-    for (const row of this.projectionData) {
-      const yearlyState = this.calculateSingleYear(
+    // Process each year atomically - DataFrame already has final computed values
+    for (const row of this.projection_df) {
+      const yearly_state = this.calculate_single_year(
         row.age,
         row.year,
         row.total_income,
@@ -206,173 +166,129 @@ export class FIREEngine {
       );
 
       // Calculate true net worth with cumulative debt tracking
-      const portfolioValue = yearlyState.portfolio_value;
+      const portfolio_value = yearly_state.portfolio_value;
 
-      if (portfolioValue > 0) {
+      if (portfolio_value > 0) {
         // Portfolio has value - net worth is portfolio value
-        yearlyState.net_worth = portfolioValue;
-        cumulativeDebt = 0.0; // Reset debt when portfolio recovers
+        yearly_state.net_worth = portfolio_value;
+        cumulative_debt = 0.0; // Reset debt when portfolio recovers
       } else {
         // Portfolio is depleted - accumulate debt
-        if (yearlyState.net_cash_flow < 0) {
-          cumulativeDebt += Math.abs(yearlyState.net_cash_flow);
-        }
-        yearlyState.net_worth = -cumulativeDebt; // Negative net worth indicates debt
+        cumulative_debt += yearly_state.net_cash_flow < 0
+          ? Math.abs(yearly_state.net_cash_flow)
+          : 0;
+        yearly_state.net_worth = -cumulative_debt; // Negative net worth indicates debt
       }
 
-      yearlyStates.push(yearlyState);
+      yearly_states.push(yearly_state);
     }
 
-    return yearlyStates;
+    return yearly_states;
   }
 
   /**
-   * Create FIRECalculationResult from yearly states
-   * Analyzes yearly states to determine overall FIRE feasibility and metrics
-   * Direct port of Python's _create_calculation_result method
-   *
-   * @param yearlyStates - Array of calculated yearly states
-   * @returns Complete FIRE calculation result
+   * Create FIRECalculationResult from yearly states and results
    */
-  private createCalculationResult(yearlyStates: YearlyState[]): FIRECalculationResult {
+  private _createCalculationResult(yearly_states: YearlyState[]): FIRECalculationResult {
     // FIRE is achievable if ALL years are sustainable
-    const isFIREAchievable = yearlyStates.length > 0
-      ? yearlyStates.every(state => state.is_sustainable)
+    const is_fire_achievable = yearly_states.length > 0
+      ? yearly_states.every(state => state.is_sustainable)
       : false;
 
     // Get net worth at expected FIRE age
-    let fireNetWorth = 0.0;
-    const currentAge = this.getCurrentAge();
-    const expectedFireYearIndex = this.profile.expected_fire_age - currentAge;
-
-    if (expectedFireYearIndex >= 0 && expectedFireYearIndex < yearlyStates.length) {
-      const fireState = yearlyStates[expectedFireYearIndex];
-      fireNetWorth = fireState.net_worth;
+    let fire_net_worth = 0.0;
+    const expected_fire_year_index = this.profile.expected_fire_age - getCurrentAge(this.profile.birth_year);
+    if (expected_fire_year_index >= 0 && expected_fire_year_index < yearly_states.length) {
+      const fire_state = yearly_states[expected_fire_year_index];
+      fire_net_worth = fire_state.net_worth;
     }
 
     // Minimum net worth from expected FIRE age onwards
-    let minNetWorthAfterFire = 0.0;
-    if (expectedFireYearIndex >= 0 && expectedFireYearIndex < yearlyStates.length) {
-      const postFireStates = yearlyStates.slice(expectedFireYearIndex);
-      if (postFireStates.length > 0) {
-        minNetWorthAfterFire = Math.min(...postFireStates.map(s => s.net_worth));
+    let min_net_worth_after_fire = 0.0;
+    if (expected_fire_year_index >= 0 && expected_fire_year_index < yearly_states.length) {
+      const post_fire_states = yearly_states.slice(expected_fire_year_index);
+      if (post_fire_states.length > 0) {
+        min_net_worth_after_fire = Math.min(...post_fire_states.map(s => s.net_worth));
       } else {
-        minNetWorthAfterFire = fireNetWorth;
+        min_net_worth_after_fire = fire_net_worth;
       }
     }
 
-    // Final net worth at life expectancy
-    const finalNetWorth = yearlyStates.length > 0
-      ? yearlyStates[yearlyStates.length - 1].net_worth
-      : 0.0;
+    const final_net_worth = yearly_states.length > 0 ? yearly_states[yearly_states.length - 1].net_worth : 0.0;
 
-    // Safety buffer analysis - calculate dynamically for each year
-    const safetyBufferRatios: number[] = [];
-    for (const state of yearlyStates) {
-      const safetyBufferAmount = state.total_expense * (this.profile.safety_buffer_months / 12.0);
-      if (safetyBufferAmount > 0) {
-        const ratio = state.net_worth / safetyBufferAmount;
-        safetyBufferRatios.push(ratio);
+    // Safety buffer analysis - calculate dynamically
+    const safety_buffer_ratios: number[] = [];
+    for (const s of yearly_states) {
+      const safety_buffer_amount = s.total_expense * (this.profile.safety_buffer_months / 12.0);
+      if (safety_buffer_amount > 0) {
+        const ratio = s.net_worth / safety_buffer_amount; // Use net_worth instead of portfolio_value
+        safety_buffer_ratios.push(ratio);
       }
     }
 
-    const minSafetyBufferRatio = safetyBufferRatios.length > 0
-      ? Math.min(...safetyBufferRatios)
+    const min_safety_buffer_ratio = safety_buffer_ratios.length > 0
+      ? Math.min(...safety_buffer_ratios)
       : 0.0;
 
     // Traditional FIRE metrics for reference
-    const traditionalFireExpenses = yearlyStates.length > 0
-      ? yearlyStates[Math.min(expectedFireYearIndex, yearlyStates.length - 1)].total_expense
-      : 0.0;
-    const traditionalFireNumber = traditionalFireExpenses * 25.0;
-    const traditionalFireAchieved = fireNetWorth >= traditionalFireNumber;
-
-    // Calculate summary statistics
-    const totalYearsSimulated = yearlyStates.length;
-    const retirementYears = Math.max(0, this.profile.life_expectancy - this.profile.expected_fire_age);
+    const traditional_fire_expenses = yearly_states.length >= 5
+      ? yearly_states.slice(0, 5).reduce((sum, s) => sum + s.total_expense, 0) / 5
+      : 0;
+    const traditional_fire_number = traditional_fire_expenses * 25;
+    const traditional_fire_achieved = yearly_states.some(s => s.portfolio_value >= traditional_fire_number);
 
     return {
-      is_fire_achievable: isFIREAchievable,
-      fire_net_worth: fireNetWorth,
-      min_net_worth_after_fire: minNetWorthAfterFire,
-      final_net_worth: finalNetWorth,
+      is_fire_achievable,
+      fire_net_worth,
+      min_net_worth_after_fire,
+      final_net_worth,
       safety_buffer_months: this.profile.safety_buffer_months,
-      min_safety_buffer_ratio: minSafetyBufferRatio,
-      yearly_results: yearlyStates,
-      traditional_fire_number: traditionalFireNumber,
-      traditional_fire_achieved: traditionalFireAchieved,
-      fire_success_probability: undefined, // Will be populated by Monte Carlo
-      total_years_simulated: totalYearsSimulated,
-      retirement_years: retirementYears,
+      min_safety_buffer_ratio,
+      yearly_results: yearly_states,
+      traditional_fire_number,
+      traditional_fire_achieved,
+      fire_success_probability: null, // Will be set by Monte Carlo
+      total_years_simulated: yearly_states.length,
+      retirement_years: expected_fire_year_index >= 0
+        ? yearly_states.length - expected_fire_year_index
+        : 0
     };
   }
 
-  /**
-   * Get current age from birth year
-   * Helper method for age calculations
-   *
-   * @returns Current age
-   */
-  private getCurrentAge(): number {
-    const currentYear = new Date().getFullYear();
-    return currentYear - this.profile.birth_year;
-  }
 }
 
 // =============================================================================
-// Utility Functions
+// Factory Functions for Convenience
 // =============================================================================
 
 /**
- * Create engine input from user profile and projection data
- * Convenience function for creating properly typed engine input
- *
- * @param userProfile - User profile configuration
- * @param projectionData - Annual financial projection data
- * @param incomeItems - Optional income items for advisor analysis
- * @returns Properly typed engine input
+ * Create EngineInput from basic parameters
  */
-export const createEngineInput = (
-  userProfile: UserProfile,
-  projectionData: AnnualProjectionRow[],
-  incomeItems?: IncomeExpenseItem[]
-): EngineInput => {
+export function createEngineInput(
+  user_profile: UserProfile,
+  projection_data: AnnualFinancialProjection[],
+  income_items?: any[]
+): EngineInput {
   return {
-    user_profile: userProfile,
-    annual_financial_projection: projectionData,
-    income_items: incomeItems,
+    user_profile,
+    annual_financial_projection: projection_data,
+    income_items: income_items || null
   };
-};
+}
 
 /**
- * Validate engine input data
- * Ensures input data is consistent and complete
- *
- * @param input - Engine input to validate
- * @returns Array of validation error messages
+ * Create AnnualFinancialProjection row
  */
-export const validateEngineInput = (input: EngineInput): string[] => {
-  const errors: string[] = [];
-
-  // Check projection data exists and is non-empty
-  if (!input.annual_financial_projection || input.annual_financial_projection.length === 0) {
-    errors.push('Annual financial projection data is required');
-  }
-
-  // Check projection data is properly structured
-  if (input.annual_financial_projection) {
-    for (let i = 0; i < input.annual_financial_projection.length; i++) {
-      const row = input.annual_financial_projection[i];
-      if (!row.age || !row.year || row.total_income === undefined || row.total_expense === undefined) {
-        errors.push(`Projection row ${i} is missing required fields`);
-      }
-    }
-  }
-
-  // Check user profile exists
-  if (!input.user_profile) {
-    errors.push('User profile is required');
-  }
-
-  return errors;
-};
+export function createProjectionRow(
+  age: number,
+  year: number,
+  total_income: number,
+  total_expense: number
+): AnnualFinancialProjection {
+  return {
+    age,
+    year,
+    total_income,
+    total_expense
+  };
+}
