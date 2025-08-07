@@ -28,6 +28,144 @@ from streamlit_ui.utils.session_manager import (
 )
 
 
+def render_top_bar_minimal(i18n: I18nManager) -> None:
+    """Minimal top bar with only title and language selection."""
+    # First row: Title only (centered)
+    st.markdown(
+        f"<h1 style='text-align: center; margin: 0;'>{i18n.t('app_title')}</h1>",
+        unsafe_allow_html=True,
+    )
+    caption_text = i18n.t("app_caption")
+    caption_html = (
+        f"<p style='text-align: center; color: gray; margin: 0 0 20px 0;'>"
+        f"{caption_text}</p>"
+    )
+    st.markdown(caption_html, unsafe_allow_html=True)
+
+    # Second row: Only language selection
+    lang_col, empty_col = st.columns([1, 1])
+
+    with lang_col:
+        # Use original selectbox approach for language
+        lang_options = {"English": "en", "简体中文": "zh-CN", "日本語": "ja"}
+        selected_lang_display = st.selectbox(
+            label=i18n.t("language"),
+            options=list(lang_options.keys()),
+            index=list(lang_options.values()).index(st.session_state.lang),
+            key="top_lang_select_minimal",
+        )
+        selected_lang_code = lang_options[selected_lang_display]
+        if selected_lang_code != st.session_state.lang:
+            st.session_state.lang = selected_lang_code
+            st.rerun()
+
+    with empty_col:
+        st.write("")  # Empty column for now
+
+    st.markdown("---")  # Separator after top bar
+
+
+def render_navigation_controls(i18n: I18nManager) -> None:
+    """Render navigation controls at the bottom of the page."""
+    current_stage: int = st.session_state.stage
+    has_validation_errors = st.session_state.get("has_validation_errors", False)
+
+    # Simple navigation: can only go to adjacent stages (difference of 1) and no errors
+    def can_navigate_to(target_stage: int) -> bool:
+        if target_stage == current_stage:
+            return True  # Always allow staying on current stage
+        if has_validation_errors:
+            return False  # Block navigation if there are errors
+        if target_stage == 3:
+            # Can go to Stage 3 if we have basic data (user_profile and items)
+            # The planner will be created automatically in Stage 2/3 if needed
+            has_basic_data = (
+                st.session_state.get("user_profile") is not None
+                and st.session_state.get("incomes")
+                and st.session_state.get("expenses")
+            )
+            if not has_basic_data:
+                return False
+        return bool(abs(target_stage - current_stage) <= 1)
+
+    st.markdown("---")
+    st.subheader(f"📍 {i18n.t('navigation')}")
+
+    # Use the original direct navigation button logic (like the original sidebar)
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        # Stage 1 button
+        if st.button(
+            f"{i18n.t('nav_stage1')}",
+            use_container_width=True,
+            type="primary" if current_stage == 1 else "secondary",
+            disabled=not can_navigate_to(1),
+            key="bottom_nav_stage1",
+        ):
+            # Clear all cached data when returning to Stage 1
+            if current_stage != 1:
+                st.session_state.pop("planner", None)
+                st.session_state.pop("final_results", None)
+            st.session_state.stage = 1
+            st.rerun()
+
+    with col2:
+        # Stage 2 button
+        if st.button(
+            f"{i18n.t('nav_stage2')}",
+            use_container_width=True,
+            type="primary" if current_stage == 2 else "secondary",
+            disabled=not can_navigate_to(2),
+            key="bottom_nav_stage2",
+        ):
+            # Clear results cache when navigating away from Stage 3
+            if current_stage == 3:
+                st.session_state.pop("final_results", None)
+            st.session_state.stage = 2
+            st.rerun()
+
+    with col3:
+        # Stage 3 button
+        if st.button(
+            f"{i18n.t('nav_stage3')}",
+            use_container_width=True,
+            type="primary" if current_stage == 3 else "secondary",
+            disabled=not can_navigate_to(3),
+            key="bottom_nav_stage3",
+        ):
+            st.session_state.stage = 3
+            st.rerun()
+
+
+def render_save_button(i18n: I18nManager) -> None:
+    """Render save button at the bottom of the page."""
+    st.markdown("---")
+
+    has_validation_errors = st.session_state.get("has_validation_errors", False)
+    if st.session_state.get("user_profile") and not has_validation_errors:
+        session_data = get_session_data_as_dict()
+        st.download_button(
+            label="💾 " + i18n.t("save_plan_label"),
+            data=json.dumps(session_data, indent=4),
+            file_name="fire_plan.json",
+            mime="application/json",
+            use_container_width=True,
+        )
+    else:
+        help_text = (
+            i18n.t("fix_errors_before_save")
+            if has_validation_errors
+            else i18n.t("complete_stage1_first")
+        )
+        st.button(
+            label="💾 " + i18n.t("save_plan_label"),
+            disabled=True,
+            help=help_text,
+            use_container_width=True,
+        )
+
+
 def main() -> None:
     """Main function to run the Streamlit app."""
     st.set_page_config(layout="wide", page_title="FireBalance")
@@ -85,28 +223,68 @@ def main() -> None:
     # Language Selection and Translator
     i18n = I18nManager(st.session_state.lang)
 
-    st.title(i18n.t("app_title"))
+    # Top bar with title, language selection and file upload (two rows)
+    # First row: Title only (centered)
+    st.markdown(
+        f"<h1 style='text-align: center; margin: 0;'>{i18n.t('app_title')}</h1>",
+        unsafe_allow_html=True,
+    )
+    caption_text = i18n.t("app_caption")
+    caption_html = (
+        f"<p style='text-align: center; color: gray; margin: 0 0 20px 0;'>"
+        f"{caption_text}</p>"
+    )
+    st.markdown(caption_html, unsafe_allow_html=True)
 
-    st.caption(i18n.t("app_caption"))
+    # Second row: Language selection and file upload
+    lang_col, import_col = st.columns([1, 1])
 
-    # Sidebar
-    with st.sidebar:
-        # Session State Save/Load
-        st.header(i18n.t("session_management"))
+    with lang_col:
+        # Language toggle - show 2 alternative languages when in one language
+        current_lang = st.session_state.lang
 
-        # Load session state from file
-        st.caption(i18n.t("file_upload_help"))
+        # Define language options
+        lang_options = {
+            "en": {
+                "display": "EN",
+                "alternatives": [("中文", "zh-CN"), ("日本", "ja")],
+            },
+            "zh-CN": {
+                "display": "中文",
+                "alternatives": [("EN", "en"), ("日本", "ja")],
+            },
+            "ja": {
+                "display": "日本",
+                "alternatives": [("EN", "en"), ("中文", "zh-CN")],
+            },
+        }
 
-        # Show success message if file was loaded in previous run
-        if st.session_state.get("file_loaded", False):
-            st.success(i18n.t("plan_loaded_success"))
-            st.balloons()
-            # Clear the flag to prevent showing success message repeatedly
-            del st.session_state["file_loaded"]
+        # Show 2 alternative language buttons (not current language)
+        alternatives = lang_options[current_lang]["alternatives"]
+        btn_col1, btn_col2 = st.columns(2)
 
-        uploaded_file = st.file_uploader(i18n.t("load_plan_label"), type=["json"])
+        with btn_col1:
+            alt_display1, alt_code1 = alternatives[0]
+            if st.button(
+                alt_display1, key=f"lang_btn_{alt_code1}", use_container_width=True
+            ):
+                st.session_state.lang = alt_code1
+                st.rerun()
 
-        # Only process file if it's newly uploaded (check file size or content hash)
+        with btn_col2:
+            alt_display2, alt_code2 = alternatives[1]
+            if st.button(
+                alt_display2, key=f"lang_btn_{alt_code2}", use_container_width=True
+            ):
+                st.session_state.lang = alt_code2
+                st.rerun()
+
+    with import_col:
+        # File upload functionality
+        uploaded_file = st.file_uploader(
+            i18n.t("load_plan_label"), type=["json"], key="top_file_upload"
+        )
+
         if uploaded_file is not None:
             file_content = uploaded_file.getvalue()
             file_hash = hash(file_content)
@@ -125,13 +303,11 @@ def main() -> None:
                     # Restore the stage (allow loading in any stage)
                     st.session_state.stage = saved_stage
 
-                    # Clear cached data based on current stage to force recalculation
+                    # Clear cached data to force recalculation
                     if saved_stage == 2:
-                        # Clear planner to force regeneration with new data
                         if "planner" in st.session_state:
                             del st.session_state["planner"]
                     elif saved_stage == 3:
-                        # Clear both planner and results to force full recalculation
                         if "planner" in st.session_state:
                             del st.session_state["planner"]
 
@@ -144,84 +320,12 @@ def main() -> None:
                     # Store file hash and success flag
                     st.session_state["last_file_hash"] = file_hash
                     st.session_state["file_loaded"] = True
+                    st.success("📂 " + i18n.t("plan_loaded_success"))
                     st.rerun()
                 except (json.JSONDecodeError, KeyError) as e:
                     st.error(i18n.t("plan_loaded_error", error=e))
 
-        # Language switcher
-        lang_options = {"English": "en", "简体中文": "zh-CN", "日本語": "ja"}
-        selected_lang_display = st.selectbox(
-            label=i18n.t("language"),
-            options=list(lang_options.keys()),
-            index=list(lang_options.values()).index(st.session_state.lang),
-        )
-        selected_lang_code = lang_options[selected_lang_display]
-
-        if selected_lang_code != st.session_state.lang:
-            st.session_state.lang = selected_lang_code
-            st.rerun()
-
-        # Navigation buttons with three-state system
-        st.subheader(f"📍 {i18n.t('navigation')}")
-
-        current_stage: int = st.session_state.stage
-        has_validation_errors = st.session_state.get("has_validation_errors", False)
-
-        # Simple navigation: can only go to adjacent stages (difference of 1)
-        # and no errors
-        def can_navigate_to(target_stage: int) -> bool:
-            if target_stage == current_stage:
-                return True  # Always allow staying on current stage
-            if has_validation_errors:
-                return False  # Block navigation if there are errors
-            if target_stage == 3:
-                # Can go to Stage 3 if we have basic data (user_profile and items)
-                # The planner will be created automatically in Stage 2/3 if needed
-                has_basic_data = (
-                    st.session_state.get("user_profile") is not None
-                    and st.session_state.get("incomes")
-                    and st.session_state.get("expenses")
-                )
-                if not has_basic_data:
-                    return False
-            return bool(abs(target_stage - current_stage) <= 1)
-
-        # Stage 1 button
-        if st.button(
-            f"{i18n.t('nav_stage1')}",
-            use_container_width=True,
-            type="primary" if current_stage == 1 else "secondary",
-            disabled=not can_navigate_to(1),
-        ):
-            # Clear all cached data when returning to Stage 1
-            if current_stage != 1:
-                st.session_state.pop("planner", None)
-                st.session_state.pop("final_results", None)
-            st.session_state.stage = 1
-            st.rerun()
-
-        # Stage 2 button
-        if st.button(
-            f"{i18n.t('nav_stage2')}",
-            use_container_width=True,
-            type="primary" if current_stage == 2 else "secondary",
-            disabled=not can_navigate_to(2),
-        ):
-            # Clear results cache when navigating away from Stage 3
-            if current_stage == 3:
-                st.session_state.pop("final_results", None)
-            st.session_state.stage = 2
-            st.rerun()
-
-        # Stage 3 button
-        if st.button(
-            f"{i18n.t('nav_stage3')}",
-            use_container_width=True,
-            type="primary" if current_stage == 3 else "secondary",
-            disabled=not can_navigate_to(3),
-        ):
-            st.session_state.stage = 3
-            st.rerun()
+    st.markdown("---")  # Separator after top bar
 
     # Main content based on stage
     if st.session_state.stage == 1:
@@ -310,25 +414,9 @@ def main() -> None:
     else:
         st.error(i18n.t("error_invalid_stage"))
 
-    # Save configuration to file - check validation state AFTER all stages have run
-    with st.sidebar:
-        st.markdown("---")
-        has_validation_errors = st.session_state.get("has_validation_errors", False)
-        if st.session_state.get("user_profile") and not has_validation_errors:
-            session_data = get_session_data_as_dict()
-            st.download_button(
-                label=i18n.t("save_plan_label"),
-                data=json.dumps(session_data, indent=4),
-                file_name="fire_plan.json",
-                mime="application/json",
-            )
-        else:
-            help_text = (
-                i18n.t("fix_errors_before_save")
-                if has_validation_errors
-                else i18n.t("complete_stage1_first")
-            )
-            st.button(label=i18n.t("save_plan_label"), disabled=True, help=help_text)
+    # Bottom navigation only
+    render_navigation_controls(i18n)
+    render_save_button(i18n)
 
 
 if __name__ == "__main__":
