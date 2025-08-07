@@ -80,7 +80,9 @@ def render_stage2(t: Callable[..., str]) -> None:
                     st.session_state.planner = planner
                 except Exception as e:
                     st.error(f"Error recalculating: {str(e)}")
-            st.rerun()
+            # Only rerun if we're still in stage 2
+            if st.session_state.get("stage", 1) == 2:
+                st.rerun()
 
     overrides = st.session_state.overrides
 
@@ -193,7 +195,9 @@ def render_stage2(t: Callable[..., str]) -> None:
                 st.session_state["last_edited_age"] = last_edited_age
 
             # Force a complete refresh to ensure UI shows the updated data
-            st.rerun()
+            # Only rerun if we're still in stage 2 to prevent navigation interference
+            if st.session_state.get("stage", 1) == 2:
+                st.rerun()
 
         except Exception as e:
             st.error(t("apply_changes_error", error=str(e)))

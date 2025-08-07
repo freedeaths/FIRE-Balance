@@ -8,6 +8,133 @@ from core.data_models import IncomeExpenseItem, ItemFrequency
 from streamlit_ui.utils.common import ensure_unique_name
 
 
+def validate_stage1_for_progression(t: Callable[..., str]) -> tuple[bool, List[str]]:
+    """Validate Stage 1 data when user tries to progress to next stage.
+
+    Returns:
+        (is_valid, error_messages): Tuple of validation result and error list
+    """
+    profile = st.session_state.user_profile
+    errors = []
+
+    from datetime import datetime
+
+    current_year = datetime.now().year
+
+    # Age progression logic validation
+    calculated_age = current_year - profile.birth_year
+
+    # Birth year validation
+    if profile.birth_year > current_year:
+        errors.append(
+            t(
+                "birth_year_future",
+                birthYear=profile.birth_year,
+                currentYear=current_year,
+            )
+        )
+    elif calculated_age < 18:
+        errors.append(
+            t(
+                "birth_year_too_recent",
+                birthYear=profile.birth_year,
+                currentAge=calculated_age,
+            )
+        )
+    elif calculated_age > 100:
+        errors.append(
+            t(
+                "birth_year_too_old",
+                birthYear=profile.birth_year,
+                currentAge=calculated_age,
+            )
+        )
+
+    # Age progression validation
+    if profile.expected_fire_age < profile.current_age:
+        errors.append(
+            t(
+                "fire_age_too_small",
+                fireAge=profile.expected_fire_age,
+                currentAge=profile.current_age,
+            )
+        )
+
+    if profile.legal_retirement_age < profile.expected_fire_age:
+        errors.append(
+            t(
+                "legal_retirement_age_invalid",
+                retirementAge=profile.legal_retirement_age,
+                fireAge=profile.expected_fire_age,
+            )
+        )
+
+    if profile.life_expectancy < profile.legal_retirement_age:
+        errors.append(
+            t(
+                "life_expectancy_too_small",
+                lifeExpectancy=profile.life_expectancy,
+                retirementAge=profile.legal_retirement_age,
+            )
+        )
+
+    if profile.life_expectancy - profile.current_age < 10:
+        errors.append(
+            t(
+                "life_span_too_short",
+                lifeExpectancy=profile.life_expectancy,
+                currentAge=profile.current_age,
+            )
+        )
+
+    # Portfolio allocation validation is kept real-time, not included in lazy validation
+
+    # Income/expense items age validation
+    all_items = st.session_state.incomes + st.session_state.expenses
+
+    for item in all_items:
+        item_type = t("income_item") if item.is_income else t("expense_item")
+
+        # Start age validation
+        if item.start_age < profile.current_age:
+            errors.append(
+                t(
+                    "item_start_age_too_small",
+                    itemType=item_type,
+                    itemName=item.name,
+                    startAge=item.start_age,
+                    currentAge=profile.current_age,
+                )
+            )
+        elif item.start_age > profile.life_expectancy:
+            errors.append(
+                t(
+                    "item_start_age_too_large",
+                    itemType=item_type,
+                    itemName=item.name,
+                    startAge=item.start_age,
+                    lifeExpectancy=profile.life_expectancy,
+                )
+            )
+
+        # End age validation (for recurring items)
+        if item.frequency == ItemFrequency.RECURRING and item.end_age:
+            if item.end_age > profile.life_expectancy:
+                errors.append(
+                    t(
+                        "item_end_age_too_large",
+                        itemType=item_type,
+                        itemName=item.name,
+                        endAge=item.end_age,
+                        lifeExpectancy=profile.life_expectancy,
+                    )
+                )
+            elif item.end_age < item.start_age:
+                errors.append(t("age_range_invalid") + f" ({item.name})")
+
+    return len(errors) == 0, errors
+
+
 def render_stage1(t: Callable[..., str]) -> bool:
     """Renders the UI for Stage 1: Basic Input."""
     st.header(t("stage1_title"))
@@ -16,14 +143,11 @@ def render_stage1(t: Callable[..., str]) -> bool:
     # Add current economic conditions note
     st.info(t("economic_conditions_note"))
 
-    # Initialize validation state
-    has_invalid_age_range = False
+    # Initialize validation state - only for portfolio allocation (real-time)
+    has_portfolio_error = False
 
     profile = st.session_state.user_profile
     with st.expander(t("user_information_header"), expanded=True):
-        from datetime import datetime
-
-        current_year = datetime.now().year
 
         # Row 1: Birth Year, FIRE Age, Legal Retirement Age, Life Expectancy
         cols1 = st.columns(4)
@@ -40,39 +164,7 @@ def render_stage1(t: Callable[..., str]) -> bool:
             if new_birth_year != profile.birth_year:
                 profile.birth_year = new_birth_year
 
-            # Validate birth year inline
-            calculated_age = current_year - profile.birth_year
-
-            if profile.birth_year > current_year:
-                from streamlit_ui.utils.inline_validation import show_inline_error
-
-                error_msg = t(
-                    "birth_year_future",
-                    birthYear=profile.birth_year,
-                    currentYear=current_year,
-                )
-                show_inline_error(error_msg)
-                has_invalid_age_range = True
-            elif calculated_age < 18:
-                from streamlit_ui.utils.inline_validation import show_inline_error
-
-                error_msg = t(
-                    "birth_year_too_recent",
-                    birthYear=profile.birth_year,
-                    currentAge=calculated_age,
-                )
-                show_inline_error(error_msg)
-                has_invalid_age_range = True
-            elif calculated_age > 100:
-                from streamlit_ui.utils.inline_validation import show_inline_error
-
-                error_msg = t(
-                    "birth_year_too_old",
-                    birthYear=profile.birth_year,
-                    currentAge=calculated_age,
-                )
-                show_inline_error(error_msg)
-                has_invalid_age_range = True
+            # Birth year validation moved to lazy validation (on Next click)
 
         # Column 2: Expected FIRE age
         with cols1[1]:
@@ -88,17 +180,7 @@ def render_stage1(t: Callable[..., str]) -> bool:
             if new_fire_age != profile.expected_fire_age:
                 profile.expected_fire_age = new_fire_age
 
-            # Validate FIRE age inline
-            if profile.expected_fire_age < profile.current_age:
-                from streamlit_ui.utils.inline_validation import show_inline_error
-
-                error_msg = t(
-                    "fire_age_too_small",
-                    fireAge=profile.expected_fire_age,
-                    currentAge=profile.current_age,
-                )
-                show_inline_error(error_msg)
-                has_invalid_age_range = True
+            # FIRE age validation moved to lazy validation (on Next click)
 
         # Column 3: Legal retirement age
         with cols1[2]:
@@ -118,17 +200,7 @@ def render_stage1(t: Callable[..., str]) -> bool:
             if new_retirement_age != profile.legal_retirement_age:
                 profile.legal_retirement_age = new_retirement_age
 
-            # Validate retirement age inline
-            if profile.legal_retirement_age < profile.expected_fire_age:
-                from streamlit_ui.utils.inline_validation import show_inline_error
-
-                error_msg = t(
-                    "legal_retirement_age_invalid",
-                    retirementAge=profile.legal_retirement_age,
-                    fireAge=profile.expected_fire_age,
-                )
-                show_inline_error(error_msg)
-                has_invalid_age_range = True
+            # Legal retirement age validation moved to lazy validation (on Next click)
 
         # Column 4: Life expectancy
         with cols1[3]:
@@ -144,27 +216,7 @@ def render_stage1(t: Callable[..., str]) -> bool:
             if new_life_expectancy != profile.life_expectancy:
                 profile.life_expectancy = new_life_expectancy
 
-            # Validate life expectancy inline
-            if profile.life_expectancy < profile.legal_retirement_age:
-                from streamlit_ui.utils.inline_validation import show_inline_error
-
-                error_msg = t(
-                    "life_expectancy_too_small",
-                    lifeExpectancy=profile.life_expectancy,
-                    retirementAge=profile.legal_retirement_age,
-                )
-                show_inline_error(error_msg)
-                has_invalid_age_range = True
-            elif profile.life_expectancy - profile.current_age < 10:
-                from streamlit_ui.utils.inline_validation import show_inline_error
-
-                error_msg = t(
-                    "life_span_too_short",
-                    lifeExpectancy=profile.life_expectancy,
-                    currentAge=profile.current_age,
-                )
-                show_inline_error(error_msg)
-                has_invalid_age_range = True
+            # Life expectancy validation moved to lazy validation (on Next click)
 
         # Row 2: Current Net Worth, Inflation Rate, Safety Buffer Months
         cols2 = st.columns(3)
@@ -282,7 +334,7 @@ def render_stage1(t: Callable[..., str]) -> bool:
         # Compact summary row
         summary_cols = st.columns([1, 1])
 
-        # Validate allocation sum in real-time
+        # Keep allocation sum validation in real-time (as per issue requirement)
         with summary_cols[0]:
             if (
                 abs(total_allocation - 100.0) > 0.01
@@ -293,7 +345,7 @@ def render_stage1(t: Callable[..., str]) -> bool:
                     + t("allocation_required")
                 )
                 st.error(f"⚠️ {allocation_error}")
-                has_invalid_age_range = True  # Use unified validation state
+                has_portfolio_error = True
             else:
                 st.success(t("allocation_balanced", total=total_allocation))
 
@@ -318,7 +370,6 @@ def render_stage1(t: Callable[..., str]) -> bool:
     def render_item_editor(
         item_list: List[IncomeExpenseItem], item_type: str, t: Callable[..., str]
     ) -> None:
-        nonlocal has_invalid_age_range
 
         # Add CSS to make inputs more compact
         st.markdown(
@@ -402,32 +453,7 @@ def render_stage1(t: Callable[..., str]) -> bool:
                 if "planner" in st.session_state:
                     del st.session_state.planner
 
-            # Inline validation for start age - show in the same column
-            profile = st.session_state.user_profile
-            if new_start_age < profile.current_age:
-                from streamlit_ui.utils.inline_validation import show_inline_error
-
-                error_msg = t(
-                    "item_start_age_too_small",
-                    itemType=t("income_item") if item.is_income else t("expense_item"),
-                    itemName=item.name,
-                    startAge=new_start_age,
-                    currentAge=profile.current_age,
-                )
-                show_inline_error(error_msg, cols[3])
-                has_invalid_age_range = True
-            elif new_start_age > profile.life_expectancy:
-                from streamlit_ui.utils.inline_validation import show_inline_error
-
-                error_msg = t(
-                    "item_start_age_too_large",
-                    itemType=t("income_item") if item.is_income else t("expense_item"),
-                    itemName=item.name,
-                    startAge=new_start_age,
-                    lifeExpectancy=profile.life_expectancy,
-                )
-                show_inline_error(error_msg, cols[3])
-                has_invalid_age_range = True
+            # Start age validation moved to lazy validation (on Next click)
 
             # 列4：结束年龄（仅recurring）
             if item.frequency == ItemFrequency.RECURRING:
@@ -448,28 +474,7 @@ def render_stage1(t: Callable[..., str]) -> bool:
                     if "planner" in st.session_state:
                         del st.session_state.planner
 
-                # Inline validation for end age - show in the same column
-                profile = st.session_state.user_profile
-                if new_end_age > profile.life_expectancy:
-                    from streamlit_ui.utils.inline_validation import show_inline_error
-
-                    error_msg = t(
-                        "item_end_age_too_large",
-                        itemType=(
-                            t("income_item") if item.is_income else t("expense_item")
-                        ),
-                        itemName=item.name,
-                        endAge=new_end_age,
-                        lifeExpectancy=profile.life_expectancy,
-                    )
-                    show_inline_error(error_msg, cols[4])
-                    has_invalid_age_range = True
-                elif new_end_age < item.start_age:
-                    from streamlit_ui.utils.inline_validation import show_inline_error
-
-                    error_msg = t("age_range_invalid")
-                    show_inline_error(error_msg, cols[4])
-                    has_invalid_age_range = True
+                # End age validation moved to lazy validation (on Next click)
             else:
                 item.end_age = None
                 cols[4].empty()
@@ -534,4 +539,6 @@ def render_stage1(t: Callable[..., str]) -> bool:
             )
             st.rerun()
 
-    return has_invalid_age_range
+    # Only return portfolio error state (real-time validation)
+    # Other validations are now handled by validate_stage1_for_progression
+    return has_portfolio_error

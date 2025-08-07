@@ -275,5 +275,7 @@
   "no_monte_carlo_results": "No Monte Carlo results available. Run simulation to generate data.",
   "generating_monte_carlo_for_report": "Generating Monte Carlo analysis for report...",
   "years": "years",
-  "months": "months"
+  "months": "months",
+  "previous": "Previous",
+  "next": "Next"
 }
