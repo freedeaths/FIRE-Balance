@@ -47,7 +47,7 @@ def render_top_bar_minimal(i18n: I18nManager) -> None:
 
     with lang_col:
         # Use original selectbox approach for language
-        lang_options = {"English": "en", "简体中文": "zh-CN", "日本語": "ja"}
+        lang_options = {"EN": "en", "中文": "zh-CN", "日本語": "ja"}
         selected_lang_display = st.selectbox(
             label=i18n.t("language"),
             options=list(lang_options.keys()),
@@ -119,6 +119,18 @@ def render_navigation_controls(i18n: I18nManager) -> None:
             disabled=not can_navigate_to(2),
             key="bottom_nav_stage2",
         ):
+            # Validate Stage 1 before proceeding if coming from Stage 1
+            if current_stage == 1:
+                from streamlit_ui.ui.stage1_input import validate_stage1_for_progression
+
+                is_valid, errors = validate_stage1_for_progression(i18n.t)
+
+                if not is_valid:
+                    st.error("❌ " + i18n.t("data_validation_errors"))
+                    for error in errors:
+                        st.error(f"• {error}")
+                    return  # Block navigation
+
             # Clear results cache when navigating away from Stage 3
             if current_stage == 3:
                 st.session_state.pop("final_results", None)
@@ -247,14 +259,14 @@ def main() -> None:
         lang_options = {
             "en": {
                 "display": "EN",
-                "alternatives": [("中文", "zh-CN"), ("日本", "ja")],
+                "alternatives": [("中文", "zh-CN"), ("日本語", "ja")],
             },
             "zh-CN": {
                 "display": "中文",
-                "alternatives": [("EN", "en"), ("日本", "ja")],
+                "alternatives": [("EN", "en"), ("日本語", "ja")],
             },
             "ja": {
-                "display": "日本",
+                "display": "日本語",
                 "alternatives": [("EN", "en"), ("中文", "zh-CN")],
             },
         }
@@ -329,12 +341,12 @@ def main() -> None:
 
     # Main content based on stage
     if st.session_state.stage == 1:
-        # Render stage 1 UI with inline validation
-        has_invalid_age_range = render_stage1(i18n.t)
+        # Render stage 1 UI with only real-time portfolio validation
+        has_portfolio_error = render_stage1(i18n.t)
 
-        # Set validation flag based on inline validation results
-        # This is used for save button state and navigation
-        st.session_state.has_validation_errors = has_invalid_age_range
+        # Set validation flag based on real-time validation results (portfolio only)
+        # Other validations are handled lazily when user tries to navigate
+        st.session_state.has_validation_errors = has_portfolio_error
 
     elif st.session_state.stage == 2:
         # Ensure we have a planner with latest data
