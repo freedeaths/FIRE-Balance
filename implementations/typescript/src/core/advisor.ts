@@ -20,7 +20,8 @@ import {
 } from './data_models';
 import type {
   EngineInput,
-  AnnualFinancialProjection
+  AnnualFinancialProjection,
+  DetailedProjection
 } from './engine';
 import {
   FIREEngine,
@@ -65,7 +66,7 @@ export class FIREAdvisor {
   public readonly engine_input: EngineInput;
   public readonly profile: UserProfile;
   public readonly projection_df: AnnualFinancialProjection[];
-  public readonly detailed_projection_df: AnnualFinancialProjection[];
+  public readonly detailed_projection_df: AnnualFinancialProjection[] | DetailedProjection[];
   public readonly income_items: IncomeExpenseItem[];
 
   constructor(engine_input: EngineInput, language?: string) {
@@ -73,8 +74,9 @@ export class FIREAdvisor {
     this.engine_input = engine_input;
     this.profile = engine_input.user_profile;
     this.projection_df = engine_input.annual_financial_projection;
-    this.detailed_projection_df = engine_input.annual_financial_projection;
+    this.detailed_projection_df = [...engine_input.annual_financial_projection]; // Create a copy
     this.income_items = engine_input.income_items || [];
+
   }
 
   /**
@@ -266,49 +268,16 @@ export class FIREAdvisor {
     }
 
     if (required_age) {
-      // Get final results for Monte Carlo analysis
-      const optimal_profile: UserProfile = {
-        ...this.profile,
-        expected_fire_age: required_age
-      };
-
-      const optimal_detailed_projection = this._extend_work_income_to_age(required_age);
-      const optimal_annual_projection = this._create_annual_summary_from_detailed_df(
-        optimal_detailed_projection
-      );
-      const optimal_input = createEngineInput(
-        optimal_profile,
-        optimal_annual_projection,
-        this.income_items
-      );
-
-      // Run Monte Carlo for delayed retirement scenario
-      const optimal_engine = new FIREEngine(optimal_input);
-      const mc_simulator = new MonteCarloSimulator(
-        optimal_engine,
-        createSimulationSettings({
-          num_simulations: 1000,
-          confidence_level: 0.95,
-          include_black_swan_events: true,
-          income_base_volatility: 0.1,
-          income_minimum_factor: 0.1,
-          expense_base_volatility: 0.05,
-          expense_minimum_factor: 0.5,
-        })
-      );
-      const mc_result = mc_simulator.run_simulation();
-
       const years_delayed = required_age - current_expected_age;
 
       return {
         type: 'delayed_retirement',
         params: {
           age: required_age,
-          years: years_delayed,
-          suggested_fire_age: required_age
+          years: years_delayed
         },
         is_achievable: true,
-        monte_carlo_success_rate: mc_result.success_rate,
+        monte_carlo_success_rate: undefined, // Match Python's null
       };
     }
 
@@ -317,14 +286,12 @@ export class FIREAdvisor {
     const years_delayed = legal_retirement_age - current_expected_age;
 
     return {
-      type: 'delayed_retirement',
+      type: 'delayed_retirement_not_feasible',
       params: {
-        age: legal_retirement_age,
-        years: years_delayed,
-        suggested_fire_age: legal_retirement_age,
-        message: 'Consider working until legal retirement age'
+        age: legal_retirement_age
       },
-      is_achievable: true, // Match Python behavior - always try to provide a solution
+      is_achievable: false,
+      monte_carlo_success_rate: undefined,
     };
   }
 
@@ -333,14 +300,17 @@ export class FIREAdvisor {
    */
   private _find_required_income_increase(): SimpleRecommendation {
     const max_multiplier = 5.0; // Maximum 500% income increase
-    const precision = 0.001;
+    const precision = 0.01; // Match Python's epsilon = 0.01
     let low = 1.0;
     let high = max_multiplier;
     let required_multiplier: number | null = null;
 
+
+    let iteration = 0;
     // Binary search for minimum income multiplier
     while (high - low > precision) {
       const mid = (low + high) / 2;
+      iteration++;
 
       // Create modified projection with increased income
       const modified_projection = this._apply_income_multiplier(mid);
@@ -361,52 +331,36 @@ export class FIREAdvisor {
       } else {
         low = mid;
       }
+
+      if (iteration > 20) {
+        break; // Prevent infinite loop
+      }
     }
 
     if (required_multiplier && required_multiplier > 1.001) {
-      // Run Monte Carlo for this income scenario
-      const optimal_projection = this._apply_income_multiplier(required_multiplier);
-      const optimal_input = createEngineInput(
-        this.profile,
-        optimal_projection,
-        this.income_items
-      );
-
-      const optimal_engine = new FIREEngine(optimal_input);
-      const mc_simulator = new MonteCarloSimulator(
-        optimal_engine,
-        createSimulationSettings({
-          num_simulations: 1000,
-          confidence_level: 0.95,
-          include_black_swan_events: true,
-          income_base_volatility: 0.1,
-          income_minimum_factor: 0.1,
-          expense_base_volatility: 0.05,
-          expense_minimum_factor: 0.5,
-        })
-      );
-      const mc_result = mc_simulator.run_simulation();
-
-      const percentage_increase = (required_multiplier - 1.0) * 100;
+      // Calculate additional income needed (matching Python logic)
+      const original_income = this.projection_df[0]?.total_income || 0;
+      const additional_income = original_income * (required_multiplier - 1.0);
 
       return {
-        type: 'income_increase',
+        type: 'increase_income',
         params: {
-          multiplier: required_multiplier,
-          percentage: Math.round(percentage_increase)
+          fire_age: this.profile.expected_fire_age,
+          percentage: (required_multiplier - 1) * 100,
+          amount: additional_income
         },
         is_achievable: true,
-        monte_carlo_success_rate: mc_result.success_rate,
+        monte_carlo_success_rate: undefined, // Match Python's null behavior
       };
     }
 
     // If no feasible income increase found within reasonable limits
     return {
-      type: 'income_increase',
+      type: 'increase_income',
       params: {
-        multiplier: max_multiplier,
-        percentage: Math.round((max_multiplier - 1.0) * 100),
-        message: 'Required income increase may be impractical'
+        fire_age: this.profile.expected_fire_age,
+        percentage: (max_multiplier - 1.0) * 100,
+        amount: 0
       },
       is_achievable: false,
     };
@@ -416,20 +370,20 @@ export class FIREAdvisor {
    * Find required expense reduction using binary search
    */
   private _find_required_expense_reduction(): SimpleRecommendation {
-    const min_multiplier = 0.2; // Maximum 80% expense reduction
-    const precision = 0.001;
-    let low = min_multiplier;
-    let high = 1.0;
-    let required_multiplier: number | null = null;
+    // Binary search for the minimum expense reduction (matching Python logic)
+    let low = 0.0; // 0% reduction
+    let high = 0.8; // 80% reduction
+    const epsilon = 0.001; // Precision for binary search
+    let optimal_reduction: number | null = null;
 
-    // Binary search for maximum expense multiplier (minimum expenses)
-    while (high - low > precision) {
+    while (high - low > epsilon) {
       const mid = (low + high) / 2;
+      const reduction_factor = 1.0 - mid; // Convert reduction rate to multiplier
 
       // Create modified projection with reduced expenses
-      const modified_projection = this._apply_expense_multiplier(mid);
+      const modified_projection = this._apply_expense_multiplier(reduction_factor);
 
-      // Test this multiplier
+      // Test this reduction
       const modified_input = createEngineInput(
         this.profile,
         modified_projection,
@@ -440,64 +394,40 @@ export class FIREAdvisor {
       const result = engine.calculate();
 
       if (result.is_fire_achievable) {
-        required_multiplier = mid;
+        optimal_reduction = mid;
         high = mid;
       } else {
         low = mid;
       }
     }
 
-    if (required_multiplier && required_multiplier < 0.999) {
-      // Run Monte Carlo for this expense scenario
-      const optimal_projection = this._apply_expense_multiplier(required_multiplier);
-      const optimal_input = createEngineInput(
-        this.profile,
-        optimal_projection,
-        this.income_items
-      );
-
-      const optimal_engine = new FIREEngine(optimal_input);
-      const mc_simulator = new MonteCarloSimulator(
-        optimal_engine,
-        createSimulationSettings({
-          num_simulations: 1000,
-          confidence_level: 0.95,
-          include_black_swan_events: true,
-          income_base_volatility: 0.1,
-          income_minimum_factor: 0.1,
-          expense_base_volatility: 0.05,
-          expense_minimum_factor: 0.5,
-        })
-      );
-      const mc_result = mc_simulator.run_simulation();
-
-      const percentage_reduction = (1.0 - required_multiplier) * 100;
+    if (optimal_reduction && optimal_reduction > 0.001) {
+      // Calculate annual savings needed (matching Python logic)
+      const original_expense = this.projection_df[0]?.total_expense || 0;
+      const annual_savings = original_expense * optimal_reduction;
 
       return {
-        type: 'expense_reduction',
+        type: 'reduce_expenses',
         params: {
-          multiplier: required_multiplier,
-          percentage: Math.round(percentage_reduction),
-          suggested_reduction_percent: Math.round(percentage_reduction)
+          fire_age: this.profile.expected_fire_age,
+          percentage: optimal_reduction * 100,
+          amount: annual_savings
         },
         is_achievable: true,
-        monte_carlo_success_rate: mc_result.success_rate,
+        monte_carlo_success_rate: undefined, // Match Python's null behavior
       };
     }
 
-    // If no feasible expense reduction found within reasonable limits, suggest maximum reduction
-    // This matches Python behavior of always trying to provide a solution
-    const max_reduction_percentage = Math.round((1.0 - min_multiplier) * 100);
-
+    // If no feasible expense reduction found within reasonable limits, return null like Python
     return {
-      type: 'expense_reduction',
+      type: 'reduce_expenses',
       params: {
-        multiplier: min_multiplier,
-        percentage: max_reduction_percentage,
-        suggested_reduction_percent: max_reduction_percentage,
-        message: 'Consider significant expense reduction'
+        fire_age: this.profile.expected_fire_age,
+        percentage: 0,
+        amount: 0.0
       },
-      is_achievable: true, // Match Python behavior - always try to provide a solution
+      is_achievable: false,
+      monte_carlo_success_rate: undefined,
     };
   }
 
@@ -507,100 +437,60 @@ export class FIREAdvisor {
 
   /**
    * Extend work income to a later FIRE age
+   * Direct TypeScript port of Python's _extend_work_income_to_age logic
    */
   private _extend_work_income_to_age(target_fire_age: number): AnnualFinancialProjection[] {
-    const modified_projection = [...this.detailed_projection_df];
-    const current_age = getCurrentAge(this.profile.birth_year);
-    const current_year = new Date().getFullYear();
-
-    // Find the last working year data to use as a template
-    // Look for the last row that has income data
-    let working_year_template: AnnualFinancialProjection | null = null;
-
-    // Try to find a row with income data, preferably around expected FIRE age
-    for (let i = modified_projection.length - 1; i >= 0; i--) {
-      const row = modified_projection[i];
-      if (row.total_income > 0) {
-        working_year_template = row;
-        break;
-      }
+    if (!this.income_items || this.income_items.length === 0) {
+      throw new Error("Income items required for income extension");
     }
 
-    // If no income data found, use first row or create a default
-    if (!working_year_template) {
-      if (modified_projection.length > 0) {
-        working_year_template = {
-          ...modified_projection[0],
-          total_income: modified_projection[0].total_income || 40000 // Default income for testing
-        };
-      } else {
-        working_year_template = {
-          age: current_age,
-          year: current_year,
-          total_income: 40000,
-          total_expense: 60000
-        };
-      }
+    // Create deep copy to avoid modifying original data
+    const extended_projection = this.detailed_projection_df.map(row => ({ ...row }));
+    const current_fire_age = this.profile.expected_fire_age;
+
+    // If target age is not later than current, return unchanged
+    if (target_fire_age <= current_fire_age) {
+      return extended_projection;
     }
 
-    // Extend projection to cover all years from current age to life expectancy
-    const life_expectancy = this.profile.life_expectancy;
-    const years_needed = life_expectancy - current_age + 1;
+    // Find income items that end at current FIRE age (work income)
+    const work_income_items = this.income_items.filter(
+      item => item.end_age && item.end_age === current_fire_age
+    );
 
-    // Build a complete projection array
-    const complete_projection: AnnualFinancialProjection[] = [];
+    if (work_income_items.length === 0) {
+      // No work income to extend
+      return extended_projection;
+    }
 
-    for (let i = 0; i < years_needed; i++) {
-      const age = current_age + i;
-      const year = current_year + i;
+    // For each work income item, extend it to target age
+    for (const item of work_income_items) {
+      // Calculate the growth pattern for extending this income
+      for (let age = item.end_age + 1; age <= target_fire_age; age++) {
+        // Find the row for this age
+        const row_index = extended_projection.findIndex(row => row.age === age);
 
-      // Try to find existing data for this age
-      let existing_row = modified_projection.find(row => row.age === age);
+        if (row_index !== -1) {
+          // Calculate extended income value with proper growth
+          const years_since_start = age - item.start_age;
+          const growth_factor = Math.pow(1 + item.annual_growth_rate / 100, years_since_start);
+          const extended_income = item.after_tax_amount_per_period * growth_factor;
 
-      if (existing_row) {
-        // Use existing data
-        complete_projection.push({ ...existing_row });
-      } else {
-        // Create new row based on the last available row
-        const last_available = modified_projection[modified_projection.length - 1];
-        if (last_available) {
-          complete_projection.push({
-            age: age,
-            year: year,
-            total_income: 0, // No income by default for future years
-            total_expense: last_available.total_expense // Keep same expense level
-          });
-        } else {
-          // Fallback to template
-          complete_projection.push({
-            age: age,
-            year: year,
-            total_income: 0,
-            total_expense: working_year_template.total_expense
-          });
+          // Set this income directly (not cumulative, since this age shouldn't have work income yet)
+          extended_projection[row_index].total_income = extended_income;
         }
       }
     }
 
-    // Now extend work income for ages between original FIRE age and target FIRE age
-    for (let i = 0; i < complete_projection.length; i++) {
-      const row = complete_projection[i];
-      const age = current_age + i;
-
-      // If this age is between original FIRE age and target FIRE age, extend work income
-      if (age > this.profile.expected_fire_age && age <= target_fire_age) {
-        row.total_income = working_year_template.total_income;
-      }
-    }
-
-    return complete_projection;
+    return extended_projection;
   }
 
   /**
    * Truncate work income to an earlier FIRE age
    */
   private _truncate_work_income_to_age(target_fire_age: number): AnnualFinancialProjection[] {
-    const modified_projection = [...this.detailed_projection_df];
+    // Create deep copy to avoid modifying original data
+    const modified_projection = this.detailed_projection_df.map(row => ({ ...row }));
     const current_age = getCurrentAge(this.profile.birth_year);
 
     // Zero out income for years after target FIRE age
