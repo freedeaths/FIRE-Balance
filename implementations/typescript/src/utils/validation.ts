@@ -312,7 +312,7 @@ export const validateIncomeExpenseItem = (
   }
 
   // End age validation (for recurring items)
-  if (item.end_age !== null) {
+  if (item.end_age !== undefined && item.end_age !== null) {
     if (item.end_age > userProfile.life_expectancy) {
       errors.push({
         field: 'end_age',

@@ -30,11 +30,14 @@
     "@mantine/hooks": "^8.2.2",
     "@mantine/notifications": "^8.2.2",
     "@tabler/icons-react": "^3.34.1",
+    "@types/uuid": "^10.0.0",
     "dayjs": "^1.11.13",
+    "decimal.js": "^10.6.0",
     "handsontable": "^16.0.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "recharts": "^3.1.0"
+    "recharts": "^3.1.0",
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.30.1",

@@ -19,38 +19,20 @@
  * Frequency type for income/expense items
  * Maps to Python's ItemFrequency enum
  */
-export enum ItemFrequency {
-  MONTHLY = 'monthly',
-  QUARTERLY = 'quarterly',
-  SEMI_ANNUAL = 'semi_annual',
-  ANNUAL = 'annual',
-  ONE_TIME = 'one_time',
-}
+export type ItemFrequency = 'recurring' | 'one-time';
 
 /**
- * Type alias for frequency values
+ * Time unit for amount input
+ * Maps to Python's TimeUnit enum
  */
-export type ItemFrequencyValue = 'monthly' | 'quarterly' | 'semi_annual' | 'annual' | 'one_time';
+export type TimeUnit = 'monthly' | 'quarterly' | 'annually';
 
-/**
- * Time unit for amount input periods - simplified for our use case
- */
-export type TimeUnit = 'month' | 'quarter' | 'year';
 
 /**
  * Asset liquidity levels for cash flow optimization
  * Maps to Python's LiquidityLevel enum
  */
-export enum LiquidityLevel {
-  HIGH = 'high',     // Cash, checking - immediately available
-  MEDIUM = 'medium', // Stocks, ETFs - liquid but less frequent access
-  LOW = 'low',       // CDs, bonds - may have penalties for early withdrawal
-}
-
-/**
- * Type alias for liquidity level values
- */
-export type LiquidityLevelValue = 'high' | 'medium' | 'low';
+export type LiquidityLevel = 'high' | 'medium' | 'low';
 
 // =============================================================================
 // Portfolio and Investment Types
@@ -77,7 +59,7 @@ export interface AssetClass {
   volatility: number;
 
   /** Asset liquidity level for cash flow optimization */
-  liquidity_level: LiquidityLevelValue;
+  liquidity_level: LiquidityLevel;
 }
 
 /**
@@ -199,13 +181,10 @@ export const DEFAULT_USER_PROFILE: Omit<UserProfile, 'birth_year'> = {
  */
 export interface IncomeExpenseItem {
   /** Unique identifier */
-  item_id: string;
+  id: string;
 
   /** Human-readable name */
   name: string;
-
-  /** Optional description */
-  description?: string;
 
   /** After-tax amount per time period */
   after_tax_amount_per_period: number;
@@ -214,22 +193,28 @@ export interface IncomeExpenseItem {
   time_unit: TimeUnit;
 
   /** Frequency type */
-  frequency: ItemFrequencyValue;
+  frequency: ItemFrequency;
 
-  /** Interval in time_unit periods (e.g., 1 for annual, 12 for monthly) */
-  interval_in_time_unit: number;
+  /** Interval in time_unit periods */
+  interval_periods: number;
 
   /** The age this item starts */
   start_age: number;
 
-  /** The age this item ends (undefined for one-time items or lifetime) */
+  /** The age this item ends (for recurring items) */
   end_age?: number;
 
   /** Annual growth rate (%) - after tax */
-  growth_rate: number;
+  annual_growth_rate: number;
+
+  /** True for income, False for expense */
+  is_income: boolean;
 
   /** Optional category for grouping */
   category?: string;
+
+  /** Predefined type identifier (optional) */
+  predefined_type?: string;
 }
 
 // =============================================================================
@@ -424,7 +409,7 @@ export type Result<T, E = Error> =
 /**
  * Language codes for internationalization
  */
-export type LanguageCode = 'en' | 'zh-CN' | 'ja';
+export type LanguageCode = 'en' | 'zh' | 'ja';
 
 /**
  * Annual projection row for stage 2 table
@@ -441,6 +426,9 @@ export interface AnnualProjectionRow {
 
   /** Total expenses for this year */
   total_expense: number;
+
+  /** Allow additional columns for detailed projection */
+  [key: string]: any;
 }
 
 // =============================================================================
@@ -530,4 +518,84 @@ export interface PlannerData {
 
   /** Monte Carlo simulation settings */
   simulation_settings: SimulationSettings;
+}
+
+// =============================================================================
+// Engine and Advisor Types
+// =============================================================================
+
+/**
+ * Input configuration for the FIRE calculation engine
+ */
+export interface EngineInput {
+  /** User profile information */
+  user_profile: UserProfile;
+
+  /** Annual financial projection data */
+  annual_financial_projection: AnnualProjectionRow[];
+
+  /** Income items for the calculation */
+  income_items: IncomeExpenseItem[];
+
+  /** Optional expense items */
+  expense_items?: IncomeExpenseItem[];
+
+  /** Optional detailed projection data */
+  detailed_projection?: AnnualProjectionRow[];
+}
+
+/**
+ * Simple recommendation from the FIRE advisor
+ */
+export interface SimpleRecommendation {
+  /** Type of recommendation */
+  type: 'early_retirement' | 'delayed_retirement' | 'delayed_retirement_not_feasible' |
+        'income_adjustment' | 'increase_income' | 'expense_reduction' | 'reduce_expenses';
+
+  /** Parameters specific to this recommendation */
+  params: Record<string, any>;
+
+  /** Whether this recommendation is achievable */
+  is_achievable: boolean;
+
+  /** Optional Monte Carlo success rate */
+  monte_carlo_success_rate?: number;
+}
+
+/**
+ * Monte Carlo simulation result
+ */
+export interface MonteCarloResult {
+  /** Total number of simulations run */
+  total_simulations: number;
+
+  /** Number of successful simulations */
+  successful_simulations: number;
+
+  /** Success rate (0-1) */
+  success_rate: number;
+
+  /** Mean final net worth across all simulations */
+  mean_final_net_worth: number;
+
+  /** Median final net worth */
+  median_final_net_worth: number;
+
+  /** 5th percentile net worth */
+  percentile_5_net_worth: number;
+
+  /** 95th percentile net worth */
+  percentile_95_net_worth: number;
+
+  /** Black swan impact analysis */
+  black_swan_impact_analysis?: Record<string, any>;
+
+  /** Resilience score (0-100) */
+  resilience_score?: number;
+
+  /** Recommended emergency fund amount */
+  recommended_emergency_fund?: number;
+
+  /** List of worst case scenarios */
+  worst_case_scenarios?: string[];
 }
