@@ -9,6 +9,7 @@
  * - Expense reduction strategies
  */
 
+import { Decimal } from 'decimal.js';
 import type {
   UserProfile,
   SimulationSettings,
@@ -48,7 +49,7 @@ export interface SimpleRecommendation {
   is_achievable: boolean;
 
   /** Monte Carlo success rate for this recommendation */
-  monte_carlo_success_rate?: number;
+  monte_carlo_success_rate?: Decimal;
 }
 
 // =============================================================================
@@ -196,12 +197,12 @@ export class FIREAdvisor {
         optimal_engine,
         createSimulationSettings({
           num_simulations: 1000,
-          confidence_level: 0.95,
+          confidence_level: new Decimal(0.95),
           include_black_swan_events: true,
-          income_base_volatility: 0.1,
-          income_minimum_factor: 0.1,
-          expense_base_volatility: 0.05,
-          expense_minimum_factor: 0.5,
+          income_base_volatility: new Decimal(0.1),
+          income_minimum_factor: new Decimal(0.1),
+          expense_base_volatility: new Decimal(0.05),
+          expense_minimum_factor: new Decimal(0.5),
         })
       );
       const mc_result = mc_simulator.run_simulation();
@@ -299,17 +300,17 @@ export class FIREAdvisor {
    * Find required income increase using binary search
    */
   private _find_required_income_increase(): SimpleRecommendation {
-    const max_multiplier = 5.0; // Maximum 500% income increase
-    const precision = 0.01; // Match Python's epsilon = 0.01
-    let low = 1.0;
+    const max_multiplier = new Decimal(5.0); // Maximum 500% income increase
+    const precision = new Decimal(0.01); // Match Python's epsilon = 0.01
+    let low = new Decimal(1.0);
     let high = max_multiplier;
-    let required_multiplier: number | null = null;
+    let required_multiplier: Decimal | null = null;
 
 
     let iteration = 0;
     // Binary search for minimum income multiplier
-    while (high - low > precision) {
-      const mid = (low + high) / 2;
+    while (high.sub(low).gt(precision)) {
+      const mid = low.add(high).div(2);
       iteration++;
 
       // Create modified projection with increased income
@@ -337,17 +338,17 @@ export class FIREAdvisor {
       }
     }
 
-    if (required_multiplier && required_multiplier > 1.001) {
+    if (required_multiplier && required_multiplier.gt(new Decimal(1.001))) {
       // Calculate additional income needed (matching Python logic)
-      const original_income = this.projection_df[0]?.total_income || 0;
-      const additional_income = original_income * (required_multiplier - 1.0);
+      const original_income = this.projection_df[0]?.total_income || new Decimal(0);
+      const additional_income = original_income.mul(required_multiplier.sub(new Decimal(1.0)));
 
       return {
         type: 'increase_income',
         params: {
           fire_age: this.profile.expected_fire_age,
-          percentage: (required_multiplier - 1) * 100,
-          amount: additional_income
+          percentage: required_multiplier.sub(1).mul(100).toNumber(),
+          amount: additional_income.toNumber()
         },
         is_achievable: true,
         monte_carlo_success_rate: undefined, // Match Python's null behavior
@@ -359,7 +360,7 @@ export class FIREAdvisor {
       type: 'increase_income',
       params: {
         fire_age: this.profile.expected_fire_age,
-        percentage: (max_multiplier - 1.0) * 100,
+        percentage: max_multiplier.sub(new Decimal(1.0)).mul(100).toNumber(),
         amount: 0
       },
       is_achievable: false,
@@ -371,14 +372,14 @@ export class FIREAdvisor {
    */
   private _find_required_expense_reduction(): SimpleRecommendation {
     // Binary search for the minimum expense reduction (matching Python logic)
-    let low = 0.0; // 0% reduction
-    let high = 0.8; // 80% reduction
-    const epsilon = 0.001; // Precision for binary search
-    let optimal_reduction: number | null = null;
+    let low = new Decimal(0.0); // 0% reduction
+    let high = new Decimal(0.8); // 80% reduction
+    const epsilon = new Decimal(0.001); // Precision for binary search
+    let optimal_reduction: Decimal | null = null;
 
-    while (high - low > epsilon) {
-      const mid = (low + high) / 2;
-      const reduction_factor = 1.0 - mid; // Convert reduction rate to multiplier
+    while (high.sub(low).gt(epsilon)) {
+      const mid = low.add(high).div(2);
+      const reduction_factor = new Decimal(1.0).sub(mid); // Convert reduction rate to multiplier
 
       // Create modified projection with reduced expenses
       const modified_projection = this._apply_expense_multiplier(reduction_factor);
@@ -401,17 +402,17 @@ export class FIREAdvisor {
       }
     }
 
-    if (optimal_reduction && optimal_reduction > 0.001) {
+    if (optimal_reduction && optimal_reduction.gt(new Decimal(0.001))) {
       // Calculate annual savings needed (matching Python logic)
-      const original_expense = this.projection_df[0]?.total_expense || 0;
-      const annual_savings = original_expense * optimal_reduction;
+      const original_expense = this.projection_df[0]?.total_expense || new Decimal(0);
+      const annual_savings = original_expense.mul(optimal_reduction);
 
       return {
         type: 'reduce_expenses',
         params: {
           fire_age: this.profile.expected_fire_age,
-          percentage: optimal_reduction * 100,
-          amount: annual_savings
+          percentage: optimal_reduction.mul(100).toNumber(),
+          amount: annual_savings.toNumber()
         },
         is_achievable: true,
         monte_carlo_success_rate: undefined, // Match Python's null behavior
@@ -472,9 +473,10 @@ export class FIREAdvisor {
 
         if (row_index !== -1) {
           // Calculate extended income value with proper growth
-          const years_since_start = age - item.start_age;
-          const growth_factor = Math.pow(1 + item.annual_growth_rate / 100, years_since_start);
-          const extended_income = item.after_tax_amount_per_period * growth_factor;
+          const years_since_start = new Decimal(age - item.start_age);
+          const growth_rate_decimal = new Decimal(item.annual_growth_rate).div(100);
+          const growth_factor = new Decimal(1).add(growth_rate_decimal).pow(years_since_start);
+          const extended_income = item.after_tax_amount_per_period.mul(growth_factor);
 
           // Set this income directly (not cumulative, since this age shouldn't have work income yet)
           extended_projection[row_index].total_income = extended_income;
@@ -498,7 +500,7 @@ export class FIREAdvisor {
       const age = current_age + i;
 
       if (age > target_fire_age) {
-        modified_projection[i].total_income = 0;
+        modified_projection[i].total_income = new Decimal(0);
       }
     }
 
@@ -508,22 +510,22 @@ export class FIREAdvisor {
   /**
    * Apply income multiplier to all income sources
    */
-  private _apply_income_multiplier(multiplier: number): AnnualFinancialProjection[] {
+  private _apply_income_multiplier(multiplier: Decimal): AnnualFinancialProjection[] {
     return this.projection_df.map(row => ({
       ...row,
-      total_income: row.total_income * multiplier,
-      net_cash_flow: (row.total_income * multiplier) - row.total_expense
+      total_income: row.total_income.mul(multiplier),
+      net_cash_flow: row.total_income.mul(multiplier).sub(row.total_expense)
     }));
   }
 
   /**
    * Apply expense multiplier to all expenses
    */
-  private _apply_expense_multiplier(multiplier: number): AnnualFinancialProjection[] {
+  private _apply_expense_multiplier(multiplier: Decimal): AnnualFinancialProjection[] {
     return this.projection_df.map(row => ({
       ...row,
-      total_expense: row.total_expense * multiplier,
-      net_cash_flow: row.total_income - (row.total_expense * multiplier)
+      total_expense: row.total_expense.mul(multiplier),
+      net_cash_flow: row.total_income.sub(row.total_expense.mul(multiplier))
     }));
   }
 
@@ -538,7 +540,7 @@ export class FIREAdvisor {
     // In Python this involves complex pandas grouping, but our data is already annual
     return detailed_df.map(row => ({
       ...row,
-      net_cash_flow: row.total_income - row.total_expense
+      net_cash_flow: row.total_income.sub(row.total_expense)
     }));
   }
 }

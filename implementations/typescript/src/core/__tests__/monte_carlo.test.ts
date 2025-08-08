@@ -3,6 +3,8 @@
  * Ensures identical behavior between TypeScript and Python implementations
  */
 
+import Decimal from 'decimal.js';
+
 import {
   UserProfile,
   SimulationSettings,
@@ -39,9 +41,9 @@ describe('MonteCarloSimulatorSetup', () => {
       expected_fire_age: 45,
       legal_retirement_age: 65,
       life_expectancy: 85,
-      current_net_worth: 50000.0,
-      inflation_rate: 3.0,
-      safety_buffer_months: 12.0,
+      current_net_worth: new Decimal(50000.0),
+      inflation_rate: new Decimal(3.0),
+      safety_buffer_months: new Decimal(12.0),
     });
 
     // Create basic projection
@@ -80,20 +82,20 @@ describe('MonteCarloSimulatorSetup', () => {
   test('simulator with custom settings', () => {
     const custom_settings = createSimulationSettings({
       num_simulations: 100,
-      confidence_level: 0.95,
+      confidence_level: new Decimal(0.95),
       include_black_swan_events: false,
-      income_base_volatility: 0.2,
-      income_minimum_factor: 0.1,
-      expense_base_volatility: 0.1,
-      expense_minimum_factor: 0.5,
+      income_base_volatility: new Decimal(0.2),
+      income_minimum_factor: new Decimal(0.1),
+      expense_base_volatility: new Decimal(0.1),
+      expense_minimum_factor: new Decimal(0.5),
     });
 
     const simulator = new MonteCarloSimulator(engine, custom_settings);
 
     expect(simulator.settings.num_simulations).toBe(100);
     expect(simulator.settings.include_black_swan_events).toBe(false);
-    expect(simulator.settings.income_base_volatility).toBe(0.2);
-    expect(simulator.settings.expense_base_volatility).toBe(0.1);
+    expect(simulator.settings.income_base_volatility.toNumber()).toBe(0.2);
+    expect(simulator.settings.expense_base_volatility.toNumber()).toBe(0.1);
   });
 });
 
@@ -111,9 +113,9 @@ describe('BasicVariations', () => {
       expected_fire_age: 45,
       legal_retirement_age: 65,
       life_expectancy: 85,
-      current_net_worth: 50000.0,
-      inflation_rate: 3.0,
-      safety_buffer_months: 12.0,
+      current_net_worth: new Decimal(50000.0),
+      inflation_rate: new Decimal(3.0),
+      safety_buffer_months: new Decimal(12.0),
     });
 
     const projection_data: AnnualFinancialProjection[] = [];
@@ -134,12 +136,12 @@ describe('BasicVariations', () => {
     // Settings without black swan events
     settings = createSimulationSettings({
       num_simulations: 50,
-      confidence_level: 0.95,
+      confidence_level: new Decimal(0.95),
       include_black_swan_events: false,
-      income_base_volatility: 0.1,
-      income_minimum_factor: 0.1,
-      expense_base_volatility: 0.05,
-      expense_minimum_factor: 0.5,
+      income_base_volatility: new Decimal(0.1),
+      income_minimum_factor: new Decimal(0.1),
+      expense_base_volatility: new Decimal(0.05),
+      expense_minimum_factor: new Decimal(0.5),
     });
     simulator = new MonteCarloSimulator(engine, settings);
   });
@@ -151,16 +153,16 @@ describe('BasicVariations', () => {
     expect(variations.length).toBe(10);
 
     // All variations should be positive (minimum factor applies)
-    expect(variations.every((v: number) => v > 0)).toBe(true);
+    expect(variations.every((v: Decimal) => v.gt(new Decimal(0)))).toBe(true);
 
     // Should respect minimum factor
-    expect(variations.every((v: number) => v >= settings.income_minimum_factor)).toBe(true);
+    expect(variations.every((v: Decimal) => v.gte(settings.income_minimum_factor))).toBe(true);
 
     // Working years should vary, post-FIRE should be stable
     const working_years = variations.slice(0, 10); // Age 35-44 (working years)
 
     // Working years should have some variation (not all exactly 1.0)
-    expect(working_years.every((v: number) => Math.abs(v - 1.0) < 0.001)).toBe(false);
+    expect(working_years.every((v: Decimal) => v.sub(new Decimal(1.0)).abs().lt(new Decimal(0.001)))).toBe(false);
   });
 
   test('expense variation generation', () => {
@@ -170,13 +172,13 @@ describe('BasicVariations', () => {
     expect(variations.length).toBe(10);
 
     // All variations should be positive
-    expect(variations.every((v: number) => v > 0)).toBe(true);
+    expect(variations.every((v: Decimal) => v.gt(new Decimal(0)))).toBe(true);
 
     // Should respect minimum factor
-    expect(variations.every((v: number) => v >= settings.expense_minimum_factor)).toBe(true);
+    expect(variations.every((v: Decimal) => v.gte(settings.expense_minimum_factor))).toBe(true);
 
     // Should have some variation (not all exactly 1.0)
-    expect(variations.every((v: number) => Math.abs(v - 1.0) < 0.001)).toBe(false);
+    expect(variations.every((v: Decimal) => v.sub(new Decimal(1.0)).abs().lt(new Decimal(0.001)))).toBe(false);
   });
 
   test('random scenario without black swan', () => {
@@ -194,10 +196,10 @@ describe('BasicVariations', () => {
 
     // Values should be different from original (due to variations)
     const income_different = !scenario_df.every((row, i) =>
-      row.total_income === original_df[i].total_income
+      row.total_income.eq(original_df[i].total_income)
     );
     const expense_different = !scenario_df.every((row, i) =>
-      row.total_expense === original_df[i].total_expense
+      row.total_expense.eq(original_df[i].total_expense)
     );
     expect(income_different || expense_different).toBe(true);
   });
@@ -228,9 +230,9 @@ describe('BlackSwanEventApplication', () => {
       expected_fire_age: 45,
       legal_retirement_age: 65,
       life_expectancy: 85,
-      current_net_worth: 50000.0,
-      inflation_rate: 3.0,
-      safety_buffer_months: 12.0,
+      current_net_worth: new Decimal(50000.0),
+      inflation_rate: new Decimal(3.0),
+      safety_buffer_months: new Decimal(12.0),
     });
 
     const projection_data: AnnualFinancialProjection[] = [];
@@ -251,12 +253,12 @@ describe('BlackSwanEventApplication', () => {
     // Settings with black swan events
     settings = createSimulationSettings({
       num_simulations: 10,
-      confidence_level: 0.95,
+      confidence_level: new Decimal(0.95),
       include_black_swan_events: true,
-      income_base_volatility: 0.1,
-      income_minimum_factor: 0.1,
-      expense_base_volatility: 0.05,
-      expense_minimum_factor: 0.5,
+      income_base_volatility: new Decimal(0.1),
+      income_minimum_factor: new Decimal(0.1),
+      expense_base_volatility: new Decimal(0.05),
+      expense_minimum_factor: new Decimal(0.5),
     });
     simulator = new MonteCarloSimulator(engine, settings);
   });
@@ -328,16 +330,16 @@ describe('BlackSwanEventApplication', () => {
       // Year 1: Full impact (-40%)
       const year1_income = modified_df[0].total_income;
       const expected_year1 = 100000 * 0.6;
-      expect(year1_income).toBeCloseTo(expected_year1, 0);
+      expect(year1_income.toNumber()).toBeCloseTo(expected_year1, 0);
 
       // Year 2: Recovery impact (-40% * 0.8 = -32%)
       const year2_income = modified_df[1].total_income;
       const expected_year2 = 100000 * 0.68;
-      expect(year2_income).toBeCloseTo(expected_year2, 0);
+      expect(year2_income.toNumber()).toBeCloseTo(expected_year2, 0);
 
       // Year 3: Should be back to normal (no ongoing effect)
       const year3_income = modified_df[2].total_income;
-      expect(year3_income).toBeCloseTo(100000, 0);
+      expect(year3_income.toNumber()).toBeCloseTo(100000, 0);
     } finally {
       (simulator as any)._simulate_black_swan_events = original_simulate;
     }
@@ -347,8 +349,8 @@ describe('BlackSwanEventApplication', () => {
 describe('MonteCarloAnalysis', () => {
   let simulation_data: Array<{
     run_id: number;
-    final_net_worth: number;
-    minimum_net_worth: number;
+    final_net_worth: Decimal;
+    minimum_net_worth: Decimal;
     fire_success: boolean;
     black_swan_events: string[];
   }>;
@@ -359,36 +361,36 @@ describe('MonteCarloAnalysis', () => {
     simulation_data = [
       {
         run_id: 0,
-        final_net_worth: 500000,
-        minimum_net_worth: 400000,
+        final_net_worth: new Decimal(500000),
+        minimum_net_worth: new Decimal(400000),
         fire_success: true,
         black_swan_events: ["financial_crisis"],
       },
       {
         run_id: 1,
-        final_net_worth: -100000,
-        minimum_net_worth: -150000,
+        final_net_worth: new Decimal(-100000),
+        minimum_net_worth: new Decimal(-150000),
         fire_success: false,
         black_swan_events: ["unemployment", "major_illness"],
       },
       {
         run_id: 2,
-        final_net_worth: 1000000,
-        minimum_net_worth: 800000,
+        final_net_worth: new Decimal(1000000),
+        minimum_net_worth: new Decimal(800000),
         fire_success: true,
         black_swan_events: [],
       },
       {
         run_id: 3,
-        final_net_worth: 200000,
-        minimum_net_worth: 100000,
+        final_net_worth: new Decimal(200000),
+        minimum_net_worth: new Decimal(100000),
         fire_success: true,
         black_swan_events: ["market_crash"],
       },
       {
         run_id: 4,
-        final_net_worth: -50000,
-        minimum_net_worth: -80000,
+        final_net_worth: new Decimal(-50000),
+        minimum_net_worth: new Decimal(-80000),
         fire_success: false,
         black_swan_events: ["global_war", "hyperinflation"],
       },
@@ -400,9 +402,9 @@ describe('MonteCarloAnalysis', () => {
       expected_fire_age: 45,
       legal_retirement_age: 65,
       life_expectancy: 85,
-      current_net_worth: 50000.0,
-      inflation_rate: 3.0,
-      safety_buffer_months: 12.0,
+      current_net_worth: new Decimal(50000.0),
+      inflation_rate: new Decimal(3.0),
+      safety_buffer_months: new Decimal(12.0),
     });
     const projection_df = [createProjectionRow(35, 2025, 100000, 50000)];
     const engine_input = createEngineInput(profile, projection_df);
@@ -446,23 +448,23 @@ describe('MonteCarloAnalysis', () => {
     const score = (simulator as any)._calculate_resilience_score(simulation_data);
 
     // Should be between 0 and 100
-    expect(score).toBeGreaterThanOrEqual(0);
-    expect(score).toBeLessThanOrEqual(100);
+    expect(score.toNumber()).toBeGreaterThanOrEqual(0);
+    expect(score.toNumber()).toBeLessThanOrEqual(100);
 
     // With 60% success rate, should be relatively low
-    expect(score).toBeLessThan(70); // Success rate is only 60%
+    expect(score.toNumber()).toBeLessThan(70); // Success rate is only 60%
   });
 
   test('emergency fund recommendation', () => {
     const fund = (simulator as any)._recommend_emergency_fund(simulation_data);
 
     // Should return a positive value
-    expect(fund).toBeGreaterThan(0);
+    expect(fund.toNumber()).toBeGreaterThan(0);
 
     // With 60% success rate (< 70%), should recommend 18 months
     // annual_expenses = 50000, so 18 months = 50000 * 18 / 12 = 75000
     const expected_fund = 50000 * 18 / 12;
-    expect(fund).toBeCloseTo(expected_fund, 0);
+    expect(fund.toNumber()).toBeCloseTo(expected_fund, 0);
   });
 });
 
@@ -475,9 +477,9 @@ describe('SensitivityAnalysis', () => {
       expected_fire_age: 45,
       legal_retirement_age: 65,
       life_expectancy: 85,
-      current_net_worth: 50000.0,
-      inflation_rate: 3.0,
-      safety_buffer_months: 12.0,
+      current_net_worth: new Decimal(50000.0),
+      inflation_rate: new Decimal(3.0),
+      safety_buffer_months: new Decimal(12.0),
     });
     const projection_df = [
       createProjectionRow(35, 2025, 100000, 50000),
@@ -488,12 +490,12 @@ describe('SensitivityAnalysis', () => {
 
     const settings = createSimulationSettings({
       num_simulations: 20, // Small number for fast testing
-      confidence_level: 0.95,
+      confidence_level: new Decimal(0.95),
       include_black_swan_events: true,
-      income_base_volatility: 0.1,
-      income_minimum_factor: 0.1,
-      expense_base_volatility: 0.05,
-      expense_minimum_factor: 0.5,
+      income_base_volatility: new Decimal(0.1),
+      income_minimum_factor: new Decimal(0.1),
+      expense_base_volatility: new Decimal(0.05),
+      expense_minimum_factor: new Decimal(0.5),
     });
     simulator = new MonteCarloSimulator(engine, settings);
   });
@@ -553,9 +555,9 @@ describe('SeedReproducibility', () => {
       expected_fire_age: 45,
       legal_retirement_age: 65,
       life_expectancy: 85,
-      current_net_worth: 50000.0,
-      inflation_rate: 3.0,
-      safety_buffer_months: 12.0,
+      current_net_worth: new Decimal(50000.0),
+      inflation_rate: new Decimal(3.0),
+      safety_buffer_months: new Decimal(12.0),
     });
     const projection_df = [
       createProjectionRow(35, 2025, 100000, 50000),
@@ -566,12 +568,12 @@ describe('SeedReproducibility', () => {
 
     settings = createSimulationSettings({
       num_simulations: 10,
-      confidence_level: 0.95,
+      confidence_level: new Decimal(0.95),
       include_black_swan_events: true,
-      income_base_volatility: 0.1,
-      income_minimum_factor: 0.1,
-      expense_base_volatility: 0.05,
-      expense_minimum_factor: 0.5,
+      income_base_volatility: new Decimal(0.1),
+      income_minimum_factor: new Decimal(0.1),
+      expense_base_volatility: new Decimal(0.05),
+      expense_minimum_factor: new Decimal(0.5),
     });
   });
 
@@ -586,9 +588,9 @@ describe('SeedReproducibility', () => {
     const result2 = simulator2.run_simulation();
 
     // Results should be identical
-    expect(result1.success_rate).toBe(result2.success_rate);
-    expect(result1.mean_final_net_worth).toBe(result2.mean_final_net_worth);
-    expect(result1.median_final_net_worth).toBe(result2.median_final_net_worth);
+    expect(result1.success_rate.eq(result2.success_rate)).toBe(true);
+    expect(result1.mean_final_net_worth.eq(result2.mean_final_net_worth)).toBe(true);
+    expect(result1.median_final_net_worth.eq(result2.median_final_net_worth)).toBe(true);
   });
 
   test('different seeds produce different results', () => {
@@ -601,9 +603,9 @@ describe('SeedReproducibility', () => {
 
     // Results should be different (with high probability)
     const different_results = (
-      result1.success_rate !== result2.success_rate ||
-      result1.mean_final_net_worth !== result2.mean_final_net_worth ||
-      result1.median_final_net_worth !== result2.median_final_net_worth
+      !result1.success_rate.eq(result2.success_rate) ||
+      !result1.mean_final_net_worth.eq(result2.mean_final_net_worth) ||
+      !result1.median_final_net_worth.eq(result2.median_final_net_worth)
     );
     expect(different_results).toBe(true);
   });
@@ -618,9 +620,9 @@ describe('SeedReproducibility', () => {
 
     // Results should be different (with very high probability)
     const different_results = (
-      result1.success_rate !== result2.success_rate ||
-      result1.mean_final_net_worth !== result2.mean_final_net_worth ||
-      result1.median_final_net_worth !== result2.median_final_net_worth
+      !result1.success_rate.eq(result2.success_rate) ||
+      !result1.mean_final_net_worth.eq(result2.mean_final_net_worth) ||
+      !result1.median_final_net_worth.eq(result2.median_final_net_worth)
     );
     expect(different_results).toBe(true);
   });
@@ -648,9 +650,9 @@ describe('MonteCarloIntegration', () => {
       expected_fire_age: 45,
       legal_retirement_age: 65,
       life_expectancy: 85,
-      current_net_worth: 50000.0,
-      inflation_rate: 3.0,
-      safety_buffer_months: 12.0,
+      current_net_worth: new Decimal(50000.0),
+      inflation_rate: new Decimal(3.0),
+      safety_buffer_months: new Decimal(12.0),
     });
     const projection_data: AnnualFinancialProjection[] = [];
     for (let year_idx = 0; year_idx < 10; year_idx++) {
@@ -671,12 +673,12 @@ describe('MonteCarloIntegration', () => {
   test('complete simulation run', () => {
     const settings = createSimulationSettings({
       num_simulations: 50, // Small number for fast testing
-      confidence_level: 0.95,
+      confidence_level: new Decimal(0.95),
       include_black_swan_events: true,
-      income_base_volatility: 0.1,
-      income_minimum_factor: 0.1,
-      expense_base_volatility: 0.05,
-      expense_minimum_factor: 0.5,
+      income_base_volatility: new Decimal(0.1),
+      income_minimum_factor: new Decimal(0.1),
+      expense_base_volatility: new Decimal(0.05),
+      expense_minimum_factor: new Decimal(0.5),
     });
 
     const simulator = new MonteCarloSimulator(engine, settings);
@@ -688,10 +690,10 @@ describe('MonteCarloIntegration', () => {
     expect(result.successful_simulations + (50 - result.successful_simulations)).toBe(50);
 
     // Check statistical measures
-    expect(result.success_rate).toBeGreaterThanOrEqual(0.0);
-    expect(result.success_rate).toBeLessThanOrEqual(1.0);
-    expect(typeof result.mean_final_net_worth).toBe('number');
-    expect(typeof result.median_final_net_worth).toBe('number');
+    expect(result.success_rate.gte(new Decimal(0.0))).toBe(true);
+    expect(result.success_rate.lte(new Decimal(1.0))).toBe(true);
+    expect(result.mean_final_net_worth).toBeInstanceOf(Decimal);
+    expect(result.median_final_net_worth).toBeInstanceOf(Decimal);
 
     // Check black swan analysis is present
     expect(result.black_swan_impact_analysis).toBeDefined();
@@ -699,19 +701,19 @@ describe('MonteCarloIntegration', () => {
     expect(result.recommended_emergency_fund).toBeDefined();
 
     // Check percentiles make sense
-    expect(result.percentile_5_net_worth).toBeLessThanOrEqual(result.median_final_net_worth);
-    expect(result.median_final_net_worth).toBeLessThanOrEqual(result.percentile_95_net_worth);
+    expect(result.percentile_5_net_worth.lte(result.median_final_net_worth)).toBe(true);
+    expect(result.median_final_net_worth.lte(result.percentile_95_net_worth)).toBe(true);
   });
 
   test('simulation without black swan events', () => {
     const settings = createSimulationSettings({
       num_simulations: 20,
-      confidence_level: 0.95,
+      confidence_level: new Decimal(0.95),
       include_black_swan_events: false,
-      income_base_volatility: 0.1,
-      income_minimum_factor: 0.1,
-      expense_base_volatility: 0.05,
-      expense_minimum_factor: 0.5,
+      income_base_volatility: new Decimal(0.1),
+      income_minimum_factor: new Decimal(0.1),
+      expense_base_volatility: new Decimal(0.05),
+      expense_minimum_factor: new Decimal(0.5),
     });
 
     const simulator = new MonteCarloSimulator(engine, settings);

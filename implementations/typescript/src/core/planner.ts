@@ -7,6 +7,7 @@
  * Stage 3: Run calculations and provide recommendations
  */
 
+import Decimal from 'decimal.js';
 import type {
   UserProfile,
   IncomeExpenseItem,
@@ -174,7 +175,7 @@ export class FIREPlanner {
   /**
    * Add or update override for specific age/item
    */
-  addOverride(age: number, itemId: string, value: number): void {
+  addOverride(age: number, itemId: string, value: number | Decimal): void {
     // Remove existing override for same age/item
     this.data.overrides = this.data.overrides.filter(
       o => !(o.age === age && o.item_id === itemId)
@@ -184,7 +185,7 @@ export class FIREPlanner {
     this.data.overrides.push({
       age,
       item_id: itemId,
-      value,
+      value: new Decimal(value),
     });
 
     this.data = updatePlannerDataTimestamp(this.data);
@@ -402,29 +403,32 @@ export class FIREPlanner {
     for (let age = currentAge; age <= profile.life_expectancy; age++) {
       const year = currentYear + (age - currentAge);
 
-      let totalIncome = 0;
-      let totalExpense = 0;
+      let totalIncome = new Decimal(0);
+      let totalExpense = new Decimal(0);
 
       // Calculate income for this age
       for (const item of this.data.income_items) {
         if (this._isItemActiveAtAge(item, age)) {
           const yearsSinceStart = age - item.start_age;
-          const growthFactor = Math.pow(1 + item.annual_growth_rate / 100, yearsSinceStart);
+          const growthRate = new Decimal(item.annual_growth_rate).div(100);
+          const growthFactor = new Decimal(1).add(growthRate).pow(yearsSinceStart);
 
           if (item.frequency === 'one-time') {
             // One-time items only appear at start age
             if (age === item.start_age) {
-              totalIncome += item.after_tax_amount_per_period * growthFactor;
+              const amount = new Decimal(item.after_tax_amount_per_period).mul(growthFactor);
+              totalIncome = totalIncome.add(amount);
             }
           } else {
             // Recurring items with growth
-            totalIncome += item.after_tax_amount_per_period * growthFactor;
+            const amount = new Decimal(item.after_tax_amount_per_period).mul(growthFactor);
+            totalIncome = totalIncome.add(amount);
           }
         }
       }
 
       // Calculate expenses for this age (with inflation)
-      const inflationRate = profile.inflation_rate / 100;
+      const inflationRate = new Decimal(profile.inflation_rate).div(100);
       for (const item of this.data.expense_items) {
         if (this._isItemActiveAtAge(item, age)) {
           const yearsSinceStart = age - item.start_age;
@@ -433,15 +437,19 @@ export class FIREPlanner {
             // One-time expenses only appear at start age
             if (age === item.start_age) {
               // Apply both individual growth rate and inflation
-              const itemGrowthFactor = Math.pow(1 + item.annual_growth_rate / 100, yearsSinceStart);
-              const inflationFactor = Math.pow(1 + inflationRate, yearsSinceStart);
-              totalExpense += item.after_tax_amount_per_period * itemGrowthFactor * inflationFactor;
+              const itemGrowthRate = new Decimal(item.annual_growth_rate).div(100);
+              const itemGrowthFactor = new Decimal(1).add(itemGrowthRate).pow(yearsSinceStart);
+              const inflationFactor = new Decimal(1).add(inflationRate).pow(yearsSinceStart);
+              const amount = new Decimal(item.after_tax_amount_per_period).mul(itemGrowthFactor).mul(inflationFactor);
+              totalExpense = totalExpense.add(amount);
             }
           } else {
             // Recurring expenses with individual growth + inflation
-            const itemGrowthFactor = Math.pow(1 + item.annual_growth_rate / 100, yearsSinceStart);
-            const inflationFactor = Math.pow(1 + inflationRate, yearsSinceStart);
-            totalExpense += item.after_tax_amount_per_period * itemGrowthFactor * inflationFactor;
+            const itemGrowthRate = new Decimal(item.annual_growth_rate).div(100);
+            const itemGrowthFactor = new Decimal(1).add(itemGrowthRate).pow(yearsSinceStart);
+            const inflationFactor = new Decimal(1).add(inflationRate).pow(yearsSinceStart);
+            const amount = new Decimal(item.after_tax_amount_per_period).mul(itemGrowthFactor).mul(inflationFactor);
+            totalExpense = totalExpense.add(amount);
           }
         }
       }
@@ -482,11 +490,11 @@ export class FIREPlanner {
         if (incomeItem) {
           // Find the current contribution of this item and replace it
           const originalContribution = this._calculateItemContributionAtAge(incomeItem, override.age);
-          row.total_income = row.total_income - originalContribution + override.value;
+          row.total_income = row.total_income.sub(originalContribution).add(new Decimal(override.value));
         } else if (expenseItem) {
           // Find the current contribution of this item and replace it
           const originalContribution = this._calculateItemContributionAtAge(expenseItem, override.age);
-          row.total_expense = row.total_expense - originalContribution + override.value;
+          row.total_expense = row.total_expense.sub(originalContribution).add(new Decimal(override.value));
         }
       }
     }
@@ -495,24 +503,29 @@ export class FIREPlanner {
   /**
    * Calculate an item's contribution at a specific age
    */
-  private _calculateItemContributionAtAge(item: IncomeExpenseItem, age: number): number {
+  private _calculateItemContributionAtAge(item: IncomeExpenseItem, age: number): Decimal {
     if (!this._isItemActiveAtAge(item, age)) {
-      return 0;
+      return new Decimal(0);
     }
 
     const yearsSinceStart = age - item.start_age;
-    const growthFactor = Math.pow(1 + item.annual_growth_rate / 100, yearsSinceStart);
+    const growthRate = new Decimal(item.annual_growth_rate).div(100);
+    const growthFactor = new Decimal(1).add(growthRate).pow(yearsSinceStart);
 
     if (item.frequency === 'one-time') {
-      return age === item.start_age ? item.after_tax_amount_per_period * growthFactor : 0;
+      if (age === item.start_age) {
+        return new Decimal(item.after_tax_amount_per_period).mul(growthFactor);
+      } else {
+        return new Decimal(0);
+      }
     } else {
-      let contribution = item.after_tax_amount_per_period * growthFactor;
+      let contribution = new Decimal(item.after_tax_amount_per_period).mul(growthFactor);
 
       // Apply inflation for expenses
       if (!item.is_income && this.data.user_profile) {
-        const inflationRate = this.data.user_profile.inflation_rate / 100;
-        const inflationFactor = Math.pow(1 + inflationRate, yearsSinceStart);
-        contribution *= inflationFactor;
+        const inflationRate = new Decimal(this.data.user_profile.inflation_rate).div(100);
+        const inflationFactor = new Decimal(1).add(inflationRate).pow(yearsSinceStart);
+        contribution = contribution.mul(inflationFactor);
       }
 
       return contribution;
@@ -534,10 +547,17 @@ export class FIREPlanner {
     const calculationData = [...this.data.projection_df];
     this._applyOverridesToProjection(calculationData);
 
-    // Create engine input
+    // Create engine input - convert AnnualProjectionRow to AnnualFinancialProjection
+    const financialProjection = calculationData.map(row => ({
+      age: row.age,
+      year: row.year,
+      total_income: row.total_income,
+      total_expense: row.total_expense
+    }));
+
     const engineInput = createEngineInput(
       this.data.user_profile,
-      calculationData,
+      financialProjection,
       this.data.income_items
     );
 
@@ -546,7 +566,7 @@ export class FIREPlanner {
     const fireResult = engine.calculate();
 
     // Run Monte Carlo simulation with custom or default settings
-    let monteCarloSuccessRate: number | undefined = undefined;
+    let monteCarloSuccessRate: Decimal | undefined = undefined;
     let recommendations: Record<string, any>[] = [];
 
     try {
@@ -585,10 +605,10 @@ export class FIREPlanner {
 
     return createPlannerResults({
       fire_calculation: fireResult,
-      monte_carlo_success_rate: monteCarloSuccessRate,
+      monte_carlo_success_rate: monteCarloSuccessRate ? monteCarloSuccessRate.toNumber() : undefined,
       recommendations,
       calculation_timestamp: new Date(),
-    });
+    } as any);
   }
 
   /**

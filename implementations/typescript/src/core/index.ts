@@ -47,10 +47,16 @@ export {
   EconomicRecessionEvent,
   MarketCrashEvent,
   HyperinflationEvent,
-  JobLossEvent,
-  HealthCrisisEvent,
-  createBlackSwanEvents,
-  createPersonalizedBlackSwanEvents,
-  getEventById,
-  calculateExpectedTotalImpact
-} from './black-swan-events';
+  UnemploymentEvent,
+  IndustryCollapseEvent,
+  UnexpectedPromotionEvent,
+  MajorIllnessEvent,
+  LongTermCareEvent,
+  RegionalConflictEvent,
+  GlobalWarEvent,
+  EconomicSanctionsEvent,
+  EnergyCrisisEvent,
+  InheritanceEvent,
+  InvestmentWindfallEvent,
+  createBlackSwanEvents
+} from './black_swan_events';

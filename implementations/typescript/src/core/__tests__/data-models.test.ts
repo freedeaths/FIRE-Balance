@@ -3,6 +3,8 @@
  * Ensures identical validation and behavior between TypeScript and Python implementations
  */
 
+import Decimal from 'decimal.js';
+
 import {
   AssetClass,
   createIncomeExpenseItem,
@@ -29,9 +31,9 @@ describe('UserProfile', () => {
       expected_fire_age: 45,
       legal_retirement_age: 65,
       life_expectancy: 85,
-      current_net_worth: 100000.0,
-      inflation_rate: 3.0,
-      safety_buffer_months: 12,
+      current_net_worth: new Decimal(100000.0),
+      inflation_rate: new Decimal(3.0),
+      safety_buffer_months: new Decimal(12),
     });
 
     expect(getCurrentAge(profile.birth_year)).toBeGreaterThanOrEqual(29); // Flexible since it depends on current year
@@ -46,9 +48,9 @@ describe('UserProfile', () => {
       expected_fire_age: 25, // Invalid: before current age
       legal_retirement_age: 65,
       life_expectancy: 85,
-      current_net_worth: 100000.0,
-      inflation_rate: 3.0,
-      safety_buffer_months: 12,
+      current_net_worth: new Decimal(100000.0),
+      inflation_rate: new Decimal(3.0),
+      safety_buffer_months: new Decimal(12),
     })).toThrow('Ages must follow progression');
   });
 
@@ -61,9 +63,9 @@ describe('UserProfile', () => {
       expected_fire_age: 45,
       legal_retirement_age: 65,
       life_expectancy: 85,
-      current_net_worth: 100000.0,
-      inflation_rate: 3.0,
-      safety_buffer_months: 12,
+      current_net_worth: new Decimal(100000.0),
+      inflation_rate: new Decimal(3.0),
+      safety_buffer_months: new Decimal(12),
     });
 
     expect(profile.birth_year).toBe(1990);
@@ -75,9 +77,9 @@ describe('UserProfile', () => {
       expected_fire_age: 45,
       legal_retirement_age: 65,
       life_expectancy: 85,
-      current_net_worth: 100000.0,
-      inflation_rate: 3.0,
-      safety_buffer_months: 12,
+      current_net_worth: new Decimal(100000.0),
+      inflation_rate: new Decimal(3.0),
+      safety_buffer_months: new Decimal(12),
     })).toThrow('Birth year must be between 1950');
 
     // Future birth year
@@ -86,9 +88,9 @@ describe('UserProfile', () => {
       expected_fire_age: 45,
       legal_retirement_age: 65,
       life_expectancy: 85,
-      current_net_worth: 100000.0,
-      inflation_rate: 3.0,
-      safety_buffer_months: 12,
+      current_net_worth: new Decimal(100000.0),
+      inflation_rate: new Decimal(3.0),
+      safety_buffer_months: new Decimal(12),
     })).toThrow('Birth year must be between 1950');
   });
 });
@@ -97,19 +99,19 @@ describe('IncomeExpenseItem', () => {
   test('creation', () => {
     const item = createIncomeExpenseItem({
       name: 'Salary',
-      after_tax_amount_per_period: 8000.0,
+      after_tax_amount_per_period: new Decimal(8000.0),
       time_unit: 'monthly',
       frequency: 'recurring',
       start_age: 25,
       end_age: 65,
       is_income: true,
       interval_periods: 1,
-      annual_growth_rate: 0.0,
+      annual_growth_rate: new Decimal(0.0),
       category: 'Employment',
     });
 
     expect(item.name).toBe('Salary');
-    expect(item.after_tax_amount_per_period).toBe(8000.0);
+    expect(item.after_tax_amount_per_period.toNumber()).toBe(8000.0);
     expect(item.time_unit).toBe('monthly');
     expect(item.is_income).toBe(true);
   });
@@ -130,25 +132,25 @@ describe('PortfolioConfiguration', () => {
         {
           name: 'Stocks',
           display_name: 'Stocks',
-          allocation_percentage: 60.0,
-          expected_return: 7.0,
-          volatility: 15.0,
+          allocation_percentage: new Decimal(60.0),
+          expected_return: new Decimal(7.0),
+          volatility: new Decimal(15.0),
           liquidity_level: 'medium',
         },
         {
           name: 'Bonds',
           display_name: 'Bonds',
-          allocation_percentage: 30.0,
-          expected_return: 3.0,
-          volatility: 5.0,
+          allocation_percentage: new Decimal(30.0),
+          expected_return: new Decimal(3.0),
+          volatility: new Decimal(5.0),
           liquidity_level: 'low',
         },
         {
           name: 'Cash',
           display_name: 'Cash',
-          allocation_percentage: 10.0,
-          expected_return: 1.0,
-          volatility: 1.0,
+          allocation_percentage: new Decimal(10.0),
+          expected_return: new Decimal(1.0),
+          volatility: new Decimal(1.0),
           liquidity_level: 'high',
         },
       ],
@@ -158,9 +160,9 @@ describe('PortfolioConfiguration', () => {
     // Should not throw validation error
     expect(config.asset_classes.length).toBe(3);
     const totalAllocation = config.asset_classes.reduce(
-      (sum, asset) => sum + asset.allocation_percentage, 0
+      (sum, asset) => sum.add(asset.allocation_percentage), new Decimal(0)
     );
-    expect(totalAllocation).toBe(100.0);
+    expect(totalAllocation.toNumber()).toBe(100.0);
   });
 
   test('invalid allocation sum too high', () => {
@@ -169,17 +171,17 @@ describe('PortfolioConfiguration', () => {
         {
           name: 'Stocks',
           display_name: 'Stocks',
-          allocation_percentage: 60.0,
-          expected_return: 7.0,
-          volatility: 15.0,
+          allocation_percentage: new Decimal(60.0),
+          expected_return: new Decimal(7.0),
+          volatility: new Decimal(15.0),
           liquidity_level: 'medium',
         },
         {
           name: 'Bonds',
           display_name: 'Bonds',
-          allocation_percentage: 50.0, // Total: 110%
-          expected_return: 3.0,
-          volatility: 5.0,
+          allocation_percentage: new Decimal(50.0), // Total: 110%
+          expected_return: new Decimal(3.0),
+          volatility: new Decimal(5.0),
           liquidity_level: 'low',
         },
       ],
@@ -193,17 +195,17 @@ describe('PortfolioConfiguration', () => {
         {
           name: 'Stocks',
           display_name: 'Stocks',
-          allocation_percentage: 40.0,
-          expected_return: 7.0,
-          volatility: 15.0,
+          allocation_percentage: new Decimal(40.0),
+          expected_return: new Decimal(7.0),
+          volatility: new Decimal(15.0),
           liquidity_level: 'medium',
         },
         {
           name: 'Bonds',
           display_name: 'Bonds',
-          allocation_percentage: 30.0, // Total: 70%
-          expected_return: 3.0,
-          volatility: 5.0,
+          allocation_percentage: new Decimal(30.0), // Total: 70%
+          expected_return: new Decimal(3.0),
+          volatility: new Decimal(5.0),
           liquidity_level: 'low',
         },
       ],
@@ -221,17 +223,17 @@ describe('PortfolioConfiguration', () => {
         {
           name: 'Stocks',
           display_name: 'Stocks',
-          allocation_percentage: slightlyOffTotal / 2,
-          expected_return: 7.0,
-          volatility: 15.0,
+          allocation_percentage: new Decimal(slightlyOffTotal / 2),
+          expected_return: new Decimal(7.0),
+          volatility: new Decimal(15.0),
           liquidity_level: 'medium',
         },
         {
           name: 'Bonds',
           display_name: 'Bonds',
-          allocation_percentage: slightlyOffTotal / 2,
-          expected_return: 3.0,
-          volatility: 5.0,
+          allocation_percentage: new Decimal(slightlyOffTotal / 2),
+          expected_return: new Decimal(3.0),
+          volatility: new Decimal(5.0),
           liquidity_level: 'low',
         },
       ],
@@ -245,18 +247,18 @@ describe('PortfolioConfiguration', () => {
         {
           name: 'My Stocks',
           display_name: 'My Stocks',
-          allocation_percentage: 50.0,
-          expected_return: 7.0,
-          volatility: 15.0,
+          allocation_percentage: new Decimal(50.0),
+          expected_return: new Decimal(7.0),
+          volatility: new Decimal(15.0),
           liquidity_level: 'medium',
         },
         {
           // Multiple spaces, different case - same after normalization
           name: 'MY   STOCKS',
           display_name: 'MY   STOCKS',
-          allocation_percentage: 50.0,
-          expected_return: 8.0,
-          volatility: 12.0,
+          allocation_percentage: new Decimal(50.0),
+          expected_return: new Decimal(8.0),
+          volatility: new Decimal(12.0),
           liquidity_level: 'medium',
         },
       ],
@@ -270,18 +272,18 @@ describe('PortfolioConfiguration', () => {
         {
           name: 'Cash',
           display_name: 'Cash',
-          allocation_percentage: 30.0,
-          expected_return: 1.0,
-          volatility: 0.0,
+          allocation_percentage: new Decimal(30.0),
+          expected_return: new Decimal(1.0),
+          volatility: new Decimal(0.0),
           liquidity_level: 'high',
         },
         {
           // Different case, same normalized name
           name: 'CASH',
           display_name: 'CASH',
-          allocation_percentage: 70.0,
-          expected_return: 1.5,
-          volatility: 0.0,
+          allocation_percentage: new Decimal(70.0),
+          expected_return: new Decimal(1.5),
+          volatility: new Decimal(0.0),
           liquidity_level: 'high',
         },
       ],
@@ -295,17 +297,17 @@ describe('PortfolioConfiguration', () => {
         {
           name: 'Stocks', // Will be normalized to "stocks"
           display_name: 'Stocks',
-          allocation_percentage: 60.0,
-          expected_return: 7.0,
-          volatility: 15.0,
+          allocation_percentage: new Decimal(60.0),
+          expected_return: new Decimal(7.0),
+          volatility: new Decimal(15.0),
           liquidity_level: 'medium',
         },
         {
           name: 'BONDS', // Will be normalized to "bonds"
           display_name: 'BONDS',
-          allocation_percentage: 40.0,
-          expected_return: 3.0,
-          volatility: 5.0,
+          allocation_percentage: new Decimal(40.0),
+          expected_return: new Decimal(3.0),
+          volatility: new Decimal(5.0),
           liquidity_level: 'low',
         },
       ],
@@ -331,9 +333,9 @@ describe('AssetClass', () => {
     const asset = normalizeAssetClass({
       name: 'Test Asset',
       display_name: 'Test Asset',
-      allocation_percentage: 100.0,
-      expected_return: 5.0,
-      volatility: 10.0,
+      allocation_percentage: new Decimal(100.0),
+      expected_return: new Decimal(5.0),
+      volatility: new Decimal(10.0),
       liquidity_level: 'medium',
     });
 
@@ -356,9 +358,9 @@ describe('AssetClass', () => {
     testCases.forEach(([inputName, expectedInternal, expectedDisplay]) => {
       const asset = normalizeAssetClass({
         name: inputName,
-        allocation_percentage: 100.0,
-        expected_return: 5.0,
-        volatility: 10.0,
+        allocation_percentage: new Decimal(100.0),
+        expected_return: new Decimal(5.0),
+        volatility: new Decimal(10.0),
         liquidity_level: 'medium',
       });
 
@@ -393,16 +395,16 @@ describe('Validation Functions', () => {
       asset_classes: [
         normalizeAssetClass({
           name: 'stocks',
-          allocation_percentage: 70,
-          expected_return: 7,
-          volatility: 15,
+          allocation_percentage: new Decimal(70),
+          expected_return: new Decimal(7),
+          volatility: new Decimal(15),
           liquidity_level: 'medium'
         }),
         normalizeAssetClass({
           name: 'bonds',
-          allocation_percentage: 30,
-          expected_return: 3,
-          volatility: 5,
+          allocation_percentage: new Decimal(30),
+          expected_return: new Decimal(3),
+          volatility: new Decimal(5),
           liquidity_level: 'low'
         })
       ],
@@ -417,9 +419,9 @@ describe('Validation Functions', () => {
       asset_classes: [
         normalizeAssetClass({
           name: 'stocks',
-          allocation_percentage: 50,
-          expected_return: 7,
-          volatility: 15,
+          allocation_percentage: new Decimal(50),
+          expected_return: new Decimal(7),
+          volatility: new Decimal(15),
           liquidity_level: 'medium'
         })
       ]
@@ -440,9 +442,9 @@ describe('Validation Functions', () => {
       expected_fire_age: 50,
       legal_retirement_age: 65,
       life_expectancy: 85,
-      current_net_worth: 100000,
-      inflation_rate: 3,
-      safety_buffer_months: 6,
+      current_net_worth: new Decimal(100000),
+      inflation_rate: new Decimal(3),
+      safety_buffer_months: new Decimal(6),
       portfolio: {
         asset_classes: [],
         enable_rebalancing: true

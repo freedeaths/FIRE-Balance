@@ -3,6 +3,8 @@
  * Ensures identical behavior between TypeScript and Python implementations
  */
 
+import Decimal from 'decimal.js';
+
 import {
   UserProfile,
   YearlyState,
@@ -26,23 +28,23 @@ describe('FIREEngine', () => {
       asset_classes: [
         {
           name: 'Cash',
-          allocation_percentage: 10.0,
-          expected_return: 1.0,
-          volatility: 1.0,
+          allocation_percentage: new Decimal(10.0),
+          expected_return: new Decimal(1.0),
+          volatility: new Decimal(1.0),
           liquidity_level: 'high'
         },
         {
           name: 'Stocks',
-          allocation_percentage: 60.0,
-          expected_return: 7.0,
-          volatility: 15.0,
+          allocation_percentage: new Decimal(60.0),
+          expected_return: new Decimal(7.0),
+          volatility: new Decimal(15.0),
           liquidity_level: 'medium'
         },
         {
           name: 'Bonds',
-          allocation_percentage: 30.0,
-          expected_return: 3.0,
-          volatility: 5.0,
+          allocation_percentage: new Decimal(30.0),
+          expected_return: new Decimal(3.0),
+          volatility: new Decimal(5.0),
           liquidity_level: 'low'
         }
       ],
@@ -54,9 +56,9 @@ describe('FIREEngine', () => {
       expected_fire_age: 50,
       legal_retirement_age: 65,
       life_expectancy: 85,
-      current_net_worth: 100000.0,
-      inflation_rate: 3.0,
-      safety_buffer_months: 12.0, // 1 year safety buffer
+      current_net_worth: new Decimal(100000.0),
+      inflation_rate: new Decimal(3.0),
+      safety_buffer_months: new Decimal(12.0), // 1 year safety buffer
       portfolio
     });
   };
@@ -115,14 +117,14 @@ describe('FIREEngine', () => {
     expect(Object.keys(initialPortfolio.asset_values).length).toBeGreaterThan(0);
 
     // Total value should match current net worth
-    const totalValue = Object.values(initialPortfolio.asset_values).reduce((sum, val) => sum + val, 0);
-    expect(totalValue).toBeCloseTo(fireEngine.profile.current_net_worth, 6);
+    const totalValue = Object.values(initialPortfolio.asset_values).reduce((sum, val) => sum.add(val), new Decimal(0));
+    expect(totalValue.toNumber()).toBeCloseTo(fireEngine.profile.current_net_worth.toNumber(), 6);
 
     // Test reset functionality
     const originalValue = totalValue;
     portfolioSimulator.resetToInitial();
-    const resetValue = Object.values(portfolioSimulator.getCurrentPortfolio().asset_values).reduce((sum, val) => sum + val, 0);
-    expect(resetValue).toBeCloseTo(originalValue, 6);
+    const resetValue = Object.values(portfolioSimulator.getCurrentPortfolio().asset_values).reduce((sum, val) => sum.add(val), new Decimal(0));
+    expect(resetValue.toNumber()).toBeCloseTo(originalValue.toNumber(), 6);
   });
 
   test('fire calculation basic', () => {
@@ -131,19 +133,19 @@ describe('FIREEngine', () => {
     // Should return valid result
     expect(result).toBeDefined();
     expect(typeof result.is_fire_achievable).toBe('boolean');
-    expect(typeof result.fire_net_worth).toBe('number');
+    expect(typeof result.fire_net_worth).toBe('object'); // Decimal object
     expect(result.yearly_results.length).toBe(5); // 5 years of data
 
     // Each yearly result should have required fields
     for (const yearlyResult of result.yearly_results) {
       expect(yearlyResult.age).toBeGreaterThanOrEqual(34);
       expect(yearlyResult.year).toBeGreaterThanOrEqual(2024);
-      expect(yearlyResult.total_income).toBeGreaterThan(0);
-      expect(yearlyResult.total_expense).toBeGreaterThan(0);
-      expect(typeof yearlyResult.net_cash_flow).toBe('number');
+      expect(yearlyResult.total_income.toNumber()).toBeGreaterThan(0);
+      expect(yearlyResult.total_expense.toNumber()).toBeGreaterThan(0);
+      expect(typeof yearlyResult.net_cash_flow).toBe('object'); // Decimal object
       // Check investment return is numeric
-      expect(typeof yearlyResult.investment_return).toBe('number');
-      expect(yearlyResult.portfolio_value).toBeGreaterThanOrEqual(0);
+      expect(typeof yearlyResult.investment_return).toBe('object'); // Decimal object
+      expect(yearlyResult.portfolio_value.toNumber()).toBeGreaterThanOrEqual(0);
     }
   });
 
@@ -157,16 +159,16 @@ describe('FIREEngine', () => {
       expect(state.year).toBeGreaterThanOrEqual(2024);
 
       // Financial metrics should be calculated
-      expect(typeof state.net_worth).toBe('number');
+      expect(typeof state.net_worth).toBe('object'); // Decimal object
       expect(typeof state.is_sustainable).toBe('boolean');
 
       // Traditional FIRE metrics (for reference)
-      expect(state.fire_number).toBeGreaterThan(0); // 25x expenses
-      expect(typeof state.fire_progress).toBe('number');
+      expect(state.fire_number.toNumber()).toBeGreaterThan(0); // 25x expenses
+      expect(typeof state.fire_progress).toBe('object'); // Decimal object
 
       // Portfolio metrics
-      expect(state.portfolio_value).toBeGreaterThanOrEqual(0);
-      expect(typeof state.investment_return).toBe('number');
+      expect(state.portfolio_value.toNumber()).toBeGreaterThanOrEqual(0);
+      expect(typeof state.investment_return).toBe('object'); // Decimal object
     }
   });
 
@@ -174,8 +176,8 @@ describe('FIREEngine', () => {
     const yearlyStates = fireEngine.get_yearly_states();
 
     for (const state of yearlyStates) {
-      const expectedFireNumber = state.total_expense * 25.0;
-      expect(state.fire_number).toBeCloseTo(expectedFireNumber, 6);
+      const expectedFireNumber = state.total_expense.toNumber() * 25.0;
+      expect(state.fire_number.toNumber()).toBeCloseTo(expectedFireNumber, 6);
     }
   });
 
@@ -183,11 +185,11 @@ describe('FIREEngine', () => {
     const yearlyStates = fireEngine.get_yearly_states();
 
     for (const state of yearlyStates) {
-      if (state.fire_number > 0) {
-        const expectedProgress = state.portfolio_value / state.fire_number;
-        expect(state.fire_progress).toBeCloseTo(expectedProgress, 6);
+      if (state.fire_number.toNumber() > 0) {
+        const expectedProgress = state.portfolio_value.toNumber() / state.fire_number.toNumber();
+        expect(state.fire_progress.toNumber()).toBeCloseTo(expectedProgress, 6);
       } else {
-        expect(state.fire_progress).toBe(0.0);
+        expect(state.fire_progress.toNumber()).toBe(0.0);
       }
     }
   });
@@ -202,7 +204,7 @@ describe('FIREEngine', () => {
     const finalNetWorth = netWorths[netWorths.length - 1];
     const initialNetWorth = fireEngine.profile.current_net_worth;
 
-    expect(finalNetWorth).toBeGreaterThan(initialNetWorth); // Should grow with positive cash flows
+    expect(finalNetWorth.toNumber()).toBeGreaterThan(initialNetWorth.toNumber()); // Should grow with positive cash flows
   });
 
   test('sustainability logic', () => {
@@ -210,18 +212,18 @@ describe('FIREEngine', () => {
 
     // Check that each state has sustainability metrics
     for (const state of yearlyStates) {
-      expect(typeof state.net_worth).toBe('number');
+      expect(typeof state.net_worth).toBe('object'); // Decimal object
       expect(typeof state.is_sustainable).toBe('boolean');
 
       // Safety buffer should be calculated dynamically
-      const expectedBuffer = state.total_expense * (fireEngine.profile.safety_buffer_months / 12.0);
+      const expectedBuffer = state.total_expense.toNumber() * (fireEngine.profile.safety_buffer_months.toNumber() / 12.0);
       // Sustainability should be based on net_worth vs safety buffer
-      const expectedSustainable = state.net_worth >= expectedBuffer;
+      const expectedSustainable = state.net_worth.toNumber() >= expectedBuffer;
       expect(state.is_sustainable).toBe(expectedSustainable);
 
       // Traditional FIRE metrics should still exist for reference
-      expect(state.fire_number).toBeGreaterThan(0);
-      expect(typeof state.fire_progress).toBe('number');
+      expect(state.fire_number.toNumber()).toBeGreaterThan(0);
+      expect(typeof state.fire_progress).toBe('object'); // Decimal object
     }
   });
 
@@ -232,9 +234,9 @@ describe('FIREEngine', () => {
       expected_fire_age: 50,
       legal_retirement_age: 65,
       life_expectancy: 85,
-      current_net_worth: 100000.0,
-      inflation_rate: 3.0,
-      safety_buffer_months: 6.0, // 6 months
+      current_net_worth: new Decimal(100000.0),
+      inflation_rate: new Decimal(3.0),
+      safety_buffer_months: new Decimal(6.0), // 6 months
     });
 
     const engine6m = new FIREEngine(createEngineInput(profile6m, createSampleProjection()));
@@ -246,9 +248,9 @@ describe('FIREEngine', () => {
       expected_fire_age: 50,
       legal_retirement_age: 65,
       life_expectancy: 85,
-      current_net_worth: 100000.0,
-      inflation_rate: 3.0,
-      safety_buffer_months: 24.0, // 24 months
+      current_net_worth: new Decimal(100000.0),
+      inflation_rate: new Decimal(3.0),
+      safety_buffer_months: new Decimal(24.0), // 24 months
     });
 
     const engine24m = new FIREEngine(createEngineInput(profile24m, createSampleProjection()));
@@ -260,8 +262,8 @@ describe('FIREEngine', () => {
       const state24m = states24m[i];
 
       // Calculate safety buffers dynamically
-      const buffer6m = state6m.total_expense * (6.0 / 12.0);
-      const buffer24m = state24m.total_expense * (24.0 / 12.0);
+      const buffer6m = state6m.total_expense.toNumber() * (6.0 / 12.0);
+      const buffer24m = state24m.total_expense.toNumber() * (24.0 / 12.0);
 
       // 24 month buffer should be 4x larger than 6 month buffer
       const expectedRatio = 24.0 / 6.0;
@@ -269,8 +271,8 @@ describe('FIREEngine', () => {
       expect(Math.abs(actualRatio - expectedRatio)).toBeLessThan(0.01);
 
       // Sustainability logic should be different for different buffers
-      const sustainable6m = state6m.net_worth >= buffer6m;
-      const sustainable24m = state24m.net_worth >= buffer24m;
+      const sustainable6m = state6m.net_worth.toNumber() >= buffer6m;
+      const sustainable24m = state24m.net_worth.toNumber() >= buffer24m;
       expect(state6m.is_sustainable).toBe(sustainable6m);
       expect(state24m.is_sustainable).toBe(sustainable24m);
     }
@@ -284,9 +286,9 @@ describe('EngineInput', () => {
       expected_fire_age: 50,
       legal_retirement_age: 65,
       life_expectancy: 85,
-      current_net_worth: 50000.0,
-      inflation_rate: 2.5,
-      safety_buffer_months: 12.0,
+      current_net_worth: new Decimal(50000.0),
+      inflation_rate: new Decimal(2.5),
+      safety_buffer_months: new Decimal(12.0),
     });
 
     const projectionData: AnnualFinancialProjection[] = [
@@ -300,8 +302,8 @@ describe('EngineInput', () => {
     expect(engineInput.annual_financial_projection.length).toBe(2);
     expect(engineInput.annual_financial_projection[0].age).toBe(34);
     expect(engineInput.annual_financial_projection[0].year).toBe(2024);
-    expect(engineInput.annual_financial_projection[0].total_income).toBe(60000.0);
-    expect(engineInput.annual_financial_projection[0].total_expense).toBe(40000.0);
+    expect(engineInput.annual_financial_projection[0].total_income.toNumber()).toBe(60000.0);
+    expect(engineInput.annual_financial_projection[0].total_expense.toNumber()).toBe(40000.0);
   });
 });
 
@@ -310,29 +312,29 @@ describe('YearlyState', () => {
     const state: YearlyState = {
       age: 35,
       year: 2025,
-      total_income: 70000.0,
-      total_expense: 45000.0,
-      net_cash_flow: 25000.0,
-      portfolio_value: 150000.00,
-      net_worth: 150000.0, // New field: net worth (can be negative)
-      investment_return: 5000.00,
+      total_income: new Decimal(70000.0),
+      total_expense: new Decimal(45000.0),
+      net_cash_flow: new Decimal(25000.0),
+      portfolio_value: new Decimal(150000.00),
+      net_worth: new Decimal(150000.0), // New field: net worth (can be negative)
+      investment_return: new Decimal(5000.00),
       is_sustainable: false,
-      fire_number: 1125000.0, // 45000 * 25
-      fire_progress: 0.133, // 150000 / 1125000
+      fire_number: new Decimal(1125000.0), // 45000 * 25
+      fire_progress: new Decimal(0.133), // 150000 / 1125000
     };
 
     // Test field access
     expect(state.age).toBe(35);
     expect(state.year).toBe(2025);
-    expect(state.total_income).toBe(70000.0);
-    expect(state.total_expense).toBe(45000.0);
-    expect(state.net_cash_flow).toBe(25000.0);
-    expect(state.portfolio_value).toBe(150000.00);
-    expect(state.net_worth).toBe(150000.0); // Test new field
-    expect(state.investment_return).toBe(5000.00);
+    expect(state.total_income.toNumber()).toBe(70000.0);
+    expect(state.total_expense.toNumber()).toBe(45000.0);
+    expect(state.net_cash_flow.toNumber()).toBe(25000.0);
+    expect(state.portfolio_value.toNumber()).toBe(150000.00);
+    expect(state.net_worth.toNumber()).toBe(150000.0); // Test new field
+    expect(state.investment_return.toNumber()).toBe(5000.00);
     expect(state.is_sustainable).toBe(false);
-    expect(state.fire_number).toBe(1125000.0);
-    expect(state.fire_progress).toBeCloseTo(0.133, 3);
+    expect(state.fire_number.toNumber()).toBe(1125000.0);
+    expect(state.fire_progress.toNumber()).toBeCloseTo(0.133, 3);
   });
 
   test('net worth negative values', () => {
@@ -340,23 +342,23 @@ describe('YearlyState', () => {
     const state: YearlyState = {
       age: 70,
       year: 2055,
-      total_income: 30000.0,
-      total_expense: 50000.0,
-      net_cash_flow: -20000.0,
-      portfolio_value: 0.00, // Portfolio depleted
-      net_worth: -10000.0, // In debt
-      investment_return: 0.00,
+      total_income: new Decimal(30000.0),
+      total_expense: new Decimal(50000.0),
+      net_cash_flow: new Decimal(-20000.0),
+      portfolio_value: new Decimal(0.00), // Portfolio depleted
+      net_worth: new Decimal(-10000.0), // In debt
+      investment_return: new Decimal(0.00),
       is_sustainable: false,
-      fire_number: 1250000.0, // 50000 * 25
-      fire_progress: 0.0,
+      fire_number: new Decimal(1250000.0), // 50000 * 25
+      fire_progress: new Decimal(0.0),
     };
 
     // Test that negative net worth is properly stored and accessible
-    expect(state.net_worth).toBe(-10000.0);
-    expect(state.net_worth).toBeLessThan(0); // Explicitly test it's negative
-    expect(state.portfolio_value).toBe(0.00);
+    expect(state.net_worth.toNumber()).toBe(-10000.0);
+    expect(state.net_worth.toNumber()).toBeLessThan(0); // Explicitly test it's negative
+    expect(state.portfolio_value.toNumber()).toBe(0.00);
     expect(state.is_sustainable).toBe(false);
-    expect(state.net_cash_flow).toBeLessThan(0);
+    expect(state.net_cash_flow.toNumber()).toBeLessThan(0);
   });
 
   test('net worth vs portfolio value', () => {
@@ -364,39 +366,39 @@ describe('YearlyState', () => {
     const statePositive: YearlyState = {
       age: 40,
       year: 2030,
-      total_income: 80000.0,
-      total_expense: 60000.0,
-      net_cash_flow: 20000.0,
-      portfolio_value: 500000.00,
-      net_worth: 500000.0,
-      investment_return: 25000.00,
+      total_income: new Decimal(80000.0),
+      total_expense: new Decimal(60000.0),
+      net_cash_flow: new Decimal(20000.0),
+      portfolio_value: new Decimal(500000.00),
+      net_worth: new Decimal(500000.0),
+      investment_return: new Decimal(25000.00),
       is_sustainable: true,
-      fire_number: 1500000.0,
-      fire_progress: 0.333,
+      fire_number: new Decimal(1500000.0),
+      fire_progress: new Decimal(0.333),
     };
 
-    expect(statePositive.net_worth).toBe(statePositive.portfolio_value);
-    expect(statePositive.net_worth).toBeGreaterThan(0);
+    expect(statePositive.net_worth.toNumber()).toBe(statePositive.portfolio_value.toNumber());
+    expect(statePositive.net_worth.toNumber()).toBeGreaterThan(0);
     expect(statePositive.is_sustainable).toBe(true);
 
     // Case 2: Portfolio depleted, net worth negative
     const stateNegative: YearlyState = {
       age: 75,
       year: 2065,
-      total_income: 20000.0,
-      total_expense: 60000.0,
-      net_cash_flow: -40000.0,
-      portfolio_value: 0.00, // Portfolio depleted
-      net_worth: -100000.0, // Accumulated debt
-      investment_return: 0.00,
+      total_income: new Decimal(20000.0),
+      total_expense: new Decimal(60000.0),
+      net_cash_flow: new Decimal(-40000.0),
+      portfolio_value: new Decimal(0.00), // Portfolio depleted
+      net_worth: new Decimal(-100000.0), // Accumulated debt
+      investment_return: new Decimal(0.00),
       is_sustainable: false,
-      fire_number: 1500000.0,
-      fire_progress: 0.0,
+      fire_number: new Decimal(1500000.0),
+      fire_progress: new Decimal(0.0),
     };
 
-    expect(stateNegative.portfolio_value).toBe(0.00);
-    expect(stateNegative.net_worth).toBeLessThan(0);
+    expect(stateNegative.portfolio_value.toNumber()).toBe(0.00);
+    expect(stateNegative.net_worth.toNumber()).toBeLessThan(0);
     expect(stateNegative.is_sustainable).toBe(false);
-    expect(Math.abs(stateNegative.net_worth)).toBeGreaterThan(0); // Has accumulated debt
+    expect(Math.abs(stateNegative.net_worth.toNumber())).toBeGreaterThan(0); // Has accumulated debt
   });
 });

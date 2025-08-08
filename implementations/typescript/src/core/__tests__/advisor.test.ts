@@ -3,13 +3,19 @@
  * Ensures identical advisor recommendations between TypeScript and Python implementations
  */
 
+import Decimal from 'decimal.js';
+
 import { FIREAdvisor, createAdvisor } from '../advisor';
-import { FIREEngine, createEngineInput } from '../engine';
-import type {
+import { FIREEngine, createEngineInput, createProjectionRow } from '../engine';
+import {
   UserProfile,
   IncomeExpenseItem,
-  AssetClass,
-  PortfolioConfiguration,
+  createUserProfile,
+  createIncomeExpenseItem,
+  createPortfolioConfiguration
+} from '../data_models';
+
+import type {
   AnnualProjectionRow,
   SimpleRecommendation
 } from '../../types';
@@ -18,44 +24,46 @@ describe('FIREAdvisor', () => {
   let baseUserProfile: UserProfile;
 
   beforeEach(() => {
-    baseUserProfile = {
+    const portfolio = createPortfolioConfiguration({
+      asset_classes: [
+        {
+          name: 'stocks',
+          display_name: 'Stocks',
+          allocation_percentage: new Decimal(70.0),
+          expected_return: new Decimal(7.0),
+          volatility: new Decimal(15.0),
+          liquidity_level: 'medium',
+        },
+        {
+          name: 'bonds',
+          display_name: 'Bonds',
+          allocation_percentage: new Decimal(20.0),
+          expected_return: new Decimal(3.0),
+          volatility: new Decimal(5.0),
+          liquidity_level: 'low',
+        },
+        {
+          name: 'cash',
+          display_name: 'Cash',
+          allocation_percentage: new Decimal(10.0),
+          expected_return: new Decimal(1.0),
+          volatility: new Decimal(1.0),
+          liquidity_level: 'high',
+        },
+      ],
+      enable_rebalancing: true,
+    });
+
+    baseUserProfile = createUserProfile({
       birth_year: 1990,
       expected_fire_age: 50,
       legal_retirement_age: 65,
       life_expectancy: 85,
-      current_net_worth: 50000,
-      inflation_rate: 3.0,
-      safety_buffer_months: 12.0,
-      portfolio: {
-        asset_classes: [
-          {
-            name: 'stocks',
-            display_name: 'Stocks',
-            allocation_percentage: 70.0,
-            expected_return: 7.0,
-            volatility: 15.0,
-            liquidity_level: 'medium',
-          },
-          {
-            name: 'bonds',
-            display_name: 'Bonds',
-            allocation_percentage: 20.0,
-            expected_return: 3.0,
-            volatility: 5.0,
-            liquidity_level: 'low',
-          },
-          {
-            name: 'cash',
-            display_name: 'Cash',
-            allocation_percentage: 10.0,
-            expected_return: 1.0,
-            volatility: 1.0,
-            liquidity_level: 'high',
-          },
-        ],
-        enable_rebalancing: true,
-      },
-    };
+      current_net_worth: new Decimal(50000),
+      inflation_rate: new Decimal(3.0),
+      safety_buffer_months: new Decimal(12.0),
+      portfolio
+    });
   });
 
   const createDetailedProjectionAndItems = (
@@ -64,38 +72,43 @@ describe('FIREAdvisor', () => {
   ) => {
     // Create sample income and expense items
     const incomeItems: IncomeExpenseItem[] = [
-      {
+      createIncomeExpenseItem({
         id: 'work-income',
         name: 'Work Income',
-        after_tax_amount_per_period: 50000,
+        after_tax_amount_per_period: new Decimal(50000),
         time_unit: 'annually',
         frequency: 'recurring',
         interval_periods: 1,
         start_age: new Date().getFullYear() - userProfile.birth_year,
         end_age: userProfile.expected_fire_age,
-        annual_growth_rate: 0.0,
+        annual_growth_rate: new Decimal(0.0),
         is_income: true,
         category: 'Employment',
-      }
+      })
     ];
 
     const expenseItems: IncomeExpenseItem[] = [
-      {
+      createIncomeExpenseItem({
         id: 'living-expenses',
         name: 'Living Expenses',
-        after_tax_amount_per_period: 30000,
+        after_tax_amount_per_period: new Decimal(30000),
         time_unit: 'annually',
         frequency: 'recurring',
         interval_periods: 1,
         start_age: new Date().getFullYear() - userProfile.birth_year,
         end_age: userProfile.life_expectancy,
-        annual_growth_rate: 0.0,
+        annual_growth_rate: new Decimal(0.0),
         is_income: false,
         category: 'Living',
-      }
+      })
     ];
 
     return { incomeItems, expenseItems };
+  };
+
+  // Helper to convert AnnualProjectionRow to AnnualFinancialProjection
+  const convertProjectionRows = (rows: AnnualProjectionRow[]) => {
+    return rows.map(row => createProjectionRow(row.age, row.year, row.total_income, row.total_expense));
   };
 
   test('advisor initialization', () => {
@@ -106,7 +119,7 @@ describe('FIREAdvisor', () => {
     ];
 
     const { incomeItems, expenseItems } = createDetailedProjectionAndItems(baseUserProfile, projection);
-    const engineInput = createEngineInput(baseUserProfile, projection, incomeItems);
+    const engineInput = createEngineInput(baseUserProfile, convertProjectionRows(projection), incomeItems);
     const advisor = new FIREAdvisor(engineInput);
 
     expect(advisor).toBeDefined();
@@ -119,7 +132,7 @@ describe('FIREAdvisor', () => {
     ];
 
     const { incomeItems } = createDetailedProjectionAndItems(baseUserProfile, projection);
-    const engineInput = createEngineInput(baseUserProfile, projection, incomeItems);
+    const engineInput = createEngineInput(baseUserProfile, convertProjectionRows(projection), incomeItems);
     const advisor = createAdvisor(engineInput);
 
     expect(advisor).toBeInstanceOf(FIREAdvisor);
@@ -127,10 +140,10 @@ describe('FIREAdvisor', () => {
 
   test('early retirement recommendation', () => {
     // Create scenario where FIRE is already achievable
-    const achievableProfile: UserProfile = {
+    const achievableProfile = createUserProfile({
       ...baseUserProfile,
-      current_net_worth: 2000000, // High net worth to make FIRE easily achievable
-    };
+      current_net_worth: new Decimal(2000000), // High net worth to make FIRE easily achievable
+    });
 
     const projection: AnnualProjectionRow[] = [
       { age: 34, year: 2024, total_income: 50000, total_expense: 30000 },
@@ -138,7 +151,7 @@ describe('FIREAdvisor', () => {
     ];
 
     const { incomeItems } = createDetailedProjectionAndItems(achievableProfile, projection);
-    const engineInput = createEngineInput(achievableProfile, projection, incomeItems);
+    const engineInput = createEngineInput(achievableProfile, convertProjectionRows(projection), incomeItems);
     const advisor = new FIREAdvisor(engineInput);
 
     const recommendations = advisor.getAllRecommendations();
@@ -156,11 +169,11 @@ describe('FIREAdvisor', () => {
 
   test('delayed retirement recommendation', () => {
     // Create scenario where FIRE is not achievable at target age
-    const challengingProfile: UserProfile = {
+    const challengingProfile = createUserProfile({
       ...baseUserProfile,
-      current_net_worth: 10000, // Low net worth
+      current_net_worth: new Decimal(10000), // Low net worth
       expected_fire_age: 40,     // Very early retirement target
-    };
+    });
 
     const projection: AnnualProjectionRow[] = [];
     const currentAge = new Date().getFullYear() - challengingProfile.birth_year;
@@ -176,7 +189,7 @@ describe('FIREAdvisor', () => {
     }
 
     const { incomeItems } = createDetailedProjectionAndItems(challengingProfile, projection);
-    const engineInput = createEngineInput(challengingProfile, projection, incomeItems);
+    const engineInput = createEngineInput(challengingProfile, convertProjectionRows(projection), incomeItems);
     const advisor = new FIREAdvisor(engineInput);
 
     const recommendations = advisor.getAllRecommendations();
@@ -194,10 +207,10 @@ describe('FIREAdvisor', () => {
 
   test('income adjustment recommendation', () => {
     // Create scenario where income needs to be increased
-    const lowIncomeProfile: UserProfile = {
+    const lowIncomeProfile = createUserProfile({
       ...baseUserProfile,
-      current_net_worth: 25000,
-    };
+      current_net_worth: new Decimal(25000),
+    });
 
     const projection: AnnualProjectionRow[] = [];
     const currentAge = new Date().getFullYear() - lowIncomeProfile.birth_year;
@@ -212,7 +225,7 @@ describe('FIREAdvisor', () => {
     }
 
     const { incomeItems } = createDetailedProjectionAndItems(lowIncomeProfile, projection);
-    const engineInput = createEngineInput(lowIncomeProfile, projection, incomeItems);
+    const engineInput = createEngineInput(lowIncomeProfile, convertProjectionRows(projection), incomeItems);
     const advisor = new FIREAdvisor(engineInput);
 
     const recommendations = advisor.getAllRecommendations();
@@ -230,10 +243,10 @@ describe('FIREAdvisor', () => {
 
   test('expense reduction recommendation', () => {
     // Create scenario where expenses need to be reduced
-    const highExpenseProfile: UserProfile = {
+    const highExpenseProfile = createUserProfile({
       ...baseUserProfile,
-      current_net_worth: 30000,
-    };
+      current_net_worth: new Decimal(30000),
+    });
 
     const projection: AnnualProjectionRow[] = [];
     const currentAge = new Date().getFullYear() - highExpenseProfile.birth_year;
@@ -248,7 +261,7 @@ describe('FIREAdvisor', () => {
     }
 
     const { incomeItems } = createDetailedProjectionAndItems(highExpenseProfile, projection);
-    const engineInput = createEngineInput(highExpenseProfile, projection, incomeItems);
+    const engineInput = createEngineInput(highExpenseProfile, convertProjectionRows(projection), incomeItems);
     const advisor = new FIREAdvisor(engineInput);
 
     const recommendations = advisor.getAllRecommendations();
@@ -266,11 +279,11 @@ describe('FIREAdvisor', () => {
 
   test('multiple recommendations', () => {
     // Create scenario that should generate multiple recommendations
-    const complexProfile: UserProfile = {
+    const complexProfile = createUserProfile({
       ...baseUserProfile,
-      current_net_worth: 15000, // Very low net worth
+      current_net_worth: new Decimal(15000), // Very low net worth
       expected_fire_age: 45,     // Aggressive FIRE target
-    };
+    });
 
     const projection: AnnualProjectionRow[] = [];
     const currentAge = new Date().getFullYear() - complexProfile.birth_year;
@@ -285,7 +298,7 @@ describe('FIREAdvisor', () => {
     }
 
     const { incomeItems } = createDetailedProjectionAndItems(complexProfile, projection);
-    const engineInput = createEngineInput(complexProfile, projection, incomeItems);
+    const engineInput = createEngineInput(complexProfile, convertProjectionRows(projection), incomeItems);
     const advisor = new FIREAdvisor(engineInput);
 
     const recommendations = advisor.getAllRecommendations();
@@ -345,7 +358,7 @@ describe('FIREAdvisor', () => {
     ];
 
     const { incomeItems } = createDetailedProjectionAndItems(baseUserProfile, minimalProjection);
-    const engineInput = createEngineInput(baseUserProfile, minimalProjection, incomeItems);
+    const engineInput = createEngineInput(baseUserProfile, convertProjectionRows(minimalProjection), incomeItems);
     const advisor = new FIREAdvisor(engineInput);
 
     const recommendations = advisor.getAllRecommendations();
@@ -362,7 +375,7 @@ describe('FIREAdvisor', () => {
     ];
 
     const { incomeItems } = createDetailedProjectionAndItems(baseUserProfile, projection);
-    const engineInput = createEngineInput(baseUserProfile, projection, incomeItems);
+    const engineInput = createEngineInput(baseUserProfile, convertProjectionRows(projection), incomeItems);
 
     // Test with different language
     const advisor = new FIREAdvisor(engineInput, 'zh');

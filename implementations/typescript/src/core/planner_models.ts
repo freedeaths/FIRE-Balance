@@ -6,6 +6,7 @@
  * for managing three-stage planning workflow and configuration persistence.
  */
 
+import Decimal from 'decimal.js';
 import type {
   UserProfile,
   IncomeExpenseItem,
@@ -44,17 +45,18 @@ export interface Override {
   item_id: string;
 
   /** New value for the item at this age */
-  value: number;
+  value: Decimal;
 }
 
 /**
  * Create an Override with validation
+ * Accepts number inputs and converts to Decimal internally
  */
-export function createOverride(data: Partial<Override>): Override {
+export function createOverride(data: Partial<Override> & { value?: number | Decimal }): Override {
   const override: Override = {
     age: data.age ?? 0,
     item_id: data.item_id ?? '',
-    value: data.value ?? 0,
+    value: typeof data.value === 'number' ? new Decimal(data.value) : data.value ?? new Decimal(0),
   };
 
   // Validate age range
@@ -83,7 +85,7 @@ export interface PlannerResults {
   fire_calculation: FIRECalculationResult;
 
   /** Monte Carlo simulation success rate (0.0-1.0) */
-  monte_carlo_success_rate?: number;
+  monte_carlo_success_rate?: Decimal;
 
   /** List of advisor recommendations */
   recommendations: Record<string, any>[];
@@ -94,11 +96,14 @@ export interface PlannerResults {
 
 /**
  * Create PlannerResults with validation
+ * Accepts number inputs and converts to Decimal internally
  */
-export function createPlannerResults(data: Partial<PlannerResults>): PlannerResults {
+export function createPlannerResults(data: Partial<PlannerResults> & { monte_carlo_success_rate?: number }): PlannerResults {
   return {
     fire_calculation: data.fire_calculation!,
-    monte_carlo_success_rate: data.monte_carlo_success_rate,
+    monte_carlo_success_rate: typeof data.monte_carlo_success_rate === 'number'
+      ? new Decimal(data.monte_carlo_success_rate)
+      : data.monte_carlo_success_rate,
     recommendations: data.recommendations ?? [],
     calculation_timestamp: data.calculation_timestamp ?? new Date(),
   };
@@ -168,8 +173,8 @@ export interface PlannerData {
 export interface AnnualProjectionRow {
   age: number;
   year: number;
-  total_income: number;
-  total_expense: number;
+  total_income: Decimal;
+  total_expense: Decimal;
 }
 
 /**
@@ -273,33 +278,33 @@ export function configToPlannerData(config: PlannerConfigV1): PlannerData {
     expected_fire_age: config.profile.expected_fire_age ?? 50,
     legal_retirement_age: config.profile.legal_retirement_age ?? 65,
     life_expectancy: config.profile.life_expectancy ?? 85,
-    current_net_worth: config.profile.current_net_worth ?? 0,
-    inflation_rate: config.profile.inflation_rate ?? 3.0,
-    safety_buffer_months: config.profile.safety_buffer_months ?? 12.0,
+    current_net_worth: new Decimal(config.profile.current_net_worth ?? 0),
+    inflation_rate: new Decimal(config.profile.inflation_rate ?? 3.0),
+    safety_buffer_months: new Decimal(config.profile.safety_buffer_months ?? 12.0),
     portfolio: config.profile.portfolio ?? {
       asset_classes: [
         {
           name: 'stocks',
           display_name: 'Stocks',
-          allocation_percentage: 70.0,
-          expected_return: 7.0,
-          volatility: 15.0,
+          allocation_percentage: new Decimal(70.0),
+          expected_return: new Decimal(7.0),
+          volatility: new Decimal(15.0),
           liquidity_level: 'medium' as const,
         },
         {
           name: 'bonds',
           display_name: 'Bonds',
-          allocation_percentage: 20.0,
-          expected_return: 3.0,
-          volatility: 5.0,
+          allocation_percentage: new Decimal(20.0),
+          expected_return: new Decimal(3.0),
+          volatility: new Decimal(5.0),
           liquidity_level: 'low' as const,
         },
         {
           name: 'cash',
           display_name: 'Cash',
-          allocation_percentage: 10.0,
-          expected_return: 1.0,
-          volatility: 1.0,
+          allocation_percentage: new Decimal(10.0),
+          expected_return: new Decimal(1.0),
+          volatility: new Decimal(1.0),
           liquidity_level: 'high' as const,
         },
       ],
@@ -311,13 +316,13 @@ export function configToPlannerData(config: PlannerConfigV1): PlannerData {
   const income_items: IncomeExpenseItem[] = config.income_items.map(item => ({
     id: item.id ?? '',
     name: item.name ?? '',
-    after_tax_amount_per_period: item.after_tax_amount_per_period ?? 0,
+    after_tax_amount_per_period: new Decimal(item.after_tax_amount_per_period ?? 0),
     time_unit: item.time_unit ?? 'annually',
     frequency: item.frequency ?? 'recurring',
     interval_periods: item.interval_periods ?? 1,
     start_age: item.start_age ?? 25,
     end_age: item.end_age ?? 65,
-    annual_growth_rate: item.annual_growth_rate ?? 0.0,
+    annual_growth_rate: new Decimal(item.annual_growth_rate ?? 0.0),
     is_income: item.is_income ?? true,
     category: item.category ?? 'Other',
   }));
@@ -325,13 +330,13 @@ export function configToPlannerData(config: PlannerConfigV1): PlannerData {
   const expense_items: IncomeExpenseItem[] = config.expense_items.map(item => ({
     id: item.id ?? '',
     name: item.name ?? '',
-    after_tax_amount_per_period: item.after_tax_amount_per_period ?? 0,
+    after_tax_amount_per_period: new Decimal(item.after_tax_amount_per_period ?? 0),
     time_unit: item.time_unit ?? 'annually',
     frequency: item.frequency ?? 'recurring',
     interval_periods: item.interval_periods ?? 1,
     start_age: item.start_age ?? 25,
     end_age: item.end_age ?? 85,
-    annual_growth_rate: item.annual_growth_rate ?? 0.0,
+    annual_growth_rate: new Decimal(item.annual_growth_rate ?? 0.0),
     is_income: item.is_income ?? false,
     category: item.category ?? 'Other',
   }));
@@ -340,7 +345,7 @@ export function configToPlannerData(config: PlannerConfigV1): PlannerData {
   const overrides: Override[] = config.overrides.map(override => createOverride({
     age: override.age,
     item_id: override.item_id,
-    value: override.value,
+    value: typeof override.value === 'number' ? new Decimal(override.value) : new Decimal(override.value ?? 0),
   }));
 
   // Convert simulation settings

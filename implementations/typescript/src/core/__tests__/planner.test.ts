@@ -3,6 +3,8 @@
  * Ensures identical planner behavior between TypeScript and Python implementations
  */
 
+import Decimal from 'decimal.js';
+
 import {
   FIREPlanner,
   createPlanner,
@@ -10,10 +12,13 @@ import {
   createPlannerFromJSON,
 } from '../planner';
 
-import type {
+import {
   UserProfile,
   IncomeExpenseItem,
   FIRECalculationResult,
+  createUserProfile,
+  createIncomeExpenseItem,
+  createPortfolioConfiguration
 } from '../data_models';
 
 import type {
@@ -30,72 +35,74 @@ describe('FIREPlanner', () => {
   let sampleExpenseItem: IncomeExpenseItem;
 
   beforeEach(() => {
-    sampleUserProfile = {
+    const portfolio = createPortfolioConfiguration({
+      asset_classes: [
+        {
+          name: 'stocks',
+          display_name: 'Stocks',
+          allocation_percentage: new Decimal(70.0),
+          expected_return: new Decimal(7.0),
+          volatility: new Decimal(15.0),
+          liquidity_level: 'medium',
+        },
+        {
+          name: 'bonds',
+          display_name: 'Bonds',
+          allocation_percentage: new Decimal(20.0),
+          expected_return: new Decimal(3.0),
+          volatility: new Decimal(5.0),
+          liquidity_level: 'low',
+        },
+        {
+          name: 'cash',
+          display_name: 'Cash',
+          allocation_percentage: new Decimal(10.0),
+          expected_return: new Decimal(1.0),
+          volatility: new Decimal(1.0),
+          liquidity_level: 'high',
+        },
+      ],
+      enable_rebalancing: true,
+    });
+
+    sampleUserProfile = createUserProfile({
       birth_year: 1990,
       expected_fire_age: 50,
       legal_retirement_age: 65,
       life_expectancy: 85,
-      current_net_worth: 50000,
-      inflation_rate: 3.0,
-      safety_buffer_months: 12.0,
-      portfolio: {
-        asset_classes: [
-          {
-            name: 'stocks',
-            display_name: 'Stocks',
-            allocation_percentage: 70.0,
-            expected_return: 7.0,
-            volatility: 15.0,
-            liquidity_level: 'medium',
-          },
-          {
-            name: 'bonds',
-            display_name: 'Bonds',
-            allocation_percentage: 20.0,
-            expected_return: 3.0,
-            volatility: 5.0,
-            liquidity_level: 'low',
-          },
-          {
-            name: 'cash',
-            display_name: 'Cash',
-            allocation_percentage: 10.0,
-            expected_return: 1.0,
-            volatility: 1.0,
-            liquidity_level: 'high',
-          },
-        ],
-        enable_rebalancing: true,
-      },
-    };
+      current_net_worth: new Decimal(50000),
+      inflation_rate: new Decimal(3.0),
+      safety_buffer_months: new Decimal(12.0),
+      portfolio
+    });
 
-    sampleIncomeItem = {
+    sampleIncomeItem = createIncomeExpenseItem({
       id: 'work-income',
       name: 'Work Income',
-      after_tax_amount_per_period: 80000,
+      after_tax_amount_per_period: new Decimal(80000),
       time_unit: 'annually',
       frequency: 'recurring',
       interval_periods: 1,
       start_age: 34,
       end_age: 50,
-      annual_growth_rate: 2.0,
+      annual_growth_rate: new Decimal(2.0),
       is_income: true,
       category: 'Employment',
-    };
+    });
 
-    sampleExpenseItem = {
+    sampleExpenseItem = createIncomeExpenseItem({
       id: 'living-expenses',
       name: 'Living Expenses',
-      after_tax_amount_per_period: 50000,
+      after_tax_amount_per_period: new Decimal(50000),
       time_unit: 'annually',
       frequency: 'recurring',
       interval_periods: 1,
       start_age: 34,
       end_age: 85,
-      annual_growth_rate: 0.0,
+      annual_growth_rate: new Decimal(0.0),
       is_income: false,
       category: 'Living',
-    };
+    });
   });
 
   describe('Initialization', () => {
@@ -263,7 +270,7 @@ describe('FIREPlanner', () => {
       expect(planner.data.overrides[0]).toEqual({
         age: 35,
         item_id: 'work-income',
-        value: 90000,
+        value: new Decimal(90000),
       });
 
       // Remove override
@@ -350,8 +357,8 @@ describe('FIREPlanner', () => {
       planner.addExpenseItem(sampleExpenseItem);
 
       const customProjection: AnnualProjectionRow[] = [
-        { age: 34, year: 2024, total_income: 80000, total_expense: 50000 },
-        { age: 35, year: 2025, total_income: 82000, total_expense: 51000 },
+        { age: 34, year: 2024, total_income: new Decimal(80000), total_expense: new Decimal(50000) },
+        { age: 35, year: 2025, total_income: new Decimal(82000), total_expense: new Decimal(51000) },
       ];
 
       planner.setSimulationSettings({ num_simulations: 10 });
@@ -387,21 +394,21 @@ describe('FIREPlanner', () => {
           expected_fire_age: 55,
           legal_retirement_age: 65,
           life_expectancy: 90,
-          current_net_worth: 100000,
-          inflation_rate: 2.5,
-          safety_buffer_months: 18.0,
+          current_net_worth: new Decimal(100000),
+          inflation_rate: new Decimal(2.5),
+          safety_buffer_months: new Decimal(18.0),
         },
         income_items: [
           {
             id: 'salary',
             name: 'Salary',
-            after_tax_amount_per_period: 120000,
+            after_tax_amount_per_period: new Decimal(120000),
             time_unit: 'annually',
             frequency: 'recurring',
             interval_periods: 1,
             start_age: 39,
             end_age: 55,
-            annual_growth_rate: 3.0,
+            annual_growth_rate: new Decimal(3.0),
             is_income: true,
             category: 'Employment',
           }
@@ -410,13 +417,13 @@ describe('FIREPlanner', () => {
           {
             id: 'expenses',
             name: 'Living Expenses',
-            after_tax_amount_per_period: 70000,
+            after_tax_amount_per_period: new Decimal(70000),
             time_unit: 'annually',
             frequency: 'recurring',
             interval_periods: 1,
             start_age: 39,
             end_age: 90,
-            annual_growth_rate: 0.0,
+            annual_growth_rate: new Decimal(0.0),
             is_income: false,
             category: 'Living',
           }

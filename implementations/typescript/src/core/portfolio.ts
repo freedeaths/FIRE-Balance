@@ -6,6 +6,7 @@
  * 1:1 mapping to Python implementation for algorithm consistency.
  */
 
+import Decimal from 'decimal.js';
 import type { UserProfile, LiquidityLevel, AssetClass, PortfolioConfiguration } from './data_models';
 import { getCurrentAge } from './data_models';
 
@@ -26,7 +27,7 @@ const logger = {
  */
 export interface PortfolioState {
   /** Asset name -> current value */
-  asset_values: Record<string, number>;
+  asset_values: Record<string, Decimal>;
 }
 
 /**
@@ -41,59 +42,61 @@ export namespace PortfolioState {
   /**
    * Calculate total portfolio value from asset values
    */
-  export function getTotalValue(state: PortfolioState): number {
-    return Object.values(state.asset_values).reduce((sum, value) => sum + value, 0) || 0;
+  export function getTotalValue(state: PortfolioState): Decimal {
+    return Object.values(state.asset_values).reduce((sum, value) => sum.add(value), new Decimal(0));
   }
 
   /**
    * Get current allocation percentages with precision handling
    * Direct port of Python's get_allocation() method
    */
-  export function getAllocation(state: PortfolioState): Record<string, number> {
+  export function getAllocation(state: PortfolioState): Record<string, Decimal> {
     const total = getTotalValue(state);
-    if (total === 0) {
-      const result: Record<string, number> = {};
+    if (total.eq(0)) {
+      const result: Record<string, Decimal> = {};
       Object.keys(state.asset_values).forEach(name => {
-        result[name] = 0.0;
+        result[name] = new Decimal(0);
       });
       return result;
     }
 
-    const rawAllocation: Record<string, number> = {};
+    const rawAllocation: Record<string, Decimal> = {};
     Object.entries(state.asset_values).forEach(([name, value]) => {
-      rawAllocation[name] = value / total;
+      rawAllocation[name] = value.div(total);
     });
 
     // Check if allocation sums to 1.0 within tolerance
-    const allocationSum = Object.values(rawAllocation).reduce((sum, value) => sum + value, 0);
-    const tolerance = 0.0001; // 0.01% tolerance for PortfolioState (runtime calculations)
+    const allocationSum = Object.values(rawAllocation).reduce((sum, value) => sum.add(value), new Decimal(0));
+    const tolerance = new Decimal(0.0001); // 0.01% tolerance for PortfolioState (runtime calculations)
+    const one = new Decimal(1);
 
-    if (Math.abs(allocationSum - 1.0) > tolerance) {
+    if (allocationSum.sub(one).abs().gt(tolerance)) {
       logger.warning(
         `Portfolio allocation sum deviates from 1.0: ${allocationSum.toFixed(6)} ` +
-        `(difference: ${(allocationSum - 1.0).toFixed(6)}). Auto-adjusting.`
+        `(difference: ${allocationSum.sub(one).toFixed(6)}). Auto-adjusting.`
       );
 
       // More robust adjustment: subtract difference from largest allocation
-      if (allocationSum > 0) {
+      if (allocationSum.gt(0)) {
         // First try proportional adjustment
-        const adjustmentFactor = 1.0 / allocationSum;
-        const adjustedAllocation: Record<string, number> = {};
+        const adjustmentFactor = one.div(allocationSum);
+        const adjustedAllocation: Record<string, Decimal> = {};
         Object.entries(rawAllocation).forEach(([name, value]) => {
-          adjustedAllocation[name] = value * adjustmentFactor;
+          adjustedAllocation[name] = value.mul(adjustmentFactor);
         });
 
         // Verify and apply precision correction if needed
-        const adjustedSum = Object.values(adjustedAllocation).reduce((sum, value) => sum + value, 0);
-        const remainingError = 1.0 - adjustedSum;
+        const adjustedSum = Object.values(adjustedAllocation).reduce((sum, value) => sum.add(value), new Decimal(0));
+        const remainingError = one.sub(adjustedSum);
+        const epsilon = new Decimal(Number.EPSILON);
 
-        if (Math.abs(remainingError) > Number.EPSILON) {
+        if (remainingError.abs().gt(epsilon)) {
           // Find largest allocation and adjust it to guarantee exactly 1.0
           const largestAsset = Object.entries(adjustedAllocation)
-            .reduce((max, [name, value]) => value > max[1] ? [name, value] : max, ['', 0])[0];
-          adjustedAllocation[largestAsset] += remainingError;
+            .reduce((max, [name, value]) => value.gt(max[1]) ? [name, value] : max, ['', new Decimal(0)])[0];
+          adjustedAllocation[largestAsset] = adjustedAllocation[largestAsset].add(remainingError);
 
-          const finalSum = Object.values(adjustedAllocation).reduce((sum, value) => sum + value, 0);
+          const finalSum = Object.values(adjustedAllocation).reduce((sum, value) => sum.add(value), new Decimal(0));
           logger.info(`Allocation sum after precision correction: ${finalSum.toFixed(10)}`);
         } else {
           logger.info(`Adjusted allocation sum: ${adjustedSum.toFixed(6)}`);
@@ -112,7 +115,7 @@ export namespace PortfolioState {
   /**
    * Create a new PortfolioState
    */
-  export function create(assetValues: Record<string, number>): PortfolioState {
+  export function create(assetValues: Record<string, Decimal>): PortfolioState {
     return { asset_values: { ...assetValues } };
   }
 }
@@ -123,7 +126,7 @@ export namespace PortfolioState {
  */
 export interface AssetRandomFactor {
   name: string;
-  random_factor: number;
+  random_factor: Decimal;
 }
 
 /**
@@ -141,9 +144,9 @@ export namespace PortfolioRandomFactors {
   /**
    * Get random factor for specific asset
    */
-  export function getFactor(factors: PortfolioRandomFactors, assetName: string): number {
+  export function getFactor(factors: PortfolioRandomFactors, assetName: string): Decimal {
     const factor = factors.asset_factors.find(f => f.name === assetName);
-    return factor?.random_factor ?? 0.0; // Default if asset not found
+    return factor?.random_factor ?? new Decimal(0); // Default if asset not found
   }
 
   /**
@@ -152,7 +155,7 @@ export namespace PortfolioRandomFactors {
    * @param factors Dict mapping asset name to random factor
    *                e.g., {"Stocks": 1.2, "Bonds": -0.8, "Cash": 0.1}
    */
-  export function fromDict(factors: Record<string, number>): PortfolioRandomFactors {
+  export function fromDict(factors: Record<string, Decimal>): PortfolioRandomFactors {
     return {
       asset_factors: Object.entries(factors).map(([name, factor]) => ({
         name,
@@ -185,10 +188,10 @@ export class PortfolioCalculator {
    * @param age User's age (reserved for future dynamic allocation features)
    * @returns Dict mapping asset names to allocation percentages (0.0-1.0)
    */
-  getTargetAllocation(age: number): Record<string, number> {
-    const result: Record<string, number> = {};
+  getTargetAllocation(age: number): Record<string, Decimal> {
+    const result: Record<string, Decimal> = {};
     this.portfolio_config.asset_classes.forEach(asset => {
-      result[asset.name] = asset.allocation_percentage / 100.0;
+      result[asset.name] = new Decimal(asset.allocation_percentage).div(100);
     });
     return result;
   }
@@ -201,23 +204,23 @@ export class PortfolioCalculator {
    * @returns Expected annual return amount
    */
   calculateReturnsByAllocation(
-    allocation: Record<string, number>,
-    portfolioValue: number
-  ): number {
-    if (portfolioValue <= 0) {
-      return 0;
+    allocation: Record<string, Decimal>,
+    portfolioValue: Decimal
+  ): Decimal {
+    if (portfolioValue.lte(0)) {
+      return new Decimal(0);
     }
 
-    let totalReturn = 0;
+    let totalReturn = new Decimal(0);
 
     this.portfolio_config.asset_classes.forEach(asset => {
-      const actualAllocation = allocation[asset.name] || 0.0;
-      const expectedReturn = asset.expected_return / 100.0; // Convert percentage to decimal
-      const assetReturn = expectedReturn * actualAllocation;
-      totalReturn += assetReturn;
+      const actualAllocation = allocation[asset.name] || new Decimal(0);
+      const expectedReturn = new Decimal(asset.expected_return).div(100); // Convert percentage to decimal
+      const assetReturn = expectedReturn.mul(actualAllocation);
+      totalReturn = totalReturn.add(assetReturn);
     });
 
-    return portfolioValue * totalReturn;
+    return portfolioValue.mul(totalReturn);
   }
 
   /**
@@ -230,49 +233,49 @@ export class PortfolioCalculator {
    * @returns Return amount with volatility applied
    */
   calculateReturnsWithVolatility(
-    allocation: Record<string, number>,
-    portfolioValue: number,
+    allocation: Record<string, Decimal>,
+    portfolioValue: Decimal,
     randomFactors: PortfolioRandomFactors
-  ): number {
-    if (portfolioValue <= 0) {
-      return 0;
+  ): Decimal {
+    if (portfolioValue.lte(0)) {
+      return new Decimal(0);
     }
 
-    let totalReturn = 0;
+    let totalReturn = new Decimal(0);
 
     this.portfolio_config.asset_classes.forEach(asset => {
-      const actualAllocation = allocation[asset.name] || 0.0;
+      const actualAllocation = allocation[asset.name] || new Decimal(0);
 
       // Expected return + volatility adjustment per asset
-      const expectedReturn = asset.expected_return / 100.0;
-      const volatility = asset.volatility / 100.0;
+      const expectedReturn = new Decimal(asset.expected_return).div(100);
+      const volatility = new Decimal(asset.volatility).div(100);
       const assetRandomFactor = PortfolioRandomFactors.getFactor(randomFactors, asset.name);
-      const volatilityAdjustment = volatility * assetRandomFactor;
-      const actualReturn = expectedReturn + volatilityAdjustment;
+      const volatilityAdjustment = volatility.mul(assetRandomFactor);
+      const actualReturn = expectedReturn.add(volatilityAdjustment);
 
-      const assetReturn = actualReturn * actualAllocation;
-      totalReturn += assetReturn;
+      const assetReturn = actualReturn.mul(actualAllocation);
+      totalReturn = totalReturn.add(assetReturn);
     });
 
-    return portfolioValue * totalReturn;
+    return portfolioValue.mul(totalReturn);
   }
 
   /**
    * Determine if portfolio should be rebalanced
    */
   shouldRebalance(
-    currentAllocation: Record<string, number>,
-    targetAllocation: Record<string, number>,
-    threshold: number = 0.05
+    currentAllocation: Record<string, Decimal>,
+    targetAllocation: Record<string, Decimal>,
+    threshold: Decimal = new Decimal(0.05)
   ): boolean {
     if (!this.portfolio_config.enable_rebalancing) {
       return false;
     }
 
     for (const assetName in targetAllocation) {
-      const current = currentAllocation[assetName] || 0.0;
+      const current = currentAllocation[assetName] || new Decimal(0);
       const target = targetAllocation[assetName];
-      if (Math.abs(current - target) > threshold) {
+      if (current.sub(target).abs().gt(threshold)) {
         return true;
       }
     }
@@ -284,23 +287,23 @@ export class PortfolioCalculator {
    */
   calculateRebalancingTrades(
     currentPortfolio: PortfolioState,
-    targetAllocation: Record<string, number>
-  ): Record<string, number> {
+    targetAllocation: Record<string, Decimal>
+  ): Record<string, Decimal> {
     const totalValue = PortfolioState.getTotalValue(currentPortfolio);
-    if (totalValue <= 0) {
-      const result: Record<string, number> = {};
+    if (totalValue.lte(0)) {
+      const result: Record<string, Decimal> = {};
       this.portfolio_config.asset_classes.forEach(asset => {
-        result[asset.name] = 0;
+        result[asset.name] = new Decimal(0);
       });
       return result;
     }
 
-    const trades: Record<string, number> = {};
+    const trades: Record<string, Decimal> = {};
     this.portfolio_config.asset_classes.forEach(asset => {
       const assetName = asset.name;
-      const targetValue = totalValue * (targetAllocation[assetName] || 0.0);
-      const currentValue = currentPortfolio.asset_values[assetName] || 0;
-      trades[assetName] = targetValue - currentValue;
+      const targetValue = totalValue.mul(targetAllocation[assetName] || new Decimal(0));
+      const currentValue = currentPortfolio.asset_values[assetName] || new Decimal(0);
+      trades[assetName] = targetValue.sub(currentValue);
     });
 
     return trades;
@@ -326,11 +329,11 @@ export interface CashFlowStrategy {
    * @returns Dict of asset name -> amount to add/allocate
    */
   handleIncome(
-    income: number,
+    income: Decimal,
     portfolio: PortfolioState,
-    annualExpenses: number,
-    targetAllocation: Record<string, number>
-  ): Record<string, number>;
+    annualExpenses: Decimal,
+    targetAllocation: Record<string, Decimal>
+  ): Record<string, Decimal>;
 
   /**
    * Handle expense withdrawal
@@ -339,7 +342,7 @@ export interface CashFlowStrategy {
    * @param portfolio Current portfolio state
    * @returns Dict of asset name -> amount to withdraw (negative values)
    */
-  handleExpense(expense: number, portfolio: PortfolioState): Record<string, number>;
+  handleExpense(expense: Decimal, portfolio: PortfolioState): Record<string, Decimal>;
 
   /**
    * Get user-friendly strategy name
@@ -352,14 +355,14 @@ export interface CashFlowStrategy {
  * Direct TypeScript equivalent of Python's LiquidityAwareFlowStrategy class
  */
 export class LiquidityAwareFlowStrategy implements CashFlowStrategy {
-  private readonly cashBufferMonths: number;
+  private readonly cashBufferMonths: Decimal;
   private readonly portfolioConfig: PortfolioConfiguration | null;
 
   constructor(
     cashBufferMonths: number = 3,
     portfolioConfig: PortfolioConfiguration | null = null
   ) {
-    this.cashBufferMonths = cashBufferMonths;
+    this.cashBufferMonths = new Decimal(cashBufferMonths);
     this.portfolioConfig = portfolioConfig;
   }
 
@@ -367,25 +370,25 @@ export class LiquidityAwareFlowStrategy implements CashFlowStrategy {
    * Handle income: liquidity-aware allocation with return optimization
    */
   handleIncome(
-    income: number,
+    income: Decimal,
     portfolio: PortfolioState,
-    annualExpenses: number,
-    targetAllocation: Record<string, number>
-  ): Record<string, number> {
+    annualExpenses: Decimal,
+    targetAllocation: Record<string, Decimal>
+  ): Record<string, Decimal> {
     // Initialize allocation dict
-    const allocation: Record<string, number> = {};
+    const allocation: Record<string, Decimal> = {};
     Object.keys(targetAllocation).forEach(name => {
-      allocation[name] = 0;
+      allocation[name] = new Decimal(0);
     });
 
     // Step 1: Ensure HIGH liquidity buffer (emergency fund)
     const highLiquidityBuffer = this._ensureLiquidityBuffer(
       income, portfolio, annualExpenses, allocation
     );
-    const remainingIncome = income - highLiquidityBuffer;
+    const remainingIncome = income.sub(highLiquidityBuffer);
 
     // Step 2: Invest remaining by return optimization within target allocation
-    if (remainingIncome > 0) {
+    if (remainingIncome.gt(0)) {
       this._allocateByReturnOptimization(
         remainingIncome, targetAllocation, allocation
       );
@@ -398,35 +401,35 @@ export class LiquidityAwareFlowStrategy implements CashFlowStrategy {
    * Ensure adequate high-liquidity buffer, return amount used
    */
   private _ensureLiquidityBuffer(
-    income: number,
+    income: Decimal,
     portfolio: PortfolioState,
-    annualExpenses: number,
-    allocation: Record<string, number>
-  ): number {
+    annualExpenses: Decimal,
+    allocation: Record<string, Decimal>
+  ): Decimal {
     // Calculate required cash buffer
-    const requiredBuffer = annualExpenses * (this.cashBufferMonths / 12.0);
+    const requiredBuffer = annualExpenses.mul(this.cashBufferMonths.div(12));
 
     // Find high-liquidity assets (assume "cash" for now - lowercase normalized)
     // TODO: Use actual asset config to identify HIGH liquidity assets
-    const currentHighLiquidity = portfolio.asset_values['cash'] || 0;
+    const currentHighLiquidity = portfolio.asset_values['cash'] || new Decimal(0);
 
-    const bufferShortfall = Math.max(0, requiredBuffer - currentHighLiquidity);
-    if (bufferShortfall > 0) {
-      const bufferAllocation = Math.min(income, bufferShortfall);
+    const bufferShortfall = Decimal.max(new Decimal(0), requiredBuffer.sub(currentHighLiquidity));
+    if (bufferShortfall.gt(0)) {
+      const bufferAllocation = Decimal.min(income, bufferShortfall);
       allocation['cash'] = bufferAllocation;
       return bufferAllocation;
     }
 
-    return 0;
+    return new Decimal(0);
   }
 
   /**
    * Allocate remaining income by return optimization within target allocation
    */
   private _allocateByReturnOptimization(
-    remainingIncome: number,
-    targetAllocation: Record<string, number>,
-    allocation: Record<string, number>
+    remainingIncome: Decimal,
+    targetAllocation: Record<string, Decimal>,
+    allocation: Record<string, Decimal>
   ): void {
     if (!this.portfolioConfig) {
       // Fallback to simple proportional allocation
@@ -438,24 +441,24 @@ export class LiquidityAwareFlowStrategy implements CashFlowStrategy {
     const investmentAssets = this.portfolioConfig.asset_classes
       .filter(asset =>
         asset.liquidity_level !== 'high' &&
-        (targetAllocation[asset.name] || 0) > 0
+        (targetAllocation[asset.name] || new Decimal(0)).gt(0)
       );
 
     // Sort by expected return (highest first) for return maximization
-    investmentAssets.sort((a, b) => b.expected_return - a.expected_return);
+    investmentAssets.sort((a, b) => b.expected_return.gt(a.expected_return) ? 1 : (b.expected_return.lt(a.expected_return) ? -1 : 0));
 
     // Calculate total investment ratio (excluding HIGH liquidity)
     const totalInvestmentRatio = investmentAssets
-      .reduce((sum, asset) => sum + (targetAllocation[asset.name] || 0), 0);
+      .reduce((sum, asset) => sum.add(targetAllocation[asset.name] || new Decimal(0)), new Decimal(0));
 
-    if (totalInvestmentRatio > 0) {
+    if (totalInvestmentRatio.gt(0)) {
       // Allocate proportionally within non-HIGH liquidity assets
       // (Future enhancement: could do greedy allocation to highest return assets)
       investmentAssets.forEach(asset => {
-        const targetRatio = targetAllocation[asset.name] || 0;
-        if (targetRatio > 0) {
-          const investmentRatio = targetRatio / totalInvestmentRatio;
-          allocation[asset.name] += remainingIncome * investmentRatio;
+        const targetRatio = targetAllocation[asset.name] || new Decimal(0);
+        if (targetRatio.gt(0)) {
+          const investmentRatio = targetRatio.div(totalInvestmentRatio);
+          allocation[asset.name] = allocation[asset.name].add(remainingIncome.mul(investmentRatio));
         }
       });
     }
@@ -465,11 +468,11 @@ export class LiquidityAwareFlowStrategy implements CashFlowStrategy {
    * Fallback proportional allocation when no config available
    */
   private _allocateProportionally(
-    remainingIncome: number,
-    targetAllocation: Record<string, number>,
-    allocation: Record<string, number>
+    remainingIncome: Decimal,
+    targetAllocation: Record<string, Decimal>,
+    allocation: Record<string, Decimal>
   ): void {
-    const investmentTargets: Record<string, number> = {};
+    const investmentTargets: Record<string, Decimal> = {};
     Object.entries(targetAllocation).forEach(([k, v]) => {
       if (k !== 'Cash') {
         investmentTargets[k] = v;
@@ -477,12 +480,12 @@ export class LiquidityAwareFlowStrategy implements CashFlowStrategy {
     });
 
     const totalInvestmentRatio = Object.values(investmentTargets)
-      .reduce((sum, value) => sum + value, 0);
+      .reduce((sum, value) => sum.add(value), new Decimal(0));
 
-    if (totalInvestmentRatio > 0) {
+    if (totalInvestmentRatio.gt(0)) {
       Object.entries(investmentTargets).forEach(([assetName, targetRatio]) => {
-        const investmentRatio = targetRatio / totalInvestmentRatio;
-        allocation[assetName] += remainingIncome * investmentRatio;
+        const investmentRatio = targetRatio.div(totalInvestmentRatio);
+        allocation[assetName] = allocation[assetName].add(remainingIncome.mul(investmentRatio));
       });
     }
   }
@@ -490,10 +493,10 @@ export class LiquidityAwareFlowStrategy implements CashFlowStrategy {
   /**
    * Handle expense: liquidity-priority withdrawal with return optimization
    */
-  handleExpense(expense: number, portfolio: PortfolioState): Record<string, number> {
-    const withdrawal: Record<string, number> = {};
+  handleExpense(expense: Decimal, portfolio: PortfolioState): Record<string, Decimal> {
+    const withdrawal: Record<string, Decimal> = {};
     Object.keys(portfolio.asset_values).forEach(name => {
-      withdrawal[name] = 0;
+      withdrawal[name] = new Decimal(0);
     });
     let remainingExpense = expense;
 
@@ -501,18 +504,18 @@ export class LiquidityAwareFlowStrategy implements CashFlowStrategy {
     const highLiquidityUsed = this._withdrawFromLiquidityTier(
       'HIGH', remainingExpense, portfolio, withdrawal
     );
-    remainingExpense -= highLiquidityUsed;
+    remainingExpense = remainingExpense.sub(highLiquidityUsed);
 
     // Step 2: Use MEDIUM liquidity assets if needed (Stocks)
-    if (remainingExpense > 0) {
+    if (remainingExpense.gt(0)) {
       const mediumLiquidityUsed = this._withdrawFromLiquidityTier(
         'MEDIUM', remainingExpense, portfolio, withdrawal
       );
-      remainingExpense -= mediumLiquidityUsed;
+      remainingExpense = remainingExpense.sub(mediumLiquidityUsed);
     }
 
     // Step 3: Use LOW liquidity assets if still needed (Bonds, Savings)
-    if (remainingExpense > 0) {
+    if (remainingExpense.gt(0)) {
       this._withdrawFromLiquidityTier(
         'LOW', remainingExpense, portfolio, withdrawal
       );
@@ -526,24 +529,24 @@ export class LiquidityAwareFlowStrategy implements CashFlowStrategy {
    */
   private _withdrawFromLiquidityTier(
     tier: string,
-    neededAmount: number,
+    neededAmount: Decimal,
     portfolio: PortfolioState,
-    withdrawal: Record<string, number>
-  ): number {
+    withdrawal: Record<string, Decimal>
+  ): Decimal {
     const tierAssets = this._getAssetsByLiquidityTier(tier, portfolio);
 
     if (Object.keys(tierAssets).length === 0) {
-      return 0;
+      return new Decimal(0);
     }
 
-    const totalTierValue = Object.values(tierAssets).reduce((sum, value) => sum + value, 0);
-    if (totalTierValue === 0) {
-      return 0;
+    const totalTierValue = Object.values(tierAssets).reduce((sum, value) => sum.add(value), new Decimal(0));
+    if (totalTierValue.eq(0)) {
+      return new Decimal(0);
     }
 
-    const actualWithdrawal = Math.min(neededAmount, totalTierValue);
-    if (actualWithdrawal === 0) {
-      return 0;
+    const actualWithdrawal = Decimal.min(neededAmount, totalTierValue);
+    if (actualWithdrawal.eq(0)) {
+      return new Decimal(0);
     }
 
     // Optimize withdrawal: sell lowest return assets first in same liquidity tier
@@ -561,12 +564,12 @@ export class LiquidityAwareFlowStrategy implements CashFlowStrategy {
    * Withdraw by selling lowest return assets first (tax loss harvesting logic)
    */
   private _withdrawByReturnOptimization(
-    tierAssets: Record<string, number>,
-    withdrawalAmount: number,
-    withdrawal: Record<string, number>
+    tierAssets: Record<string, Decimal>,
+    withdrawalAmount: Decimal,
+    withdrawal: Record<string, Decimal>
   ): void {
     // Get asset return info and sort by expected return (ascending-sell lowest first)
-    const assetReturns: Array<[string, number, number]> = [];
+    const assetReturns: Array<[string, Decimal, Decimal]> = [];
     if (!this.portfolioConfig) {
       return;
     }
@@ -577,17 +580,17 @@ export class LiquidityAwareFlowStrategy implements CashFlowStrategy {
       }
     });
 
-    assetReturns.sort((a, b) => a[1] - b[1]); // Sort by return (lowest first)
+    assetReturns.sort((a, b) => a[1].gt(b[1]) ? 1 : (a[1].lt(b[1]) ? -1 : 0)); // Sort by return (lowest first)
 
     let remainingWithdrawal = withdrawalAmount;
     assetReturns.forEach(([assetName, , assetValue]) => {
-      if (remainingWithdrawal <= 0) {
+      if (remainingWithdrawal.lte(0)) {
         return;
       }
 
-      const assetWithdrawal = Math.min(remainingWithdrawal, assetValue);
-      withdrawal[assetName] = -assetWithdrawal;
-      remainingWithdrawal -= assetWithdrawal;
+      const assetWithdrawal = Decimal.min(remainingWithdrawal, assetValue);
+      withdrawal[assetName] = assetWithdrawal.neg();
+      remainingWithdrawal = remainingWithdrawal.sub(assetWithdrawal);
     });
   }
 
@@ -595,15 +598,15 @@ export class LiquidityAwareFlowStrategy implements CashFlowStrategy {
    * Fallback proportional withdrawal
    */
   private _withdrawProportionally(
-    tierAssets: Record<string, number>,
-    withdrawalAmount: number,
-    withdrawal: Record<string, number>
+    tierAssets: Record<string, Decimal>,
+    withdrawalAmount: Decimal,
+    withdrawal: Record<string, Decimal>
   ): void {
-    const totalTierValue = Object.values(tierAssets).reduce((sum, value) => sum + value, 0);
+    const totalTierValue = Object.values(tierAssets).reduce((sum, value) => sum.add(value), new Decimal(0));
     Object.entries(tierAssets).forEach(([assetName, assetValue]) => {
-      if (assetValue > 0) {
-        const withdrawalRatio = assetValue / totalTierValue;
-        withdrawal[assetName] = -withdrawalAmount * withdrawalRatio;
+      if (assetValue.gt(0)) {
+        const withdrawalRatio = assetValue.div(totalTierValue);
+        withdrawal[assetName] = withdrawalAmount.mul(withdrawalRatio).neg();
       }
     });
   }
@@ -612,7 +615,7 @@ export class LiquidityAwareFlowStrategy implements CashFlowStrategy {
    * Get assets belonging to specific liquidity tier
    * Made public for testing (marked with underscore to indicate internal use)
    */
-  _getAssetsByLiquidityTier(tier: string, portfolio: PortfolioState): Record<string, number> {
+  _getAssetsByLiquidityTier(tier: string, portfolio: PortfolioState): Record<string, Decimal> {
     let tierAssetNames: string[];
 
     if (!this.portfolioConfig) {
@@ -631,9 +634,9 @@ export class LiquidityAwareFlowStrategy implements CashFlowStrategy {
         .map(asset => asset.name);
     }
 
-    const result: Record<string, number> = {};
+    const result: Record<string, Decimal> = {};
     Object.entries(portfolio.asset_values).forEach(([name, value]) => {
-      if (tierAssetNames.includes(name) && value > 0) {
+      if (tierAssetNames.includes(name) && value.gt(0)) {
         result[name] = value;
       }
     });
@@ -666,11 +669,11 @@ export class SimpleFlowStrategy extends LiquidityAwareFlowStrategy {
  */
 export interface YearlyPortfolioResult {
   age: number;
-  starting_portfolio_value: number;
-  investment_returns: number;
-  cash_flows_allocated: Record<string, number>; // Income/expense allocations
-  ending_portfolio_value: number;
-  ending_allocation: Record<string, number>;
+  starting_portfolio_value: Decimal;
+  investment_returns: Decimal;
+  cash_flows_allocated: Record<string, Decimal>; // Income/expense allocations
+  ending_portfolio_value: Decimal;
+  ending_allocation: Record<string, Decimal>;
   rebalanced: boolean;
 }
 
@@ -706,12 +709,12 @@ export class PortfolioSimulator {
     const targetAllocation = this.calculator.getTargetAllocation(currentAge);
 
     // Distribute initial net worth according to target allocation
-    const initialValue = userProfile.current_net_worth;
-    const assetValues: Record<string, number> = {};
+    const initialValue = new Decimal(userProfile.current_net_worth);
+    const assetValues: Record<string, Decimal> = {};
 
     userProfile.portfolio.asset_classes.forEach(assetClass => {
-      const allocationPct = targetAllocation[assetClass.name] || 0.0;
-      const assetValue = initialValue * allocationPct;
+      const allocationPct = targetAllocation[assetClass.name] || new Decimal(0);
+      const assetValue = initialValue.mul(allocationPct);
       assetValues[assetClass.name] = assetValue;
     });
 
@@ -735,8 +738,8 @@ export class PortfolioSimulator {
    */
   simulateYear(
     age: number,
-    netCashFlow: number,
-    annualExpenses: number
+    netCashFlow: Decimal,
+    annualExpenses: Decimal
   ): YearlyPortfolioResult {
     const startingValue = PortfolioState.getTotalValue(this.currentPortfolio);
     const startingAllocation = PortfolioState.getAllocation(this.currentPortfolio);
@@ -750,11 +753,11 @@ export class PortfolioSimulator {
     this._applyReturns(investmentReturns, startingAllocation);
 
     // Step 3: Handle cash flows
-    let cashFlows: Record<string, number> = {};
-    if (netCashFlow !== 0) {
+    let cashFlows: Record<string, Decimal> = {};
+    if (!netCashFlow.eq(0)) {
       const targetAllocation = this.calculator.getTargetAllocation(age);
 
-      if (netCashFlow > 0) {
+      if (netCashFlow.gt(0)) {
         // Handle income
         cashFlows = this.strategy.handleIncome(
           netCashFlow,
@@ -765,7 +768,7 @@ export class PortfolioSimulator {
       } else {
         // Handle expenses
         cashFlows = this.strategy.handleExpense(
-          Math.abs(netCashFlow), this.currentPortfolio
+          netCashFlow.abs(), this.currentPortfolio
         );
       }
 
@@ -789,21 +792,21 @@ export class PortfolioSimulator {
   /**
    * Apply investment returns proportionally to assets
    */
-  private _applyReturns(totalReturns: number, allocation: Record<string, number>): void {
+  private _applyReturns(totalReturns: Decimal, allocation: Record<string, Decimal>): void {
     Object.entries(this.currentPortfolio.asset_values).forEach(([assetName, currentValue]) => {
-      const assetAllocation = allocation[assetName] || 0.0;
-      const assetReturns = totalReturns * assetAllocation;
-      this.currentPortfolio.asset_values[assetName] = currentValue + assetReturns;
+      const assetAllocation = allocation[assetName] || new Decimal(0);
+      const assetReturns = totalReturns.mul(assetAllocation);
+      this.currentPortfolio.asset_values[assetName] = currentValue.add(assetReturns);
     });
   }
 
   /**
    * Apply cash flow changes to portfolio
    */
-  private _applyCashFlows(cashFlows: Record<string, number>): void {
+  private _applyCashFlows(cashFlows: Record<string, Decimal>): void {
     Object.entries(cashFlows).forEach(([assetName, flowAmount]) => {
       if (this.currentPortfolio.asset_values[assetName] !== undefined) {
-        this.currentPortfolio.asset_values[assetName] += flowAmount;
+        this.currentPortfolio.asset_values[assetName] = this.currentPortfolio.asset_values[assetName].add(flowAmount);
       } else {
         this.currentPortfolio.asset_values[assetName] = flowAmount;
       }
@@ -811,8 +814,8 @@ export class PortfolioSimulator {
 
     // Ensure no negative values
     Object.keys(this.currentPortfolio.asset_values).forEach(assetName => {
-      this.currentPortfolio.asset_values[assetName] = Math.max(
-        0, this.currentPortfolio.asset_values[assetName]
+      this.currentPortfolio.asset_values[assetName] = Decimal.max(
+        new Decimal(0), this.currentPortfolio.asset_values[assetName]
       );
     });
   }
@@ -838,12 +841,12 @@ export class PortfolioSimulator {
   /**
    * Execute rebalancing trades (no transaction costs for now)
    */
-  private _executeTrades(trades: Record<string, number>): void {
+  private _executeTrades(trades: Record<string, Decimal>): void {
     Object.entries(trades).forEach(([assetName, tradeAmount]) => {
       if (this.currentPortfolio.asset_values[assetName] !== undefined) {
-        this.currentPortfolio.asset_values[assetName] += tradeAmount;
+        this.currentPortfolio.asset_values[assetName] = this.currentPortfolio.asset_values[assetName].add(tradeAmount);
       } else {
-        this.currentPortfolio.asset_values[assetName] = Math.max(0, tradeAmount);
+        this.currentPortfolio.asset_values[assetName] = Decimal.max(new Decimal(0), tradeAmount);
       }
     });
   }
@@ -860,7 +863,7 @@ export class PortfolioSimulator {
     return this.resetToInitial();
   }
 
-  simulate_year(age: number, net_cash_flow: number, annual_expenses: number): YearlyPortfolioResult {
+  simulate_year(age: number, net_cash_flow: Decimal, annual_expenses: Decimal): YearlyPortfolioResult {
     return this.simulateYear(age, net_cash_flow, annual_expenses);
   }
 }

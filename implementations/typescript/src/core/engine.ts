@@ -6,6 +6,7 @@
  * financial data and integrates with the portfolio management system.
  */
 
+import Decimal from 'decimal.js';
 import type { FIRECalculationResult, UserProfile, YearlyState } from './data_models';
 import { getCurrentAge } from './data_models';
 import { LiquidityAwareFlowStrategy, PortfolioSimulator } from './portfolio';
@@ -44,8 +45,8 @@ export interface EngineInput {
 export interface AnnualFinancialProjection {
   age: number;
   year: number;
-  total_income: number;
-  total_expense: number;
+  total_income: Decimal;
+  total_expense: Decimal;
 }
 
 /**
@@ -55,7 +56,7 @@ export interface AnnualFinancialProjection {
 export interface DetailedProjection {
   age: number;
   year: number;
-  [key: string]: number; // Individual income/expense columns
+  [key: string]: number | Decimal; // Individual income/expense columns (mixed for backward compatibility)
 }
 
 // =============================================================================
@@ -110,10 +111,10 @@ export class FIREEngine {
   calculate_single_year(
     age: number,
     year: number,
-    total_income: number,
-    total_expense: number
+    total_income: Decimal,
+    total_expense: Decimal
   ): YearlyState {
-    const net_cash_flow = total_income - total_expense;
+    const net_cash_flow = total_income.sub(total_expense);
 
     // Simulate portfolio for this year
     const portfolio_result = this.portfolio_simulator.simulate_year(
@@ -126,10 +127,15 @@ export class FIREEngine {
     const portfolio_value = portfolio_result.ending_portfolio_value;
 
     // Calculate sustainability metrics
-    const safety_buffer_amount = total_expense * (this.profile.safety_buffer_months / 12.0);
-    const fire_number = total_expense * 25.0;
-    const fire_progress = fire_number > 0 ? portfolio_value / fire_number : 0.0;
-    const is_sustainable = portfolio_value >= safety_buffer_amount; // portfolio_value is net_worth here
+    const safety_buffer_months_decimal = new Decimal(this.profile.safety_buffer_months);
+    const twelve_decimal = new Decimal(12.0);
+    const twenty_five_decimal = new Decimal(25.0);
+    const zero_decimal = new Decimal(0.0);
+
+    const safety_buffer_amount = total_expense.mul(safety_buffer_months_decimal.div(twelve_decimal));
+    const fire_number = total_expense.mul(twenty_five_decimal);
+    const fire_progress = fire_number.gt(zero_decimal) ? portfolio_value.div(fire_number) : zero_decimal;
+    const is_sustainable = portfolio_value.gte(safety_buffer_amount); // portfolio_value is net_worth here
 
     return {
       age,
@@ -151,7 +157,8 @@ export class FIREEngine {
    */
   private _calculateYearlyStates(): YearlyState[] {
     const yearly_states: YearlyState[] = [];
-    let cumulative_debt = 0.0; // Track accumulated debt when portfolio is depleted
+    let cumulative_debt = new Decimal(0.0); // Track accumulated debt when portfolio is depleted
+    const zero_decimal = new Decimal(0);
 
     // Reset portfolio simulator to initial state
     this.portfolio_simulator.reset_to_initial();
@@ -168,16 +175,16 @@ export class FIREEngine {
       // Calculate true net worth with cumulative debt tracking
       const portfolio_value = yearly_state.portfolio_value;
 
-      if (portfolio_value > 0) {
+      if (portfolio_value.gt(zero_decimal)) {
         // Portfolio has value - net worth is portfolio value
         yearly_state.net_worth = portfolio_value;
-        cumulative_debt = 0.0; // Reset debt when portfolio recovers
+        cumulative_debt = new Decimal(0.0); // Reset debt when portfolio recovers
       } else {
         // Portfolio is depleted - accumulate debt
-        cumulative_debt += yearly_state.net_cash_flow < 0
-          ? Math.abs(yearly_state.net_cash_flow)
-          : 0;
-        yearly_state.net_worth = -cumulative_debt; // Negative net worth indicates debt
+        if (yearly_state.net_cash_flow.lt(zero_decimal)) {
+          cumulative_debt = cumulative_debt.add(yearly_state.net_cash_flow.abs());
+        }
+        yearly_state.net_worth = cumulative_debt.neg(); // Negative net worth indicates debt
       }
 
       yearly_states.push(yearly_state);
@@ -196,7 +203,7 @@ export class FIREEngine {
       : false;
 
     // Get net worth at expected FIRE age
-    let fire_net_worth = 0.0;
+    let fire_net_worth = new Decimal(0.0);
     const expected_fire_year_index = this.profile.expected_fire_age - getCurrentAge(this.profile.birth_year);
     if (expected_fire_year_index >= 0 && expected_fire_year_index < yearly_states.length) {
       const fire_state = yearly_states[expected_fire_year_index];
@@ -204,38 +211,58 @@ export class FIREEngine {
     }
 
     // Minimum net worth from expected FIRE age onwards
-    let min_net_worth_after_fire = 0.0;
+    let min_net_worth_after_fire = new Decimal(0.0);
     if (expected_fire_year_index >= 0 && expected_fire_year_index < yearly_states.length) {
       const post_fire_states = yearly_states.slice(expected_fire_year_index);
       if (post_fire_states.length > 0) {
-        min_net_worth_after_fire = Math.min(...post_fire_states.map(s => s.net_worth));
+        // Find minimum net worth using Decimal comparison
+        min_net_worth_after_fire = post_fire_states.reduce((min, state) =>
+          state.net_worth.lt(min) ? state.net_worth : min,
+          post_fire_states[0].net_worth
+        );
       } else {
         min_net_worth_after_fire = fire_net_worth;
       }
     }
 
-    const final_net_worth = yearly_states.length > 0 ? yearly_states[yearly_states.length - 1].net_worth : 0.0;
+    const final_net_worth = yearly_states.length > 0
+      ? yearly_states[yearly_states.length - 1].net_worth
+      : new Decimal(0.0);
 
     // Safety buffer analysis - calculate dynamically
-    const safety_buffer_ratios: number[] = [];
+    const safety_buffer_ratios: Decimal[] = [];
+    const safety_buffer_months_decimal = new Decimal(this.profile.safety_buffer_months);
+    const twelve_decimal = new Decimal(12.0);
+    const zero_decimal = new Decimal(0);
+
     for (const s of yearly_states) {
-      const safety_buffer_amount = s.total_expense * (this.profile.safety_buffer_months / 12.0);
-      if (safety_buffer_amount > 0) {
-        const ratio = s.net_worth / safety_buffer_amount; // Use net_worth instead of portfolio_value
+      const safety_buffer_amount = s.total_expense.mul(safety_buffer_months_decimal.div(twelve_decimal));
+      if (safety_buffer_amount.gt(zero_decimal)) {
+        const ratio = s.net_worth.div(safety_buffer_amount); // Use net_worth instead of portfolio_value
         safety_buffer_ratios.push(ratio);
       }
     }
 
     const min_safety_buffer_ratio = safety_buffer_ratios.length > 0
-      ? Math.min(...safety_buffer_ratios)
-      : 0.0;
+      ? safety_buffer_ratios.reduce((min, ratio) =>
+          ratio.lt(min) ? ratio : min,
+          safety_buffer_ratios[0]
+        )
+      : new Decimal(0.0);
 
     // Traditional FIRE metrics for reference
-    const traditional_fire_expenses = yearly_states.length >= 5
-      ? yearly_states.slice(0, 5).reduce((sum, s) => sum + s.total_expense, 0) / 5
-      : 0;
-    const traditional_fire_number = traditional_fire_expenses * 25;
-    const traditional_fire_achieved = yearly_states.some(s => s.portfolio_value >= traditional_fire_number);
+    const five_decimal = new Decimal(5);
+    const twenty_five_decimal = new Decimal(25);
+
+    let traditional_fire_expenses = new Decimal(0);
+    if (yearly_states.length >= 5) {
+      const first_five_expenses = yearly_states.slice(0, 5);
+      const sum = first_five_expenses.reduce((sum, s) => sum.add(s.total_expense), new Decimal(0));
+      traditional_fire_expenses = sum.div(five_decimal);
+    }
+
+    const traditional_fire_number = traditional_fire_expenses.mul(twenty_five_decimal);
+    const traditional_fire_achieved = yearly_states.some(s => s.portfolio_value.gte(traditional_fire_number));
 
     return {
       is_fire_achievable,
@@ -288,7 +315,7 @@ export function createProjectionRow(
   return {
     age,
     year,
-    total_income,
-    total_expense
+    total_income: new Decimal(total_income),
+    total_expense: new Decimal(total_expense)
   };
 }

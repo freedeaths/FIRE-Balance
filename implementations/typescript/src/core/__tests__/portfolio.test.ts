@@ -3,6 +3,8 @@
  * Ensures identical behavior between TypeScript and Python implementations
  */
 
+import Decimal from 'decimal.js';
+
 import {
   AssetClass,
   LiquidityLevel,
@@ -29,25 +31,25 @@ describe('PortfolioCalculator', () => {
         {
           name: 'Stocks', // Will normalize to "stocks"
           display_name: 'Stocks',
-          allocation_percentage: 60.0,
-          expected_return: 7.0,
-          volatility: 15.0,
+          allocation_percentage: new Decimal(60.0),
+          expected_return: new Decimal(7.0),
+          volatility: new Decimal(15.0),
           liquidity_level: 'medium',
         },
         {
           name: 'Bonds', // Will normalize to "bonds"
           display_name: 'Bonds',
-          allocation_percentage: 30.0,
-          expected_return: 3.0,
-          volatility: 5.0,
+          allocation_percentage: new Decimal(30.0),
+          expected_return: new Decimal(3.0),
+          volatility: new Decimal(5.0),
           liquidity_level: 'low',
         },
         {
           name: 'Cash', // Will normalize to "cash"
           display_name: 'Cash',
-          allocation_percentage: 10.0,
-          expected_return: 1.0,
-          volatility: 1.0,
+          allocation_percentage: new Decimal(10.0),
+          expected_return: new Decimal(1.0),
+          volatility: new Decimal(1.0),
           liquidity_level: 'high',
         },
       ],
@@ -59,9 +61,9 @@ describe('PortfolioCalculator', () => {
       expected_fire_age: 50,
       legal_retirement_age: 65,
       life_expectancy: 85,
-      current_net_worth: 100000.0,
-      inflation_rate: 3.0,
-      safety_buffer_months: 12,
+      current_net_worth: new Decimal(100000.0),
+      inflation_rate: new Decimal(3.0),
+      safety_buffer_months: new Decimal(12),
       portfolio,
     });
   };
@@ -84,19 +86,19 @@ describe('PortfolioCalculator', () => {
     const allocationOld = portfolioCalculator.getTargetAllocation(60);
 
     for (const allocation of [allocationYoung, allocationOld]) {
-      expect(allocation['stocks']).toBe(0.6);
-      expect(allocation['bonds']).toBe(0.3);
-      expect(allocation['cash']).toBe(0.1);
+      expect(allocation['stocks'].toNumber()).toBe(0.6);
+      expect(allocation['bonds'].toNumber()).toBe(0.3);
+      expect(allocation['cash'].toNumber()).toBe(0.1);
 
       // Should sum to 1.0
-      const sum = Object.values(allocation).reduce((s, v) => s + v, 0);
-      expect(Math.abs(sum - 1.0)).toBeLessThan(0.001);
+      const sum = Object.values(allocation).reduce((s, v) => s.add(v), new Decimal(0));
+      expect(sum.sub(1.0).abs().toNumber()).toBeLessThan(0.001);
     }
   });
 
   test('calculate returns by allocation', () => {
-    const portfolioValue = 100000;
-    const allocation = { stocks: 0.6, bonds: 0.3, cash: 0.1 };
+    const portfolioValue = new Decimal(100000);
+    const allocation = { stocks: new Decimal(0.6), bonds: new Decimal(0.3), cash: new Decimal(0.1) };
 
     const expectedReturn = portfolioCalculator.calculateReturnsByAllocation(
       allocation,
@@ -105,27 +107,27 @@ describe('PortfolioCalculator', () => {
 
     // Expected: 60% * 7% + 30% * 3% + 10% * 1% = 4.2% + 0.9% + 0.1% = 5.2%
     const expectedPercentage = 0.052;
-    const expectedAmount = portfolioValue * expectedPercentage;
+    const expectedAmount = portfolioValue.mul(expectedPercentage);
 
-    expect(Math.abs(expectedReturn - expectedAmount)).toBeLessThan(0.01);
+    expect(expectedReturn.sub(expectedAmount).abs().toNumber()).toBeLessThan(0.01);
   });
 
   test('calculate returns by allocation zero value', () => {
-    const allocation = { stocks: 0.6, bonds: 0.3, cash: 0.1 };
-    const result = portfolioCalculator.calculateReturnsByAllocation(allocation, 0);
-    expect(result).toBe(0);
+    const allocation = { stocks: new Decimal(0.6), bonds: new Decimal(0.3), cash: new Decimal(0.1) };
+    const result = portfolioCalculator.calculateReturnsByAllocation(allocation, new Decimal(0));
+    expect(result.toNumber()).toBe(0);
   });
 
   test('calculate returns with volatility', () => {
-    const portfolioValue = 100000;
-    const allocation = { stocks: 0.6, bonds: 0.3, cash: 0.1 };
+    const portfolioValue = new Decimal(100000);
+    const allocation = { stocks: new Decimal(0.6), bonds: new Decimal(0.3), cash: new Decimal(0.1) };
 
     // Create random factors with +1 std dev for all assets
     const randomFactors: PortfolioRandomFactors = {
       asset_factors: [
-        { name: 'stocks', random_factor: 1.0 },
-        { name: 'bonds', random_factor: 1.0 },
-        { name: 'cash', random_factor: 1.0 },
+        { name: 'stocks', random_factor: new Decimal(1.0) },
+        { name: 'bonds', random_factor: new Decimal(1.0) },
+        { name: 'cash', random_factor: new Decimal(1.0) },
       ],
     };
 
@@ -140,14 +142,14 @@ describe('PortfolioCalculator', () => {
     // Bonds: (3% + 5%) * 30% = 2.4%
     // Cash: (1% + 1%) * 10% = 0.2%
     // Total: 15.8%
-    const expectedReturn = portfolioValue * 0.158;
+    const expectedReturn = portfolioValue.mul(0.158);
 
-    expect(Math.abs(returnWithVolatility - expectedReturn)).toBeLessThan(0.01);
+    expect(returnWithVolatility.sub(expectedReturn).abs().toNumber()).toBeLessThan(0.01);
   });
 
   test('should rebalance within threshold', () => {
-    const currentAllocation = { stocks: 0.58, bonds: 0.32, cash: 0.1 };
-    const targetAllocation = { stocks: 0.6, bonds: 0.3, cash: 0.1 };
+    const currentAllocation = { stocks: new Decimal(0.58), bonds: new Decimal(0.32), cash: new Decimal(0.1) };
+    const targetAllocation = { stocks: new Decimal(0.6), bonds: new Decimal(0.3), cash: new Decimal(0.1) };
 
     // Differences are within 5% threshold
     expect(
@@ -156,8 +158,8 @@ describe('PortfolioCalculator', () => {
   });
 
   test('should rebalance outside threshold', () => {
-    const currentAllocation = { stocks: 0.5, bonds: 0.4, cash: 0.1 };
-    const targetAllocation = { stocks: 0.6, bonds: 0.3, cash: 0.1 };
+    const currentAllocation = { stocks: new Decimal(0.5), bonds: new Decimal(0.4), cash: new Decimal(0.1) };
+    const targetAllocation = { stocks: new Decimal(0.6), bonds: new Decimal(0.3), cash: new Decimal(0.1) };
 
     // Stock difference is 10%, which exceeds 5% threshold
     expect(
@@ -170,8 +172,8 @@ describe('PortfolioCalculator', () => {
     profile.portfolio.enable_rebalancing = false;
     const calculator = new PortfolioCalculator(profile);
 
-    const currentAllocation = { stocks: 0.5, bonds: 0.4, cash: 0.1 };
-    const targetAllocation = { stocks: 0.6, bonds: 0.3, cash: 0.1 };
+    const currentAllocation = { stocks: new Decimal(0.5), bonds: new Decimal(0.4), cash: new Decimal(0.1) };
+    const targetAllocation = { stocks: new Decimal(0.6), bonds: new Decimal(0.3), cash: new Decimal(0.1) };
 
     // Should not rebalance even with large differences
     expect(calculator.shouldRebalance(currentAllocation, targetAllocation)).toBe(false);
@@ -179,12 +181,12 @@ describe('PortfolioCalculator', () => {
 
   test('calculate rebalancing trades', () => {
     const currentPortfolio = PortfolioState.create({
-      stocks: 50000, // Currently 50%
-      bonds: 40000, // Currently 40%
-      cash: 10000, // Currently 10%
+      stocks: new Decimal(50000), // Currently 50%
+      bonds: new Decimal(40000), // Currently 40%
+      cash: new Decimal(10000), // Currently 10%
     });
 
-    const targetAllocation = { stocks: 0.6, bonds: 0.3, cash: 0.1 };
+    const targetAllocation = { stocks: new Decimal(0.6), bonds: new Decimal(0.3), cash: new Decimal(0.1) };
 
     const trades = portfolioCalculator.calculateRebalancingTrades(
       currentPortfolio,
@@ -195,38 +197,38 @@ describe('PortfolioCalculator', () => {
     // Stocks: 60000 - 50000 = +10000
     // Bonds: 30000 - 40000 = -10000
     // Cash: 10000 - 10000 = 0
-    expect(trades['stocks']).toBe(10000);
-    expect(trades['bonds']).toBe(-10000);
-    expect(trades['cash']).toBe(0);
+    expect(trades['stocks'].toNumber()).toBe(10000);
+    expect(trades['bonds'].toNumber()).toBe(-10000);
+    expect(trades['cash'].toNumber()).toBe(0);
   });
 
   test('portfolio state get allocation', () => {
     const portfolioState = PortfolioState.create({
-      stocks: 60000,
-      bonds: 30000,
-      cash: 10000,
+      stocks: new Decimal(60000),
+      bonds: new Decimal(30000),
+      cash: new Decimal(10000),
     });
 
     const allocation = PortfolioState.getAllocation(portfolioState);
 
-    expect(allocation['stocks']).toBe(0.6);
-    expect(allocation['bonds']).toBe(0.3);
-    expect(allocation['cash']).toBe(0.1);
+    expect(allocation['stocks'].toNumber()).toBe(0.6);
+    expect(allocation['bonds'].toNumber()).toBe(0.3);
+    expect(allocation['cash'].toNumber()).toBe(0.1);
 
     // Test total_value property
-    expect(PortfolioState.getTotalValue(portfolioState)).toBe(100000);
+    expect(PortfolioState.getTotalValue(portfolioState).toNumber()).toBe(100000);
   });
 
   test('portfolio state get allocation zero value', () => {
     const portfolioState = PortfolioState.create({
-      Stocks: 0,
-      Bonds: 0,
+      Stocks: new Decimal(0),
+      Bonds: new Decimal(0),
     });
 
     const allocation = PortfolioState.getAllocation(portfolioState);
 
-    expect(allocation['Stocks']).toBe(0.0);
-    expect(allocation['Bonds']).toBe(0.0);
+    expect(allocation['Stocks'].toNumber()).toBe(0.0);
+    expect(allocation['Bonds'].toNumber()).toBe(0.0);
   });
 });
 
@@ -240,25 +242,25 @@ describe('LiquidityAwareFlowStrategy', () => {
         {
           name: 'Cash',
           display_name: 'Cash',
-          allocation_percentage: 10.0,
-          expected_return: 0.5,
-          volatility: 0.0,
+          allocation_percentage: new Decimal(10.0),
+          expected_return: new Decimal(0.5),
+          volatility: new Decimal(0.0),
           liquidity_level: 'high',
         },
         {
           name: 'Stocks',
           display_name: 'Stocks',
-          allocation_percentage: 60.0,
-          expected_return: 7.0,
-          volatility: 15.0,
+          allocation_percentage: new Decimal(60.0),
+          expected_return: new Decimal(7.0),
+          volatility: new Decimal(15.0),
           liquidity_level: 'medium',
         },
         {
           name: 'Bonds',
           display_name: 'Bonds',
-          allocation_percentage: 30.0,
-          expected_return: 3.0,
-          volatility: 5.0,
+          allocation_percentage: new Decimal(30.0),
+          expected_return: new Decimal(3.0),
+          volatility: new Decimal(5.0),
           liquidity_level: 'low',
         },
       ],
@@ -269,37 +271,37 @@ describe('LiquidityAwareFlowStrategy', () => {
 
   test('handle income cash buffer priority', () => {
     const portfolio = PortfolioState.create({
-      cash: 1000, // Low cash
-      stocks: 50000,
-      bonds: 20000,
+      cash: new Decimal(1000), // Low cash
+      stocks: new Decimal(50000),
+      bonds: new Decimal(20000),
     });
 
-    const annualExpenses = 24000; // Need 6000 for 3-month buffer
-    const targetAllocation = { cash: 0.1, stocks: 0.6, bonds: 0.3 };
-    const income = 10000;
+    const annualExpenses = new Decimal(24000); // Need 6000 for 3-month buffer
+    const targetAllocation = { cash: new Decimal(0.1), stocks: new Decimal(0.6), bonds: new Decimal(0.3) };
+    const income = new Decimal(10000);
 
     const allocation = strategy.handleIncome(income, portfolio, annualExpenses, targetAllocation);
 
     // Should prioritize filling cash buffer (need 5000 more)
-    expect(allocation['cash']).toBe(5000);
+    expect(allocation['cash'].toNumber()).toBe(5000);
     // Remaining 5000 should be invested in higher return assets first
-    expect(allocation['stocks']).toBeGreaterThan(allocation['bonds']); // Stocks have higher return
+    expect(allocation['stocks'].toNumber()).toBeGreaterThan(allocation['bonds'].toNumber()); // Stocks have higher return
   });
 
   test('handle expense liquidity priority', () => {
     const portfolio = PortfolioState.create({
-      cash: 2000,
-      stocks: 50000,
-      bonds: 30000,
+      cash: new Decimal(2000),
+      stocks: new Decimal(50000),
+      bonds: new Decimal(30000),
     });
 
-    const expense = 5000;
+    const expense = new Decimal(5000);
     const withdrawal = strategy.handleExpense(expense, portfolio);
 
     // Should use all cash first
-    expect(withdrawal['cash']).toBe(-2000);
+    expect(withdrawal['cash'].toNumber()).toBe(-2000);
     // Should withdraw from MEDIUM liquidity (Stocks) next
-    expect(withdrawal['stocks']).toBeLessThan(0);
+    expect(withdrawal['stocks'].toNumber()).toBeLessThan(0);
     // Should not touch LOW liquidity (Bonds) if not needed
     // (In this case, might still touch bonds due to proportional withdrawal)
   });
@@ -311,17 +313,17 @@ describe('LiquidityAwareFlowStrategy', () => {
         {
           name: 'Stock_A',
           display_name: 'Stock_A',
-          allocation_percentage: 50.0, // Sum must be 100%
-          expected_return: 8.0, // Higher return
-          volatility: 15.0,
+          allocation_percentage: new Decimal(50.0), // Sum must be 100%
+          expected_return: new Decimal(8.0), // Higher return
+          volatility: new Decimal(15.0),
           liquidity_level: 'medium',
         },
         {
           name: 'Stock_B',
           display_name: 'Stock_B',
-          allocation_percentage: 50.0, // Sum must be 100%
-          expected_return: 5.0, // Lower return
-          volatility: 15.0,
+          allocation_percentage: new Decimal(50.0), // Sum must be 100%
+          expected_return: new Decimal(5.0), // Lower return
+          volatility: new Decimal(15.0),
           liquidity_level: 'medium',
         },
       ],
@@ -331,26 +333,26 @@ describe('LiquidityAwareFlowStrategy', () => {
     const testStrategy = new LiquidityAwareFlowStrategy(3, config);
 
     const portfolio = PortfolioState.create({
-      stock_a: 50000,
-      stock_b: 50000,
+      stock_a: new Decimal(50000),
+      stock_b: new Decimal(50000),
     });
 
-    const expense = 10000;
+    const expense = new Decimal(10000);
     const withdrawal = testStrategy.handleExpense(expense, portfolio);
 
     // Should sell more of Stock_B (lower return) than Stock_A
     // This tests the return optimization logic
-    expect(Math.abs(withdrawal['stock_b'] || 0)).toBeGreaterThanOrEqual(
-      Math.abs(withdrawal['stock_a'] || 0)
+    expect(Math.abs((withdrawal['stock_b'] || new Decimal(0)).toNumber())).toBeGreaterThanOrEqual(
+      Math.abs((withdrawal['stock_a'] || new Decimal(0)).toNumber())
     );
   });
 
   test('liquidity level classification', () => {
     // Test the internal liquidity tier mapping
     const portfolio = PortfolioState.create({
-      cash: 10000,
-      stocks: 50000,
-      bonds: 30000,
+      cash: new Decimal(10000),
+      stocks: new Decimal(50000),
+      bonds: new Decimal(30000),
     });
 
     const highAssets = strategy._getAssetsByLiquidityTier('HIGH', portfolio);
@@ -365,16 +367,16 @@ describe('LiquidityAwareFlowStrategy', () => {
   test('allocation sum precision correction', () => {
     // Create a portfolio with values that might have floating point precision issues
     const portfolio = PortfolioState.create({
-      Asset1: 33333.33,
-      Asset2: 33333.33,
-      Asset3: 33333.34, // Total: 100000.00
+      Asset1: new Decimal(33333.33),
+      Asset2: new Decimal(33333.33),
+      Asset3: new Decimal(33333.34), // Total: 100000.00
     });
 
     const allocation = PortfolioState.getAllocation(portfolio);
 
     // Sum should be exactly 1.0 after precision correction
-    const allocationSum = Object.values(allocation).reduce((sum, value) => sum + value, 0);
-    expect(Math.abs(allocationSum - 1.0)).toBeLessThanOrEqual(1e-10);
+    const allocationSum = Object.values(allocation).reduce((sum, value) => sum.add(value), new Decimal(0));
+    expect(allocationSum.sub(1.0).abs().toNumber()).toBeLessThanOrEqual(1e-10);
   });
 
   test('display names', () => {
@@ -393,53 +395,53 @@ describe('PortfolioRandomFactors', () => {
   test('get factor', () => {
     const factors: PortfolioRandomFactors = {
       asset_factors: [
-        { name: 'stocks', random_factor: 1.2 },
-        { name: 'bonds', random_factor: -0.8 },
-        { name: 'cash', random_factor: 0.1 },
+        { name: 'stocks', random_factor: new Decimal(1.2) },
+        { name: 'bonds', random_factor: new Decimal(-0.8) },
+        { name: 'cash', random_factor: new Decimal(0.1) },
       ],
     };
 
-    expect(PortfolioRandomFactors.getFactor(factors, 'stocks')).toBe(1.2);
-    expect(PortfolioRandomFactors.getFactor(factors, 'bonds')).toBe(-0.8);
-    expect(PortfolioRandomFactors.getFactor(factors, 'cash')).toBe(0.1);
-    expect(PortfolioRandomFactors.getFactor(factors, 'nonexistent')).toBe(0.0);
+    expect(PortfolioRandomFactors.getFactor(factors, 'stocks').toNumber()).toBe(1.2);
+    expect(PortfolioRandomFactors.getFactor(factors, 'bonds').toNumber()).toBe(-0.8);
+    expect(PortfolioRandomFactors.getFactor(factors, 'cash').toNumber()).toBe(0.1);
+    expect(PortfolioRandomFactors.getFactor(factors, 'nonexistent').toNumber()).toBe(0.0);
   });
 
   test('from dict', () => {
     const factorsDict = {
-      Stocks: 1.2,
-      Bonds: -0.8,
-      Cash: 0.1,
+      Stocks: new Decimal(1.2),
+      Bonds: new Decimal(-0.8),
+      Cash: new Decimal(0.1),
     };
 
     const factors = PortfolioRandomFactors.fromDict(factorsDict);
 
     expect(factors.asset_factors).toHaveLength(3);
-    expect(PortfolioRandomFactors.getFactor(factors, 'Stocks')).toBe(1.2);
-    expect(PortfolioRandomFactors.getFactor(factors, 'Bonds')).toBe(-0.8);
-    expect(PortfolioRandomFactors.getFactor(factors, 'Cash')).toBe(0.1);
+    expect(PortfolioRandomFactors.getFactor(factors, 'Stocks').toNumber()).toBe(1.2);
+    expect(PortfolioRandomFactors.getFactor(factors, 'Bonds').toNumber()).toBe(-0.8);
+    expect(PortfolioRandomFactors.getFactor(factors, 'Cash').toNumber()).toBe(0.1);
   });
 });
 
 describe('PortfolioState', () => {
   test('create and basic operations', () => {
     const state = PortfolioState.create({
-      stocks: 60000,
-      bonds: 30000,
-      cash: 10000,
+      stocks: new Decimal(60000),
+      bonds: new Decimal(30000),
+      cash: new Decimal(10000),
     });
 
-    expect(PortfolioState.getTotalValue(state)).toBe(100000);
+    expect(PortfolioState.getTotalValue(state).toNumber()).toBe(100000);
 
     const allocation = PortfolioState.getAllocation(state);
-    expect(allocation['stocks']).toBe(0.6);
-    expect(allocation['bonds']).toBe(0.3);
-    expect(allocation['cash']).toBe(0.1);
+    expect(allocation['stocks'].toNumber()).toBe(0.6);
+    expect(allocation['bonds'].toNumber()).toBe(0.3);
+    expect(allocation['cash'].toNumber()).toBe(0.1);
   });
 
   test('empty portfolio', () => {
     const state = PortfolioState.create({});
-    expect(PortfolioState.getTotalValue(state)).toBe(0);
+    expect(PortfolioState.getTotalValue(state).toNumber()).toBe(0);
 
     const allocation = PortfolioState.getAllocation(state);
     expect(Object.keys(allocation)).toHaveLength(0);
@@ -447,14 +449,14 @@ describe('PortfolioState', () => {
 
   test('zero value portfolio', () => {
     const state = PortfolioState.create({
-      stocks: 0,
-      bonds: 0,
+      stocks: new Decimal(0),
+      bonds: new Decimal(0),
     });
 
-    expect(PortfolioState.getTotalValue(state)).toBe(0);
+    expect(PortfolioState.getTotalValue(state).toNumber()).toBe(0);
 
     const allocation = PortfolioState.getAllocation(state);
-    expect(allocation['stocks']).toBe(0.0);
-    expect(allocation['bonds']).toBe(0.0);
+    expect(allocation['stocks'].toNumber()).toBe(0.0);
+    expect(allocation['bonds'].toNumber()).toBe(0.0);
   });
 });

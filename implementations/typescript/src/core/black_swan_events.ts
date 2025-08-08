@@ -6,6 +6,7 @@
  * that can be applied to financial projections for risk analysis.
  */
 
+import Decimal from 'decimal.js';
 import type { BlackSwanEvent, UserProfile } from './data_models';
 import { getCurrentAge } from './data_models';
 
@@ -19,14 +20,14 @@ import { getCurrentAge } from './data_models';
  */
 export class FinancialCrisisEvent implements BlackSwanEvent {
   event_id = 'financial_crisis';
-  annual_probability = 0.016;  // 1.6% annual probability
+  annual_probability = new Decimal(0.016);  // 1.6% annual probability
   duration_years = 2;
-  recovery_factor = 0.8;
+  recovery_factor = new Decimal(0.8);
   age_range: [number, number];
 
   // Impact factors for income/expense
-  income_impact = -0.4;  // -40% income impact
-  expense_impact = 0.0;  // No expense impact
+  income_impact = new Decimal(-0.4);  // -40% income impact
+  expense_impact = new Decimal(0.0);  // No expense impact
 
   constructor(age_range: [number, number] = [18, 100]) {
     this.age_range = age_range;
@@ -39,13 +40,13 @@ export class FinancialCrisisEvent implements BlackSwanEvent {
  */
 export class EconomicRecessionEvent implements BlackSwanEvent {
   event_id = 'economic_recession';
-  annual_probability = 0.024;  // 2.4% annual probability
+  annual_probability = new Decimal(0.024);  // 2.4% annual probability
   duration_years = 1;
-  recovery_factor = 0.7;
+  recovery_factor = new Decimal(0.7);
   age_range: [number, number];
 
-  income_impact = -0.25;  // -25% income impact
-  expense_impact = 0.0;
+  income_impact = new Decimal(-0.25);  // -25% income impact
+  expense_impact = new Decimal(0.0);
 
   constructor(age_range: [number, number] = [18, 100]) {
     this.age_range = age_range;
@@ -58,13 +59,13 @@ export class EconomicRecessionEvent implements BlackSwanEvent {
  */
 export class MarketCrashEvent implements BlackSwanEvent {
   event_id = 'market_crash';
-  annual_probability = 0.012;  // 1.2% annual probability
+  annual_probability = new Decimal(0.012);  // 1.2% annual probability
   duration_years = 1;
-  recovery_factor = 0.6;
+  recovery_factor = new Decimal(0.6);
   age_range: [number, number];
 
-  income_impact = -0.3;  // -30% income impact
-  expense_impact = 0.0;
+  income_impact = new Decimal(-0.3);  // -30% income impact
+  expense_impact = new Decimal(0.0);
 
   constructor(age_range: [number, number] = [18, 100]) {
     this.age_range = age_range;
@@ -77,13 +78,13 @@ export class MarketCrashEvent implements BlackSwanEvent {
  */
 export class HyperinflationEvent implements BlackSwanEvent {
   event_id = 'hyperinflation';
-  annual_probability = 0.004;  // 0.4% annual probability
+  annual_probability = new Decimal(0.004);  // 0.4% annual probability
   duration_years = 3;
-  recovery_factor = 0.9;
+  recovery_factor = new Decimal(0.9);
   age_range: [number, number];
 
-  income_impact = 0.0;
-  expense_impact = 0.5;  // +50% expense impact
+  income_impact = new Decimal(0.0);
+  expense_impact = new Decimal(0.5);  // +50% expense impact
 
   constructor(age_range: [number, number] = [18, 100]) {
     this.age_range = age_range;
@@ -96,13 +97,13 @@ export class HyperinflationEvent implements BlackSwanEvent {
  */
 export class UnemploymentEvent implements BlackSwanEvent {
   event_id = 'unemployment';
-  annual_probability = 0.02;  // 2% annual probability
+  annual_probability = new Decimal(0.02);  // 2% annual probability
   duration_years = 1;
-  recovery_factor = 0.5;
+  recovery_factor = new Decimal(0.5);
   age_range: [number, number];
 
-  income_impact = -0.8;  // -80% income impact (severe)
-  expense_impact = 0.0;
+  income_impact = new Decimal(-0.8);  // -80% income impact (severe)
+  expense_impact = new Decimal(0.0);
 
   constructor(age_range: [number, number] = [22, 65]) {
     this.age_range = age_range;
@@ -115,13 +116,13 @@ export class UnemploymentEvent implements BlackSwanEvent {
  */
 export class IndustryCollapseEvent implements BlackSwanEvent {
   event_id = 'industry_collapse';
-  annual_probability = 0.008;  // 0.8% annual probability
+  annual_probability = new Decimal(0.008);  // 0.8% annual probability
   duration_years = 3;
-  recovery_factor = 0.7;
+  recovery_factor = new Decimal(0.7);
   age_range: [number, number];
 
-  income_impact = -0.4;  // -40% income impact
-  expense_impact = 0.0;
+  income_impact = new Decimal(-0.4);  // -40% income impact
+  expense_impact = new Decimal(0.0);
 
   constructor(age_range: [number, number] = [25, 60]) {
     this.age_range = age_range;
@@ -134,13 +135,13 @@ export class IndustryCollapseEvent implements BlackSwanEvent {
  */
 export class UnexpectedPromotionEvent implements BlackSwanEvent {
   event_id = 'unexpected_promotion';
-  annual_probability = 0.016;  // 1.6% annual probability
+  annual_probability = new Decimal(0.016);  // 1.6% annual probability
   duration_years = 5;
-  recovery_factor = 1.0;  // Permanent benefit
+  recovery_factor = new Decimal(1.0);  // Permanent benefit
   age_range: [number, number];
 
-  income_impact = 0.3;  // +30% income boost
-  expense_impact = 0.0;
+  income_impact = new Decimal(0.3);  // +30% income boost
+  expense_impact = new Decimal(0.0);
 
   constructor(age_range: [number, number] = [25, 55]) {
     this.age_range = age_range;
@@ -153,13 +154,13 @@ export class UnexpectedPromotionEvent implements BlackSwanEvent {
  */
 export class MajorIllnessEvent implements BlackSwanEvent {
   event_id = 'major_illness';
-  annual_probability = 0.012;  // 1.2% annual probability
+  annual_probability = new Decimal(0.012);  // 1.2% annual probability
   duration_years = 2;
-  recovery_factor = 0.8;
+  recovery_factor = new Decimal(0.8);
   age_range: [number, number];
 
-  income_impact = -0.3;  // -30% income impact
-  expense_impact = 0.8;  // +80% expense impact
+  income_impact = new Decimal(-0.3);  // -30% income impact
+  expense_impact = new Decimal(0.8);  // +80% expense impact
 
   constructor(age_range: [number, number] = [35, 100]) {
     this.age_range = age_range;
@@ -172,13 +173,13 @@ export class MajorIllnessEvent implements BlackSwanEvent {
  */
 export class LongTermCareEvent implements BlackSwanEvent {
   event_id = 'long_term_care';
-  annual_probability = 0.008;  // 0.8% annual probability
+  annual_probability = new Decimal(0.008);  // 0.8% annual probability
   duration_years = 5;
-  recovery_factor = 0.9;
+  recovery_factor = new Decimal(0.9);
   age_range: [number, number];
 
-  income_impact = 0.0;
-  expense_impact = 1.2;  // +120% expense impact
+  income_impact = new Decimal(0.0);
+  expense_impact = new Decimal(1.2);  // +120% expense impact
 
   constructor(age_range: [number, number] = [65, 100]) {
     this.age_range = age_range;
@@ -191,13 +192,13 @@ export class LongTermCareEvent implements BlackSwanEvent {
  */
 export class RegionalConflictEvent implements BlackSwanEvent {
   event_id = 'regional_conflict';
-  annual_probability = 0.006;  // 0.6% annual probability
+  annual_probability = new Decimal(0.006);  // 0.6% annual probability
   duration_years = 2;
-  recovery_factor = 0.8;
+  recovery_factor = new Decimal(0.8);
   age_range: [number, number];
 
-  income_impact = -0.2;  // -20% income impact
-  expense_impact = 0.3;  // +30% expense impact
+  income_impact = new Decimal(-0.2);  // -20% income impact
+  expense_impact = new Decimal(0.3);  // +30% expense impact
 
   constructor(age_range: [number, number] = [18, 100]) {
     this.age_range = age_range;
@@ -210,13 +211,13 @@ export class RegionalConflictEvent implements BlackSwanEvent {
  */
 export class GlobalWarEvent implements BlackSwanEvent {
   event_id = 'global_war';
-  annual_probability = 0.002;  // 0.2% annual probability
+  annual_probability = new Decimal(0.002);  // 0.2% annual probability
   duration_years = 4;
-  recovery_factor = 0.7;
+  recovery_factor = new Decimal(0.7);
   age_range: [number, number];
 
-  income_impact = -0.5;  // -50% income impact
-  expense_impact = 1.0;  // +100% expense impact
+  income_impact = new Decimal(-0.5);  // -50% income impact
+  expense_impact = new Decimal(1.0);  // +100% expense impact
 
   constructor(age_range: [number, number] = [18, 100]) {
     this.age_range = age_range;
@@ -229,13 +230,13 @@ export class GlobalWarEvent implements BlackSwanEvent {
  */
 export class EconomicSanctionsEvent implements BlackSwanEvent {
   event_id = 'economic_sanctions';
-  annual_probability = 0.004;  // 0.4% annual probability
+  annual_probability = new Decimal(0.004);  // 0.4% annual probability
   duration_years = 3;
-  recovery_factor = 0.8;
+  recovery_factor = new Decimal(0.8);
   age_range: [number, number];
 
-  income_impact = -0.15;  // -15% income impact
-  expense_impact = 0.2;  // +20% expense impact
+  income_impact = new Decimal(-0.15);  // -15% income impact
+  expense_impact = new Decimal(0.2);  // +20% expense impact
 
   constructor(age_range: [number, number] = [18, 100]) {
     this.age_range = age_range;
@@ -248,13 +249,13 @@ export class EconomicSanctionsEvent implements BlackSwanEvent {
  */
 export class EnergyCrisisEvent implements BlackSwanEvent {
   event_id = 'energy_crisis';
-  annual_probability = 0.01;  // 1% annual probability
+  annual_probability = new Decimal(0.01);  // 1% annual probability
   duration_years = 2;
-  recovery_factor = 0.9;
+  recovery_factor = new Decimal(0.9);
   age_range: [number, number];
 
-  income_impact = 0.0;
-  expense_impact = 0.4;  // +40% expense impact
+  income_impact = new Decimal(0.0);
+  expense_impact = new Decimal(0.4);  // +40% expense impact
 
   constructor(age_range: [number, number] = [18, 100]) {
     this.age_range = age_range;
@@ -267,13 +268,13 @@ export class EnergyCrisisEvent implements BlackSwanEvent {
  */
 export class InheritanceEvent implements BlackSwanEvent {
   event_id = 'inheritance';
-  annual_probability = 0.006;  // 0.6% annual probability
+  annual_probability = new Decimal(0.006);  // 0.6% annual probability
   duration_years = 1;
-  recovery_factor = 1.0;  // One-time benefit
+  recovery_factor = new Decimal(1.0);  // One-time benefit
   age_range: [number, number];
 
-  income_impact = 2.0;  // +200% income boost (one-time)
-  expense_impact = 0.0;
+  income_impact = new Decimal(2.0);  // +200% income boost (one-time)
+  expense_impact = new Decimal(0.0);
 
   constructor(age_range: [number, number] = [30, 80]) {
     this.age_range = age_range;
@@ -286,13 +287,13 @@ export class InheritanceEvent implements BlackSwanEvent {
  */
 export class InvestmentWindfallEvent implements BlackSwanEvent {
   event_id = 'investment_windfall';
-  annual_probability = 0.004;  // 0.4% annual probability
+  annual_probability = new Decimal(0.004);  // 0.4% annual probability
   duration_years = 1;
-  recovery_factor = 1.0;  // One-time benefit
+  recovery_factor = new Decimal(1.0);  // One-time benefit
   age_range: [number, number];
 
-  income_impact = 1.5;  // +150% income boost (one-time)
-  expense_impact = 0.0;
+  income_impact = new Decimal(1.5);  // +150% income boost (one-time)
+  expense_impact = new Decimal(0.0);
 
   constructor(age_range: [number, number] = [25, 70]) {
     this.age_range = age_range;
