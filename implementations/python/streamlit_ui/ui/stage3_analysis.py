@@ -76,7 +76,7 @@ def render_stage3(t: Callable[..., str]) -> None:
                 chart_data.append(
                     {
                         "Age": yearly.age,
-                        "Year": yearly.age - sim_profile.current_age + 2024,
+                        "Year": yearly.year,
                         "Net Worth": yearly.net_worth,
                         "Total Income": yearly.total_income,
                         "Total Expense": yearly.total_expense,
@@ -207,25 +207,15 @@ def render_stage3(t: Callable[..., str]) -> None:
         if not chart_df.empty:
             # Calculate safety buffer curve
             chart_df_with_buffer = chart_df.copy()
-            base_year = 2024
 
             safety_buffer_values = []
             for _, row in chart_df.iterrows():
-                year = row["Year"]
                 annual_expense = row["Total Expense"]
 
-                # Calculate inflation adjustment
-                years_from_base = year - base_year
-                inflation_factor = (
-                    1 + sim_profile.inflation_rate / 100.0
-                ) ** years_from_base
-
-                # Safety buffer = months of expenses (inflation-adjusted)
+                # Safety buffer = months of expenses
                 safety_buffer = (
-                    (sim_profile.safety_buffer_months / 12.0)
-                    * annual_expense
-                    * inflation_factor
-                )
+                    sim_profile.safety_buffer_months / 12.0
+                ) * annual_expense
                 safety_buffer_values.append(safety_buffer)
 
             chart_df_with_buffer["Safety Buffer"] = safety_buffer_values
