@@ -81,18 +81,6 @@ export class FIRECalculationService {
       throw new Error('User profile is missing');
     }
 
-    // 调试信息
-    console.log('🔍 Debugging plannerData:', {
-      hasUserProfile: !!plannerData.user_profile,
-      hasSimulationSettings: !!plannerData.simulation_settings,
-      hasIncomeItems: !!plannerData.income_items?.length,
-      hasExpenseItems: !!plannerData.expense_items?.length,
-      userProfile: plannerData.user_profile,
-      simulationSettings: plannerData.simulation_settings,
-      incomeItemsSample: plannerData.income_items?.[0],
-      expenseItemsSample: plannerData.expense_items?.[0]
-    });
-
     // 基本数据验证
     if (!plannerData.user_profile) {
       throw new Error('User profile is missing');
@@ -115,10 +103,8 @@ export class FIRECalculationService {
     let convertedData: CorePlannerData;
 
     try {
-      console.log('🔄 开始数据类型转换...');
 
       // 转换 simulation_settings
-      console.log('转换 simulation_settings:', plannerData.simulation_settings);
       const convertedSimulationSettings = {
         ...plannerData.simulation_settings,
         num_simulations: plannerData.simulation_settings.num_simulations ?? 1000,
@@ -128,48 +114,35 @@ export class FIRECalculationService {
         expense_base_volatility: new Decimal(plannerData.simulation_settings.expense_base_volatility ?? 0.05),
         expense_minimum_factor: new Decimal(plannerData.simulation_settings.expense_minimum_factor ?? 0.8)
       };
-      console.log('✅ simulation_settings 转换完成');
 
       // 转换 income_items
-      console.log('转换 income_items...');
-      const convertedIncomeItems = plannerData.income_items.map((item, index) => {
-        console.log(`转换 income_item[${index}]:`, item);
+      const convertedIncomeItems = plannerData.income_items.map((item) => {
         return {
           ...item,
           after_tax_amount_per_period: new Decimal(item.after_tax_amount_per_period ?? 0),
           annual_growth_rate: new Decimal(item.annual_growth_rate ?? 0)
         };
       });
-      console.log('✅ income_items 转换完成');
 
       // 转换 expense_items
-      console.log('转换 expense_items...');
-      const convertedExpenseItems = plannerData.expense_items.map((item, index) => {
-        console.log(`转换 expense_item[${index}]:`, item);
+      const convertedExpenseItems = plannerData.expense_items.map((item) => {
         return {
           ...item,
           after_tax_amount_per_period: new Decimal(item.after_tax_amount_per_period ?? 0),
           annual_growth_rate: new Decimal(item.annual_growth_rate ?? 0)
         };
       });
-      console.log('✅ expense_items 转换完成');
 
       // 转换 overrides
-      console.log('转换 overrides...');
-      const convertedOverrides = plannerData.overrides.map((override, index) => {
-        console.log(`转换 override[${index}]:`, override);
+      const convertedOverrides = plannerData.overrides.map((override) => {
         return {
           ...override,
           value: new Decimal(override.value ?? 0)
         };
       });
-      console.log('✅ overrides 转换完成');
 
       // 转换 user_profile
-      console.log('转换 user_profile...');
-      console.log('user_profile.portfolio:', plannerData.user_profile.portfolio);
-      const convertedAssetClasses = plannerData.user_profile.portfolio.asset_classes.map((asset, index) => {
-        console.log(`转换 asset[${index}]:`, asset);
+      const convertedAssetClasses = plannerData.user_profile.portfolio.asset_classes.map((asset) => {
         return {
           ...asset,
           allocation_percentage: new Decimal(asset.allocation_percentage ?? 0),
@@ -188,21 +161,17 @@ export class FIRECalculationService {
           asset_classes: convertedAssetClasses
         }
       };
-      console.log('✅ user_profile 转换完成');
 
       // 转换 projection_data (如果存在)
       let convertedProjectionData = undefined;
       if (plannerData.projection_data) {
-        console.log('转换 projection_data...');
-        convertedProjectionData = plannerData.projection_data.map((row, index) => {
-          console.log(`转换 projection_row[${index}]:`, row);
+        convertedProjectionData = plannerData.projection_data.map((row) => {
           return {
             ...row,
             total_income: new Decimal(row.total_income ?? 0),
             total_expense: new Decimal(row.total_expense ?? 0)
           };
         });
-        console.log('✅ projection_data 转换完成');
       }
 
       convertedData = {
@@ -219,7 +188,6 @@ export class FIRECalculationService {
         projection_df: convertedProjectionData
       };
 
-      console.log('✅ 所有数据转换完成');
 
     } catch (error) {
       console.error('❌ 数据转换失败:', error);
@@ -244,9 +212,7 @@ export class FIRECalculationService {
     };
 
     // 运行完整计算（包含 Monte Carlo 模拟）
-    console.log('🔄 Running FIRE calculations with Monte Carlo for Stage3...');
     const coreResults = await planner.runCalculations(internalProgressCallback);
-    console.log('✅ Stage3 calculations completed:', coreResults);
 
     // 转换结果类型
     const uiResults = convertCoreResultsToUI(coreResults);

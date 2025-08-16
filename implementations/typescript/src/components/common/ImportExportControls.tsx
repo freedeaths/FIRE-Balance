@@ -8,18 +8,22 @@
  * - 响应式设计：桌面显示图标+文字，移动端只显示文字
  */
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { Group, Button, ActionIcon, Text } from '@mantine/core';
 import { IconDownload, IconUpload, IconTrash } from '@tabler/icons-react';
 import { usePlannerStore, usePlannerData } from '../../stores/plannerStore';
 import { getI18n } from '../../core/i18n';
 import { notifications } from '@mantine/notifications';
 import { PlannerStage } from '../../types';
+import { ConfirmDialog } from './ConfirmDialog';
 
 export function ImportExportControls() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const plannerStore = usePlannerStore();
   const data = usePlannerData(); // 使用 selector 订阅数据
+
+  // 确认弹窗状态
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   // i18n
   const i18n = getI18n();
@@ -119,16 +123,19 @@ export function ImportExportControls() {
 
   // 处理数据清空
   const handleClear = () => {
-    if (window.confirm(t('import_export.clear_data_confirm'))) {
-      plannerStore.reset();
-      // reset() 已经会导航到第一阶段，不需要额外调用 setCurrentStage
+    setShowConfirmDialog(true);
+  };
 
-      notifications.show({
-        title: t('import_export.success'),
-        message: t('import_export.clear_success'),
-        color: 'blue',
-      });
-    }
+  // 确认清空数据
+  const handleConfirmClear = () => {
+    plannerStore.reset();
+    // reset() 已经会导航到第一阶段，不需要额外调用 setCurrentStage
+
+    notifications.show({
+      title: t('import_export.success'),
+      message: t('import_export.clear_success'),
+      color: 'blue',
+    });
   };
 
   return (
@@ -178,6 +185,19 @@ export function ImportExportControls() {
           {t('import_export.clear_data')}
         </Button>
       </Group>
+
+      {/* 确认弹窗 */}
+      <ConfirmDialog
+        opened={showConfirmDialog}
+        onClose={() => setShowConfirmDialog(false)}
+        onConfirm={handleConfirmClear}
+        title={t('import_export.clear_data')}
+        message={t('import_export.clear_data_confirm')}
+        confirmLabel={t('import_export.clear_data')}
+        cancelLabel={t('cancel')}
+        confirmColor="red"
+        iconType="delete"
+      />
     </>
   );
 }

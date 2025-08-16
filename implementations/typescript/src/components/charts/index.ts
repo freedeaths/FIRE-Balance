@@ -7,6 +7,7 @@
 export { IncomeExpenseBreakdownChart } from './IncomeExpenseBreakdownChart';
 export { NetWorthTrajectoryChart } from './NetWorthTrajectoryChart';
 export { MonteCarloResultsChart } from './MonteCarloResultsChart';
+export { ResponsiveFullscreenChartWrapper } from './ResponsiveFullscreenChartWrapper';
 
 export type {
   IncomeExpenseBreakdownChartProps,

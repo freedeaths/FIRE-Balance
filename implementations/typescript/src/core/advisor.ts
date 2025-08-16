@@ -371,11 +371,6 @@ export class FIREAdvisor {
     const epsilon = new Decimal(0.001); // Precision for binary search
     let optimal_reduction: Decimal | null = null;
 
-    console.log('🔍 [DEBUG] Starting expense reduction binary search:', {
-      projection_df_length: this.projection_df.length,
-      first_row: this.projection_df[0],
-      first_expense: this.projection_df[0]?.total_expense?.toString()
-    });
 
     while (high.sub(low).gt(epsilon)) {
       const mid = low.add(high).div(2);
@@ -429,15 +424,6 @@ export class FIREAdvisor {
 
       const annual_savings = original_expense.mul(optimal_reduction);
 
-      console.log('🔍 [DEBUG] Expense reduction calculation:', {
-        optimal_reduction: optimal_reduction.toString(),
-        original_expense: original_expense.toString(),
-        annual_savings: annual_savings.toString(),
-        percentage: optimal_reduction.mul(100).toNumber(),
-        amount: annual_savings.toNumber(),
-        projection_df_length: this.projection_df.length,
-        first_expense: this.projection_df[0]?.total_expense?.toString()
-      });
 
       return {
         type: 'reduce_expenses',

@@ -11,6 +11,7 @@
  */
 
 import React, { useCallback, useState } from 'react';
+import { useMediaQuery } from '@mantine/hooks';
 import {
   Container,
   Card,
@@ -24,6 +25,8 @@ import {
   Divider,
   Checkbox,
   Slider,
+  Collapse,
+  Badge,
 } from '@mantine/core';
 import {
   IconCheck,
@@ -32,11 +35,12 @@ import {
   IconChartBar,
   IconRocket,
   IconRefresh,
+  IconChevronDown,
+  IconChevronUp,
 } from '@tabler/icons-react';
 import { usePlannerStore } from '../../stores/plannerStore';
 import { getI18n } from '../../core/i18n';
 import { useFIRECalculation } from '../../hooks/useFIRECalculation';
-import { PlannerStage } from '../../types';
 import { LoadingOverlay } from '../ui/LoadingOverlay';
 import { NetWorthTrajectoryChart } from '../charts/NetWorthTrajectoryChart';
 import { MonteCarloResultsChart } from '../charts/MonteCarloResultsChart';
@@ -68,15 +72,16 @@ const formatPercentage = (rate: number): string => {
 export function Stage3Content(): React.JSX.Element {
   // Store hooks
   const plannerStore = usePlannerStore();
+  const currentStage = usePlannerStore(state => state.currentStage);
 
-  // FIRE计算hook
+  // FIRE计算hook - 传递真实的 currentStage 来检测 stage 变化
   const {
     isCalculating,
     progress,
     error,
     results,
     hasResults
-  } = useFIRECalculation(PlannerStage.STAGE3_ANALYSIS);
+  } = useFIRECalculation(currentStage);
 
   // Monte Carlo 交互式状态
   const [monteCarloSettings, setMonteCarloSettings] = useState({
@@ -104,6 +109,9 @@ export function Stage3Content(): React.JSX.Element {
   // i18n
   const i18n = getI18n();
   const t = useCallback((key: string, variables?: Record<string, unknown>): string => i18n.t(key, variables), [i18n]);
+
+  // 移动端检测
+  const isMobile = useMediaQuery('(max-width: 768px)');
 
   // Monte Carlo 运行函数 - 使用现有的TypeScript核心模块
   const runInteractiveMonteCarlo = useCallback(async () => {
@@ -313,44 +321,86 @@ export function Stage3Content(): React.JSX.Element {
             <Title order={3}>{t('stage3.fire_feasibility.title')}</Title>
           </Group>
 
-          {/* 关键指标 */}
-          <Group grow mb="md">
-            <div>
-              <Text size="sm" c="dimmed">{t('stage3.fire_feasibility.target_age')}</Text>
-              <Text size="xl" fw={700}>
-                {plannerStore.data.user_profile?.expected_fire_age} {t('stage3.fire_feasibility.years_old')}
-              </Text>
-            </div>
-            <div>
-              <Text size="sm" c="dimmed">{t('stage3.fire_feasibility.fire_net_worth')}</Text>
-              <Text size="xl" fw={700}>
-                {formatCurrency(fireCalculation.fire_net_worth)}
-              </Text>
-            </div>
-            <div>
-              <Text size="sm" c="dimmed">{t('stage3.fire_feasibility.feasibility')}</Text>
-              <Text
-                size="xl"
-                fw={700}
-                c={fireCalculation.is_fire_achievable ? "green" : "red"}
-              >
-                {/* 按照 Python 版本显示 Monte Carlo 成功率或简单 bool */}
-                {monteCarloSuccessRate !== undefined ? (
-                  <>
-                    {fireCalculation.is_fire_achievable ? "✅" : "❌"} {formatPercentage(monteCarloSuccessRate)}
-                  </>
-                ) : (
-                  <>
-                    {fireCalculation.is_fire_achievable ? (
-                      <>✅ {t('stage3.fire_feasibility.achievable')}</>
-                    ) : (
-                      <>❌ {t('stage3.fire_feasibility.needs_adjustment')}</>
-                    )}
-                  </>
-                )}
-              </Text>
-            </div>
-          </Group>
+          {/* 关键指标 - 响应式布局 */}
+          {isMobile ? (
+            /* 移动端：垂直布局 */
+            <Stack gap="md" mb="md">
+              <div>
+                <Text size="sm" c="dimmed">{t('stage3.fire_feasibility.target_age')}</Text>
+                <Text size="xl" fw={700}>
+                  {plannerStore.data.user_profile?.expected_fire_age} {t('stage3.fire_feasibility.years_old')}
+                </Text>
+              </div>
+              <div>
+                <Text size="sm" c="dimmed">{t('stage3.fire_feasibility.fire_net_worth')}</Text>
+                <Text size="xl" fw={700}>
+                  {formatCurrency(fireCalculation.fire_net_worth)}
+                </Text>
+              </div>
+              <div>
+                <Text size="sm" c="dimmed">{t('stage3.fire_feasibility.feasibility')}</Text>
+                <Text
+                  size="xl"
+                  fw={700}
+                  c={fireCalculation.is_fire_achievable ? "green" : "red"}
+                >
+                  {/* 按照 Python 版本显示 Monte Carlo 成功率或简单 bool */}
+                  {monteCarloSuccessRate !== undefined ? (
+                    <>
+                      {fireCalculation.is_fire_achievable ? "✅" : "❌"} {formatPercentage(monteCarloSuccessRate)}
+                    </>
+                  ) : (
+                    <>
+                      {fireCalculation.is_fire_achievable ? (
+                        <>✅ {t('stage3.fire_feasibility.achievable')}</>
+                      ) : (
+                        <>❌ {t('stage3.fire_feasibility.needs_adjustment')}</>
+                      )}
+                    </>
+                  )}
+                </Text>
+              </div>
+            </Stack>
+          ) : (
+            /* 桌面端：水平布局 */
+            <Group grow mb="md">
+              <div>
+                <Text size="sm" c="dimmed">{t('stage3.fire_feasibility.target_age')}</Text>
+                <Text size="xl" fw={700}>
+                  {plannerStore.data.user_profile?.expected_fire_age} {t('stage3.fire_feasibility.years_old')}
+                </Text>
+              </div>
+              <div>
+                <Text size="sm" c="dimmed">{t('stage3.fire_feasibility.fire_net_worth')}</Text>
+                <Text size="xl" fw={700}>
+                  {formatCurrency(fireCalculation.fire_net_worth)}
+                </Text>
+              </div>
+              <div>
+                <Text size="sm" c="dimmed">{t('stage3.fire_feasibility.feasibility')}</Text>
+                <Text
+                  size="xl"
+                  fw={700}
+                  c={fireCalculation.is_fire_achievable ? "green" : "red"}
+                >
+                  {/* 按照 Python 版本显示 Monte Carlo 成功率或简单 bool */}
+                  {monteCarloSuccessRate !== undefined ? (
+                    <>
+                      {fireCalculation.is_fire_achievable ? "✅" : "❌"} {formatPercentage(monteCarloSuccessRate)}
+                    </>
+                  ) : (
+                    <>
+                      {fireCalculation.is_fire_achievable ? (
+                        <>✅ {t('stage3.fire_feasibility.achievable')}</>
+                      ) : (
+                        <>❌ {t('stage3.fire_feasibility.needs_adjustment')}</>
+                      )}
+                    </>
+                  )}
+                </Text>
+              </div>
+            </Group>
+          )}
 
           {/* 结果说明 */}
           {fireCalculation.is_fire_achievable ? (
@@ -377,6 +427,24 @@ export function Stage3Content(): React.JSX.Element {
             safetyBufferMonths={plannerStore.data.user_profile?.safety_buffer_months || 6}
             height={400}
             showCashFlowArea={true}
+          />
+        </Card>
+
+        {/* 完整计算数据表格 - 可折叠 */}
+        <Card withBorder>
+          <Group mb="md">
+            <IconChartBar size={24} color="var(--mantine-primary-color-6)" />
+            <Title order={3}>{t('complete_calculation_data')}</Title>
+          </Group>
+
+          <Text c="dimmed" mb="md">
+            {t('complete_calculation_data_description')}
+          </Text>
+
+          <YearlyDataTableSection
+            data={yearlyStates}
+            safetyBufferMonths={plannerStore.data.user_profile?.safety_buffer_months || 6}
+            t={t}
           />
         </Card>
 
@@ -473,59 +541,116 @@ export function Stage3Content(): React.JSX.Element {
             {t('stage3.monte_carlo.description')}
           </Text>
 
-          {/* Monte Carlo 控制面板 - 单行布局 */}
-          <Group mb="lg" align="center" wrap="nowrap">
-            {/* 运行按钮 */}
-            <Button
-              size="md"
-              leftSection={<IconRefresh size={16} />}
-              loading={isRunningMonteCarlo}
-              disabled={isRunningMonteCarlo || isCalculating}
-              onClick={runInteractiveMonteCarlo}
-              style={{ minWidth: '180px', flexShrink: 0 }}
-            >
-              {t('run_monte_carlo_simulation')}
-            </Button>
-
-            {/* 模拟次数滑块 */}
-            <div style={{ flex: 1, minWidth: '200px' }}>
-              <Text size="sm" c="dimmed" mb="xs">
-                {t('num_simulations')}: {monteCarloSettings.numSimulations.toLocaleString()}
-              </Text>
-              <Slider
-                value={monteCarloSettings.numSimulations}
-                onChange={(value) => setMonteCarloSettings(prev => ({
-                  ...prev,
-                  numSimulations: value
-                }))}
-                min={100}
-                max={10000}
-                step={100}
-                marks={[
-                  { value: 100, label: '100' },
-                  { value: 1000, label: '1K' },
-                  { value: 5000, label: '5K' },
-                  { value: 10000, label: '10K' }
-                ]}
+          {/* Monte Carlo 控制面板 - 响应式布局 */}
+          {isMobile ? (
+            /* 移动端垂直布局 */
+            <Stack gap="md" mb="lg">
+              {/* 运行按钮 */}
+              <Button
                 size="md"
-              />
-            </div>
+                leftSection={<IconRefresh size={16} />}
+                loading={isRunningMonteCarlo}
+                disabled={isRunningMonteCarlo || isCalculating}
+                onClick={runInteractiveMonteCarlo}
+                fullWidth
+              >
+                {t('run_monte_carlo_simulation')}
+              </Button>
 
-            {/* 黑天鹅事件复选框 */}
-            <Group gap="sm" align="center" style={{ flexShrink: 0 }}>
-              <Text size="sm" c="dimmed">{t('include_extreme_events')}</Text>
-              <Checkbox
-                checked={monteCarloSettings.includeBlackSwan}
-                onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
-                  setMonteCarloSettings(prev => ({
+              {/* 模拟次数滑块 */}
+              <div>
+                <Text size="sm" c="dimmed" mb="xs">
+                  {t('num_simulations')}: {monteCarloSettings.numSimulations.toLocaleString()}
+                </Text>
+                <Slider
+                  value={monteCarloSettings.numSimulations}
+                  onChange={(value) => setMonteCarloSettings(prev => ({
                     ...prev,
-                    includeBlackSwan: event.target.checked
-                  }));
-                }}
+                    numSimulations: value
+                  }))}
+                  min={100}
+                  max={10000}
+                  step={100}
+                  marks={[
+                    { value: 100, label: '100' },
+                    { value: 1000, label: '1K' },
+                    { value: 5000, label: '5K' },
+                    { value: 10000, label: '10K' }
+                  ]}
+                  size="md"
+                />
+              </div>
+
+              {/* 黑天鹅事件复选框 */}
+              <Group justify="space-between" align="center">
+                <Text size="sm" c="dimmed">{t('include_extreme_events')}</Text>
+                <Checkbox
+                  checked={monteCarloSettings.includeBlackSwan}
+                  onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+                    setMonteCarloSettings(prev => ({
+                      ...prev,
+                      includeBlackSwan: event.target.checked
+                    }));
+                  }}
+                  size="md"
+                />
+              </Group>
+            </Stack>
+          ) : (
+            /* 桌面端水平布局 */
+            <Group mb="lg" align="center" wrap="nowrap">
+              {/* 运行按钮 */}
+              <Button
                 size="md"
-              />
+                leftSection={<IconRefresh size={16} />}
+                loading={isRunningMonteCarlo}
+                disabled={isRunningMonteCarlo || isCalculating}
+                onClick={runInteractiveMonteCarlo}
+                style={{ minWidth: '180px', flexShrink: 0 }}
+              >
+                {t('run_monte_carlo_simulation')}
+              </Button>
+
+              {/* 模拟次数滑块 */}
+              <div style={{ flex: 1, minWidth: '200px' }}>
+                <Text size="sm" c="dimmed" mb="xs">
+                  {t('num_simulations')}: {monteCarloSettings.numSimulations.toLocaleString()}
+                </Text>
+                <Slider
+                  value={monteCarloSettings.numSimulations}
+                  onChange={(value) => setMonteCarloSettings(prev => ({
+                    ...prev,
+                    numSimulations: value
+                  }))}
+                  min={100}
+                  max={10000}
+                  step={100}
+                  marks={[
+                    { value: 100, label: '100' },
+                    { value: 1000, label: '1K' },
+                    { value: 5000, label: '5K' },
+                    { value: 10000, label: '10K' }
+                  ]}
+                  size="md"
+                />
+              </div>
+
+              {/* 黑天鹅事件复选框 */}
+              <Group gap="sm" align="center" style={{ flexShrink: 0 }}>
+                <Text size="sm" c="dimmed">{t('include_extreme_events')}</Text>
+                <Checkbox
+                  checked={monteCarloSettings.includeBlackSwan}
+                  onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+                    setMonteCarloSettings(prev => ({
+                      ...prev,
+                      includeBlackSwan: event.target.checked
+                    }));
+                  }}
+                  size="md"
+                />
+              </Group>
             </Group>
-          </Group>
+          )}
 
           {/* 无结果时的提示 */}
           {!monteCarloResult && (
@@ -567,48 +692,96 @@ export function Stage3Content(): React.JSX.Element {
               {/* 结果分布 */}
               <div>
                 <Title order={5} mb="md">{t('result_distribution')}</Title>
-                <Group>
-                  <div style={{ flex: 1 }}>
-                    <Table striped>
-                      <Table.Thead>
-                        <Table.Tr>
-                          <Table.Th>{t('percentile')}</Table.Th>
-                          <Table.Th>{t('minimum_net_worth')}</Table.Th>
-                        </Table.Tr>
-                      </Table.Thead>
-                      <Table.Tbody>
-                        <Table.Tr>
-                          <Table.Td>5%</Table.Td>
-                          <Table.Td>{formatCurrency(monteCarloResult.percentile_5_minimum_net_worth)}</Table.Td>
-                        </Table.Tr>
-                        <Table.Tr>
-                          <Table.Td>25%</Table.Td>
-                          <Table.Td>{formatCurrency(monteCarloResult.percentile_25_minimum_net_worth)}</Table.Td>
-                        </Table.Tr>
-                        <Table.Tr>
-                          <Table.Td>50%</Table.Td>
-                          <Table.Td>{formatCurrency(monteCarloResult.median_minimum_net_worth)}</Table.Td>
-                        </Table.Tr>
-                        <Table.Tr>
-                          <Table.Td>75%</Table.Td>
-                          <Table.Td>{formatCurrency(monteCarloResult.percentile_75_minimum_net_worth)}</Table.Td>
-                        </Table.Tr>
-                        <Table.Tr>
-                          <Table.Td>95%</Table.Td>
-                          <Table.Td>{formatCurrency(monteCarloResult.percentile_95_minimum_net_worth)}</Table.Td>
-                        </Table.Tr>
-                      </Table.Tbody>
-                    </Table>
-                  </div>
+                {isMobile ? (
+                  /* 移动端垂直布局 */
+                  <Stack gap="lg">
+                    {/* 分布数据表 */}
+                    <div>
+                      <Table striped>
+                        <Table.Thead>
+                          <Table.Tr>
+                            <Table.Th>{t('percentile')}</Table.Th>
+                            <Table.Th>{t('minimum_net_worth')}</Table.Th>
+                          </Table.Tr>
+                        </Table.Thead>
+                        <Table.Tbody>
+                          <Table.Tr>
+                            <Table.Td>5%</Table.Td>
+                            <Table.Td>{formatCurrency(monteCarloResult.percentile_5_minimum_net_worth)}</Table.Td>
+                          </Table.Tr>
+                          <Table.Tr>
+                            <Table.Td>25%</Table.Td>
+                            <Table.Td>{formatCurrency(monteCarloResult.percentile_25_minimum_net_worth)}</Table.Td>
+                          </Table.Tr>
+                          <Table.Tr>
+                            <Table.Td>50%</Table.Td>
+                            <Table.Td>{formatCurrency(monteCarloResult.median_minimum_net_worth)}</Table.Td>
+                          </Table.Tr>
+                          <Table.Tr>
+                            <Table.Td>75%</Table.Td>
+                            <Table.Td>{formatCurrency(monteCarloResult.percentile_75_minimum_net_worth)}</Table.Td>
+                          </Table.Tr>
+                          <Table.Tr>
+                            <Table.Td>95%</Table.Td>
+                            <Table.Td>{formatCurrency(monteCarloResult.percentile_95_minimum_net_worth)}</Table.Td>
+                          </Table.Tr>
+                        </Table.Tbody>
+                      </Table>
+                    </div>
 
-                  {/* 分布图表 */}
-                  <div style={{ flex: 1, marginLeft: '20px' }}>
-                    <MonteCarloResultsChart
-                      results={monteCarloResult}
-                      height={250}
-                    />
-                  </div>
-                </Group>
+                    {/* 分布图表 */}
+                    <div>
+                      <MonteCarloResultsChart
+                        results={monteCarloResult}
+                        height={250}
+                      />
+                    </div>
+                  </Stack>
+                ) : (
+                  /* 桌面端水平布局 */
+                  <Group>
+                    <div style={{ flex: 1 }}>
+                      <Table striped>
+                        <Table.Thead>
+                          <Table.Tr>
+                            <Table.Th>{t('percentile')}</Table.Th>
+                            <Table.Th>{t('minimum_net_worth')}</Table.Th>
+                          </Table.Tr>
+                        </Table.Thead>
+                        <Table.Tbody>
+                          <Table.Tr>
+                            <Table.Td>5%</Table.Td>
+                            <Table.Td>{formatCurrency(monteCarloResult.percentile_5_minimum_net_worth)}</Table.Td>
+                          </Table.Tr>
+                          <Table.Tr>
+                            <Table.Td>25%</Table.Td>
+                            <Table.Td>{formatCurrency(monteCarloResult.percentile_25_minimum_net_worth)}</Table.Td>
+                          </Table.Tr>
+                          <Table.Tr>
+                            <Table.Td>50%</Table.Td>
+                            <Table.Td>{formatCurrency(monteCarloResult.median_minimum_net_worth)}</Table.Td>
+                          </Table.Tr>
+                          <Table.Tr>
+                            <Table.Td>75%</Table.Td>
+                            <Table.Td>{formatCurrency(monteCarloResult.percentile_75_minimum_net_worth)}</Table.Td>
+                          </Table.Tr>
+                          <Table.Tr>
+                            <Table.Td>95%</Table.Td>
+                            <Table.Td>{formatCurrency(monteCarloResult.percentile_95_minimum_net_worth)}</Table.Td>
+                          </Table.Tr>
+                        </Table.Tbody>
+                      </Table>
+                    </div>
+
+                    {/* 分布图表 */}
+                    <div style={{ flex: 1, marginLeft: '20px' }}>
+                      <MonteCarloResultsChart
+                        results={monteCarloResult}
+                        height={250}
+                      />
+                    </div>
+                  </Group>
+                )}
               </div>
 
               {/* 风险评估 */}
@@ -709,6 +882,127 @@ export function Stage3Content(): React.JSX.Element {
         </Stack>
       </Container>
     </>
+  );
+}
+
+// =============================================================================
+// YearlyDataTableSection Component
+// =============================================================================
+
+interface YearlyDataTableSectionProps {
+  data: any[];
+  safetyBufferMonths: number;
+  t: (key: string, variables?: Record<string, any>) => string;
+}
+
+function YearlyDataTableSection({ data, safetyBufferMonths, t }: YearlyDataTableSectionProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  // 计算每年的风险状态 (safe/warning/danger)
+  const getRiskStatus = (netWorth: number, totalExpense: number): 'safe' | 'warning' | 'danger' => {
+    const safetyBuffer = (totalExpense * safetyBufferMonths) / 12;
+    if (netWorth > safetyBuffer) return 'safe';
+    if (netWorth > 0) return 'warning';
+    return 'danger';
+  };
+
+  const getStatusBadge = (status: 'safe' | 'warning' | 'danger') => {
+    const configs = {
+      safe: { color: 'green', text: t('feasible') },
+      warning: { color: 'yellow', text: t('risky') },
+      danger: { color: 'red', text: t('needs_adjustment') }
+    };
+    const config = configs[status];
+    return <Badge color={config.color} size="sm">{config.text}</Badge>;
+  };
+
+  return (
+    <div>
+      <Button
+        variant="light"
+        leftSection={isExpanded ? <IconChevronUp size={16} /> : <IconChevronDown size={16} />}
+        onClick={() => setIsExpanded(!isExpanded)}
+        mb="md"
+      >
+        {isExpanded ? t('hide_detailed_data') : t('show_detailed_data')}
+      </Button>
+
+      <Collapse in={isExpanded}>
+        <div style={{
+          overflowX: 'auto',
+          overflowY: 'auto',
+          maxHeight: '60vh', // 限制表格最大高度，启用垂直滚动
+          border: '1px solid var(--mantine-color-gray-3)',
+          borderRadius: '4px'
+        }}>
+          <Table striped highlightOnHover>
+            <Table.Thead style={{
+              position: 'sticky',
+              top: 0,
+              backgroundColor: 'var(--mantine-color-gray-0)',
+              zIndex: 10,
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+            }}>
+              <Table.Tr>
+                <Table.Th style={{ backgroundColor: 'var(--mantine-color-gray-0)' }}>{t('age')}</Table.Th>
+                <Table.Th style={{ backgroundColor: 'var(--mantine-color-gray-0)' }}>{t('year')}</Table.Th>
+                <Table.Th style={{ backgroundColor: 'var(--mantine-color-gray-0)' }}>{t('total_income')}</Table.Th>
+                <Table.Th style={{ backgroundColor: 'var(--mantine-color-gray-0)' }}>{t('total_expense')}</Table.Th>
+                <Table.Th style={{ backgroundColor: 'var(--mantine-color-gray-0)' }}>{t('net_cash_flow')}</Table.Th>
+                <Table.Th style={{ backgroundColor: 'var(--mantine-color-gray-0)' }}>{t('investment_return')}</Table.Th>
+                <Table.Th style={{ backgroundColor: 'var(--mantine-color-gray-0)' }}>{t('portfolio_value')}</Table.Th>
+                <Table.Th style={{ backgroundColor: 'var(--mantine-color-gray-0)' }}>{t('net_worth')}</Table.Th>
+                <Table.Th style={{ backgroundColor: 'var(--mantine-color-gray-0)' }}>{t('status')}</Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {data.map((yearlyState, index) => {
+                const netWorth = typeof yearlyState.net_worth === 'object'
+                  ? yearlyState.net_worth.toNumber()
+                  : yearlyState.net_worth;
+                const totalIncome = typeof yearlyState.total_income === 'object'
+                  ? yearlyState.total_income.toNumber()
+                  : yearlyState.total_income;
+                const totalExpense = typeof yearlyState.total_expense === 'object'
+                  ? yearlyState.total_expense.toNumber()
+                  : yearlyState.total_expense;
+                const netCashFlow = typeof yearlyState.net_cash_flow === 'object'
+                  ? yearlyState.net_cash_flow.toNumber()
+                  : yearlyState.net_cash_flow;
+                const investmentReturn = typeof yearlyState.investment_return === 'object'
+                  ? yearlyState.investment_return.toNumber()
+                  : yearlyState.investment_return;
+                const portfolioValue = typeof yearlyState.portfolio_value === 'object'
+                  ? yearlyState.portfolio_value.toNumber()
+                  : yearlyState.portfolio_value;
+
+                const riskStatus = getRiskStatus(netWorth, totalExpense);
+
+                return (
+                  <Table.Tr key={index}>
+                    <Table.Td>{yearlyState.age}</Table.Td>
+                    <Table.Td>{yearlyState.year}</Table.Td>
+                    <Table.Td>{formatCurrency(totalIncome)}</Table.Td>
+                    <Table.Td>{formatCurrency(totalExpense)}</Table.Td>
+                    <Table.Td style={{ color: netCashFlow >= 0 ? 'green' : 'red' }}>
+                      {formatCurrency(netCashFlow)}
+                    </Table.Td>
+                    <Table.Td>{formatCurrency(investmentReturn)}</Table.Td>
+                    <Table.Td>{formatCurrency(portfolioValue)}</Table.Td>
+                    <Table.Td style={{ color: netWorth >= 0 ? 'green' : 'red' }}>
+                      {formatCurrency(netWorth)}
+                    </Table.Td>
+                    <Table.Td>
+                      {getStatusBadge(riskStatus)}
+                    </Table.Td>
+                  </Table.Tr>
+                );
+              })}
+            </Table.Tbody>
+          </Table>
+        </div>
+      </Collapse>
+    </div>
   );
 }
 

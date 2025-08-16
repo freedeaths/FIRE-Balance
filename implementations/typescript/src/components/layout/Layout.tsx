@@ -57,6 +57,23 @@ export function Layout() {
   const { currentLanguage, setLanguage } = useAppStore();
   const currentStage = usePlannerStore(state => state.currentStage);
 
+  // 全局跟踪上一次的 stage，避免组件卸载导致的状态丢失
+  const prevStageRef = React.useRef<PlannerStage | undefined>(undefined);
+
+  // 全局 stage 变化跟踪
+  React.useEffect(() => {
+    const prevStage = prevStageRef.current;
+
+    // 在 window 对象上存储 stage 变化信息，供 useFIRECalculation 使用
+    (window as any).__fireStageTransition = {
+      from: prevStage,
+      to: currentStage,
+      timestamp: Date.now()
+    };
+
+    prevStageRef.current = currentStage;
+  }, [currentStage]);
+
   // i18n - 直接使用当前语言确保同步
   const t = (key: string, variables?: Record<string, any>) => {
     const i18n = getI18n();
@@ -65,11 +82,6 @@ export function Layout() {
     return i18n.t(key, variables);
   };
 
-  // 开发模式下显示语言检测信息
-  if (import.meta.env.DEV) {
-    const detectionInfo = getLanguageDetectionInfo();
-    console.log('🌍 Language Detection Info:', detectionInfo);
-  }
 
   // Handle language change
   const handleLanguageChange = (value: string | null) => {

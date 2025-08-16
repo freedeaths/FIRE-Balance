@@ -19,6 +19,7 @@ import {
   Group,
   Alert,
 } from '@mantine/core';
+import { useMediaQuery } from '@mantine/hooks';
 import { IconTable, IconInfoCircle } from '@tabler/icons-react';
 import Handsontable from 'handsontable';
 import 'handsontable/dist/handsontable.full.min.css';
@@ -59,6 +60,9 @@ export function Stage2FinancialTable({
 
   const hotRef = useRef<HTMLDivElement>(null);
   const hotInstance = useRef<Handsontable | null>(null);
+
+  // 响应式设计 - 检测移动端
+  const isMobile = useMediaQuery('(max-width: 768px)');
 
   // 统一的渲染调度器，避免多个setTimeout冲突
   const renderSchedulerRef = useRef<NodeJS.Timeout | null>(null);
@@ -129,6 +133,58 @@ export function Stage2FinancialTable({
   const incomeItems = usePlannerStore(state => state.data.income_items);
   const expenseItems = usePlannerStore(state => state.data.expense_items);
   const overrides = usePlannerStore(state => state.data.overrides);
+
+  // 窗口宽度状态，用于响应式计算
+  const [windowWidth, setWindowWidth] = React.useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth : 1024
+  );
+
+  // 监听窗口大小变化
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // 智能响应式列宽计算
+  const columnWidths = useMemo(() => {
+    const totalColumns = (incomeItems?.length || 0) + (expenseItems?.length || 0);
+
+    if (isMobile) {
+      // 移动端：更紧凑的自适应列宽
+      const availableWidth = windowWidth - 32; // 减少 padding 让出更多空间
+
+      // 计算最优列宽分布，优先紧凑性
+      if (totalColumns <= 2) {
+        // 列数少时，适度空间
+        const firstColumnWidth = Math.min(100, availableWidth * 0.28);
+        const dataColumnWidth = Math.max(75, (availableWidth - firstColumnWidth) / totalColumns);
+        return [firstColumnWidth, ...Array(totalColumns).fill(dataColumnWidth)];
+      } else if (totalColumns <= 4) {
+        // 中等列数，紧凑布局
+        const firstColumnWidth = Math.min(85, availableWidth * 0.22);
+        const dataColumnWidth = Math.max(65, (availableWidth - firstColumnWidth) / totalColumns);
+        return [firstColumnWidth, ...Array(totalColumns).fill(dataColumnWidth)];
+      } else {
+        // 列数多时，极致压缩布局
+        const firstColumnWidth = Math.min(75, availableWidth * 0.18);
+        const dataColumnWidth = Math.max(55, (availableWidth - firstColumnWidth) / totalColumns);
+        return [firstColumnWidth, ...Array(totalColumns).fill(dataColumnWidth)];
+      }
+    } else {
+      // 桌面端：根据列数智能调整
+      if (totalColumns <= 4) {
+        return [200, ...Array(totalColumns).fill(140)]; // 宽松布局
+      } else if (totalColumns <= 8) {
+        return [180, ...Array(totalColumns).fill(120)]; // 标准布局
+      } else {
+        return [160, ...Array(totalColumns).fill(100)]; // 紧凑布局
+      }
+    }
+  }, [incomeItems, expenseItems, isMobile, windowWidth]);
 
   const addOverride = usePlannerStore(state => state.addOverride);
   const updateOverride = usePlannerStore(state => state.updateOverride);
@@ -455,10 +511,11 @@ export function Stage2FinancialTable({
     hotInstance.current = new Handsontable(hotRef.current, {
       licenseKey: 'non-commercial-and-evaluation',
       data: tableData,
-      colWidths: [180, ...Array(incomeItems.length + expenseItems.length).fill(120)],
+      colWidths: columnWidths,
       rowHeights: 35,
       rowHeaders: false,
       colHeaders: false,
+      fixedRowsTop: 1, // 冻结首行作为表头
       contextMenu: {
         items: {
           'undo_override': {
@@ -475,7 +532,7 @@ export function Stage2FinancialTable({
           }
         }
       },
-      manualColumnResize: true,
+      manualColumnResize: !isMobile, // 移动端禁用手动调整列宽，保持响应式设计
 
       // 填充手柄
       fillHandle: {
@@ -721,6 +778,20 @@ export function Stage2FinancialTable({
     // 重新渲染以应用样式（包括 override 橙色框），保持滚动位置
     scheduleRender(true, 15); // 稍微延长时间，确保 loadData 完成
   }, [tableData, scheduleRender]); // 依赖缓存的数据
+
+  // 响应式列宽变化时更新表格列宽
+  useEffect(() => {
+    if (!hotInstance.current) return;
+
+    // 更新列宽设置
+    hotInstance.current.updateSettings({
+      colWidths: columnWidths,
+      manualColumnResize: !isMobile, // 同时更新手动调整列宽的设置
+    });
+
+    // 重新渲染以应用新的列宽
+    scheduleRender(true, 10);
+  }, [columnWidths, isMobile, scheduleRender]);
 
   // Override 变化时单独触发样式更新
   useEffect(() => {

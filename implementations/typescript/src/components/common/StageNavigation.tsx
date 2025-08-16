@@ -29,18 +29,22 @@ import {
 import { usePlannerStore } from '../../stores/plannerStore';
 import { getI18n } from '../../core/i18n';
 import { PlannerStage } from '../../types';
+import { ConfirmDialog } from './ConfirmDialog';
 
 interface StageNavigationProps {
   currentStage: PlannerStage;
 }
 
-export function StageNavigation({ currentStage }: StageNavigationProps): JSX.Element {
+export function StageNavigation({ currentStage }: StageNavigationProps): React.JSX.Element {
   // Store hooks
   const plannerStore = usePlannerStore();
   const isTransitioning = plannerStore.isTransitioning;
 
   // Local state for lazy validation messages
   const [showValidationErrors, setShowValidationErrors] = useState(false);
+
+  // 确认弹窗状态
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   // i18n
   const i18n = getI18n();
@@ -161,9 +165,7 @@ export function StageNavigation({ currentStage }: StageNavigationProps): JSX.Ele
       forwardLabel: t('ui.continue_to_stage2'),
       stageNumber: 1,
       nextStageNumber: 2,
-      // 临时bypass验证以测试第二阶段Handsontable功能
-      validation: { isValid: true, errors: [] }, // 临时bypass - 测试完后恢复validateStage1
-      // validation: validateStage1, // 原有验证逻辑 - 临时注释
+      validation: validateStage1, // 原有验证逻辑 - 恢复
     },
     [PlannerStage.STAGE2_ADJUSTMENT]: {
       canGoBack: true,
@@ -215,24 +217,26 @@ export function StageNavigation({ currentStage }: StageNavigationProps): JSX.Ele
 
   const handleRestart = useCallback((): void => {
     if (isTransitioning) return;
+    setShowConfirmDialog(true);
+  }, [isTransitioning]);
 
-    if (window.confirm(t('import_export.clear_data_confirm'))) {
-      setShowValidationErrors(false); // 重新开始时清除验证消息
+  // 确认重新开始
+  const handleConfirmRestart = useCallback((): void => {
+    setShowValidationErrors(false); // 重新开始时清除验证消息
 
-      // 使用与ImportExportControls相同的逻辑
-      plannerStore.reset();
+    // 使用与ImportExportControls相同的逻辑
+    plannerStore.reset();
 
-      // 显示成功通知（如果需要）
-      // notifications.show({
-      //   title: t('import_export.success'),
-      //   message: t('import_export.clear_success'),
-      //   color: 'blue',
-      // });
-    }
-  }, [isTransitioning, plannerStore, t]);
+    // 显示成功通知（如果需要）
+    // notifications.show({
+    //   title: t('import_export.success'),
+    //   message: t('import_export.clear_success'),
+    //   color: 'blue',
+    // });
+  }, [plannerStore]);
 
   // 获取按钮颜色和变体（即时验证状态表达）
-  const getButtonProps = () => {
+  const getButtonProps = (): { color: string; variant: string } => {
     if (!config.canGoForward) return { color: 'blue', variant: 'filled' };
 
     if (config.validation.isValid) {
@@ -243,7 +247,7 @@ export function StageNavigation({ currentStage }: StageNavigationProps): JSX.Ele
   };
 
   // 获取内容区域样式（即时验证状态表达）
-  const getContentStyle = () => {
+  const getContentStyle = (): React.CSSProperties => {
     if (!config.canGoForward) return {};
 
     if (config.validation.isValid) {
@@ -410,6 +414,19 @@ export function StageNavigation({ currentStage }: StageNavigationProps): JSX.Ele
           </Group>
         </Stack>
       </Box>
+
+      {/* 确认弹窗 */}
+      <ConfirmDialog
+        opened={showConfirmDialog}
+        onClose={() => setShowConfirmDialog(false)}
+        onConfirm={handleConfirmRestart}
+        title={t('import_export.clear_data')}
+        message={t('import_export.clear_data_confirm')}
+        confirmLabel={t('import_export.clear_data')}
+        cancelLabel={t('cancel')}
+        confirmColor="red"
+        iconType="delete"
+      />
     </div>
   );
 }

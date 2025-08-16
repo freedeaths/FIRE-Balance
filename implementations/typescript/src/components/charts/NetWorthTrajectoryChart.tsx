@@ -27,6 +27,7 @@ import { Card, Title, Text, Group, Badge, Stack } from '@mantine/core';
 import { IconTrendingUp } from '@tabler/icons-react';
 import type { YearlyState } from '../../core';
 import { getI18n } from '../../core/i18n';
+import { ResponsiveFullscreenChartWrapper, useMobileDisplay } from './ResponsiveFullscreenChartWrapper';
 
 // =============================================================================
 // Types
@@ -91,6 +92,17 @@ const formatCurrencyCompact = (value: number): string => {
     return `${(value / 1000).toFixed(0)}K`;
   } else {
     return `${Math.round(value)}`;
+  }
+};
+
+// 移动端专用的更紧凑格式
+const formatCurrencyMobile = (value: number): string => {
+  if (Math.abs(value) >= 1000000) {
+    return `${(value / 1000000).toFixed(0)}M`;
+  } else if (Math.abs(value) >= 1000) {
+    return `${Math.round(value / 1000)}K`;
+  } else {
+    return `${Math.round(value / 100)}`;
   }
 };
 
@@ -213,6 +225,294 @@ const calculateZones = (data: ChartDataPoint[]): ZoneDefinition[] => {
 };
 
 // =============================================================================
+// 图表内容子组件 - 使用mobile display context
+// =============================================================================
+
+interface NetWorthChartContentProps {
+  chartData: ChartDataPoint[];
+  height: number;
+  yAxisDomain: [number | string, number | string];
+  zones: ZoneDefinition[];
+  hiddenSeries: string[];
+  handleLegendClick: (dataKey: string) => void;
+  targetFireAge: number;
+  legalRetirementAge?: number;
+  safetyBufferMonths: number;
+  t: (key: string, variables?: Record<string, any>) => string;
+}
+
+function NetWorthChartContent({
+  chartData,
+  height,
+  yAxisDomain,
+  zones,
+  hiddenSeries,
+  handleLegendClick,
+  targetFireAge,
+  legalRetirementAge,
+  safetyBufferMonths,
+  t
+}: NetWorthChartContentProps) {
+  const { isMobilePortrait } = useMobileDisplay();
+
+  // 自定义 Tooltip
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload as ChartDataPoint;
+      return (
+        <div style={{
+          backgroundColor: 'white',
+          padding: '12px',
+          border: '1px solid #ccc',
+          borderRadius: '8px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+        }}>
+          <Text size="sm" fw={600} mb="xs">
+            {data.year} ({data.age} {t('years')})
+          </Text>
+          <Stack gap="xs">
+            <div>
+              <Text size="xs" c="dimmed">{t('chart_net_worth_label')}</Text>
+              <Text size="sm" fw={500} c={data.netWorth >= 0 ? 'green' : 'red'}>
+                {formatCurrency(data.netWorth)}
+              </Text>
+            </div>
+            <div>
+              <Text size="xs" c="dimmed">{t('safety_buffer_line', { months: safetyBufferMonths })}</Text>
+              <Text size="sm">
+                {formatCurrency(data.safetyBuffer)}
+              </Text>
+            </div>
+            <div>
+              <Text size="xs" c="dimmed">{t('chart_net_cash_flow_label')}</Text>
+              <Text size="sm" c={data.netCashFlow >= 0 ? 'green' : 'red'}>
+                {formatCurrency(data.netCashFlow)}
+              </Text>
+            </div>
+            <div>
+              <Text size="xs" c="dimmed">{t('fire_progress')}</Text>
+              <Text size="sm">
+                {(data.fireProgress * 100).toFixed(1)}%
+              </Text>
+            </div>
+            <Badge
+              size="xs"
+              color={data.isSustainable ? 'green' : 'red'}
+            >
+              {data.isSustainable ? t('feasible') : t('needs_adjustment')}
+            </Badge>
+          </Stack>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  return (
+    <ResponsiveContainer width="100%" height={height}>
+      <ComposedChart
+        data={chartData}
+        margin={isMobilePortrait ?
+          // 移动端竖屏：最小边距，最大化利用空间
+          { top: 2, right: 2, left: 2, bottom: 2 } :
+          // 桌面端/横屏：正常边距
+          { top: 5, right: 30, left: 20, bottom: 5 }
+        }
+      >
+        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+        <XAxis
+          dataKey="age"
+          type="number"
+          domain={['dataMin', 'dataMax']}
+          ticks={isMobilePortrait ?
+            // 移动端竖屏：更少的刻度
+            chartData.filter((_, index) => index % 8 === 0).map(d => d.age) :
+            // 桌面端/横屏：正常刻度
+            chartData.map(d => d.age)
+          }
+          stroke="#666"
+          fontSize={isMobilePortrait ? 10 : 12}
+          tickFormatter={(value) => Math.round(value).toString()}
+        />
+        <YAxis
+          domain={yAxisDomain}
+          stroke="#666"
+          fontSize={isMobilePortrait ? 8 : 12}
+          tickFormatter={isMobilePortrait ? formatCurrencyMobile : formatCurrencyCompact}
+          width={isMobilePortrait ? 25 : 55} // 移动端更窄的Y轴
+          axisLine={false} // 移动端隐藏Y轴线
+          tickLine={isMobilePortrait ? false : true} // 移动端隐藏刻度线
+        />
+        <Tooltip content={<CustomTooltip />} />
+
+        {/* Legend - 移动端竖屏时隐藏 */}
+        {!isMobilePortrait && (
+          <Legend
+            onClick={(props) => handleLegendClick(props.dataKey)}
+            wrapperStyle={{ paddingTop: '20px' }}
+          />
+        )}
+
+        {/* 背景区域填充 */}
+        {zones.map((zone, index) => (
+          <ReferenceArea
+            key={`zone-${index}`}
+            x1={Math.round(zone.x1 * 1000) / 1000}
+            x2={Math.round(zone.x2 * 1000) / 1000}
+            fill={zone.color}
+            stroke="none"
+            fillOpacity={0.8}
+          />
+        ))}
+
+        {/* 年度现金流线 - 移动端竖屏时隐藏 */}
+        {!isMobilePortrait && (
+          <Line
+            type="monotone"
+            dataKey="netCashFlow"
+            stroke="#9333ea"
+            strokeWidth={2}
+            strokeDasharray="5 2"
+            dot={false}
+            name={t('annual_cash_flow_line')}
+            hide={hiddenSeries.includes('netCashFlow')}
+            opacity={0.6}
+          />
+        )}
+
+        {/* 安全缓冲区线 */}
+        <Line
+          type="monotone"
+          dataKey="safetyBuffer"
+          stroke="#22c55e"
+          strokeWidth={2}
+          dot={false}
+          name={t('safety_buffer_line', { months: safetyBufferMonths })}
+          hide={hiddenSeries.includes('safetyBuffer')}
+        />
+
+        {/* 净值曲线 - 主线 */}
+        <Line
+          type="monotone"
+          dataKey="netWorth"
+          stroke="#1e3a8a"
+          strokeWidth={4}
+          dot={false}
+          name={t('net_worth_line')}
+          hide={hiddenSeries.includes('netWorth')}
+        />
+
+        {/* FIRE 目标年龄参考线 */}
+        {!isMobilePortrait ? (
+          <ReferenceLine
+            x={targetFireAge}
+            stroke="#f59e0b"
+            strokeWidth={2}
+            strokeDasharray="8 4"
+            label={{
+              value: `FIRE ${targetFireAge}`,
+              position: 'insideBottomLeft',
+              style: { fill: '#f59e0b', fontWeight: 'bold', fontSize: '12px' }
+            }}
+          />
+        ) : (
+          <ReferenceLine
+            x={targetFireAge}
+            stroke="#f59e0b"
+            strokeWidth={2}
+            strokeDasharray="8 4"
+          />
+        )}
+
+        {/* 法定退休年龄参考线 */}
+        {legalRetirementAge && (
+          !isMobilePortrait ? (
+            <ReferenceLine
+              x={legalRetirementAge}
+              stroke="#6366f1"
+              strokeWidth={2}
+              strokeDasharray="6 6"
+              label={{
+                value: `${t('legal_retirement_age')} ${legalRetirementAge}`,
+                position: 'insideBottomLeft',
+                style: { fill: '#6366f1', fontWeight: 'bold', fontSize: '12px' }
+              }}
+            />
+          ) : (
+            <ReferenceLine
+              x={legalRetirementAge}
+              stroke="#6366f1"
+              strokeWidth={2}
+              strokeDasharray="6 6"
+            />
+          )
+        )}
+
+        {/* 零线参考 */}
+        <ReferenceLine
+          y={0}
+          stroke="#ef4444"
+          strokeWidth={1}
+          strokeDasharray="2 4"
+        />
+      </ComposedChart>
+    </ResponsiveContainer>
+  );
+}
+
+// =============================================================================
+// 图例说明组件
+// =============================================================================
+
+interface LegendExplanationProps {
+  t: (key: string, variables?: Record<string, any>) => string;
+  safetyBufferMonths: number;
+  legalRetirementAge?: number;
+}
+
+function LegendExplanation({ t, safetyBufferMonths, legalRetirementAge }: LegendExplanationProps) {
+  const { isMobilePortrait } = useMobileDisplay();
+
+  // 移动端竖屏时隐藏图例说明
+  if (isMobilePortrait) {
+    return null;
+  }
+
+  return (
+    <Group justify="center" gap="lg">
+      <Group gap="xs">
+        <div style={{ width: 16, height: 4, backgroundColor: '#1e3a8a' }}></div>
+        <Text size="xs" fw={600}>{t('net_worth_line')}</Text>
+      </Group>
+      <Group gap="xs">
+        <div style={{ width: 16, height: 2, backgroundColor: '#22c55e' }}></div>
+        <Text size="xs">{t('safety_buffer_line', { months: safetyBufferMonths })}</Text>
+      </Group>
+      <Group gap="xs">
+        <div style={{
+          width: 16,
+          height: 1,
+          backgroundColor: '#9333ea',
+          opacity: 0.6,
+          backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent 2px, #9333ea 2px, #9333ea 4px)'
+        }}></div>
+        <Text size="xs" c="dimmed">{t('annual_cash_flow_line')}</Text>
+      </Group>
+      <Group gap="xs">
+        <div style={{ width: 16, height: 2, backgroundColor: '#f59e0b', borderStyle: 'dashed' }}></div>
+        <Text size="xs">{t('target_fire_age')}</Text>
+      </Group>
+      {legalRetirementAge && (
+        <Group gap="xs">
+          <div style={{ width: 16, height: 2, backgroundColor: '#6366f1', borderStyle: 'dashed' }}></div>
+          <Text size="xs">{t('legal_retirement_age')}</Text>
+        </Group>
+      )}
+    </Group>
+  );
+}
+
+// =============================================================================
 // 主组件
 // =============================================================================
 
@@ -233,6 +533,8 @@ export function NetWorthTrajectoryChart({
 
   // 检测是否为移动端
   const isMobile = useMediaQuery('(max-width: 768px)');
+  const isPortrait = useMediaQuery('(orientation: portrait)');
+  const isMobilePortrait = isMobile && isPortrait;
 
   // Legend 交互状态：控制哪些线条被隐藏
   const [hiddenSeries, setHiddenSeries] = useState<string[]>([]);
@@ -535,8 +837,8 @@ export function NetWorthTrajectoryChart({
   }
 
   return (
-    <Card withBorder>
-      <Stack gap="md">
+    <Card withBorder p={isMobile ? "xs" : "md"}>
+      <Stack gap={isMobile ? 2 : 4}>
         {/* 图表标题和关键指标 */}
         <Group justify="space-between" align="flex-start">
           <div>
@@ -576,151 +878,37 @@ export function NetWorthTrajectoryChart({
         </Group>
 
         {/* 图表 */}
-        <ResponsiveContainer width="100%" height={height}>
-          <ComposedChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-            <XAxis
-              dataKey="age"
-              type="number"
-              domain={['dataMin', 'dataMax']}
-              ticks={isMobile ?
-                // 移动端：每5岁一个刻度
-                chartData.filter((_, index) => index % 5 === 0).map(d => d.age) :
-                // 桌面端：每1岁一个刻度
-                chartData.map(d => d.age)
-              }
-              stroke="#666"
-              fontSize={12}
-              tickFormatter={(value) => Math.round(value).toString()}
+        <ResponsiveFullscreenChartWrapper
+          targetAspectRatio={3.5} // 净值轨迹图可以更扁
+          baseHeight={height}
+          chartType="composed"
+          enableFullscreen={true}
+          enableMobileScaling={true}
+        >
+          {({ height: adjustedHeight }) => (
+            <NetWorthChartContent
+              chartData={chartData}
+              height={adjustedHeight}
+              yAxisDomain={yAxisDomain}
+              zones={zones}
+              hiddenSeries={hiddenSeries}
+              handleLegendClick={handleLegendClick}
+              targetFireAge={targetFireAge}
+              legalRetirementAge={legalRetirementAge}
+              safetyBufferMonths={safetyBufferMonths}
+              t={t}
             />
-            <YAxis
-              domain={yAxisDomain}  // 使用动态计算的Y轴范围（相对值）
-              stroke="#666"
-              fontSize={12}
-              tickFormatter={formatCurrencyCompact}
-            />
-            <Tooltip content={<CustomTooltip />} />
-            <Legend
-              onClick={(props) => handleLegendClick(props.dataKey)}
-              wrapperStyle={{ paddingTop: '20px' }}
-            />
-
-            {/* 背景区域填充 - 精确插值区域 */}
-            {zones.map((zone, index) => (
-              <ReferenceArea
-                key={`zone-${index}`}
-                x1={Math.round(zone.x1 * 1000) / 1000}  // 保留3位小数
-                x2={Math.round(zone.x2 * 1000) / 1000}  // 保留3位小数
-                fill={zone.color}
-                stroke="none"
-                fillOpacity={0.8}
-              />
-            ))}
-
-            {/* 年度现金流线 - 辅助信息，放在最底层 */}
-            <Line
-              type="monotone"
-              dataKey="netCashFlow"
-              stroke="#9333ea"
-              strokeWidth={1}
-              strokeDasharray="5 5"
-              dot={false}
-              name={t('annual_cash_flow_line')}
-              hide={hiddenSeries.includes('netCashFlow')}
-              opacity={0.6}
-            />
-
-            {/* 安全缓冲区线 */}
-            <Line
-              type="monotone"
-              dataKey="safetyBuffer"
-              stroke="#22c55e"
-              strokeWidth={2}
-              dot={false}
-              name={t('safety_buffer_line', { months: safetyBufferMonths })}
-              hide={hiddenSeries.includes('safetyBuffer')}
-            />
-
-            {/* 净值曲线 - 主线，最粗最突出 */}
-            <Line
-              type="monotone"
-              dataKey="netWorth"
-              stroke="#1e3a8a"
-              strokeWidth={4}
-              dot={false}
-              name={t('net_worth_line')}
-              hide={hiddenSeries.includes('netWorth')}
-            />
-
-            {/* FIRE 目标年龄参考线 */}
-            <ReferenceLine
-              x={targetFireAge}
-              stroke="#f59e0b"
-              strokeWidth={2}
-              strokeDasharray="8 4"
-              label={{
-                value: `FIRE ${targetFireAge}`,
-                position: 'insideBottomLeft',
-                style: { fill: '#f59e0b', fontWeight: 'bold', fontSize: '12px' }
-              }}
-            />
-
-            {/* 法定退休年龄参考线 */}
-            {legalRetirementAge && (
-              <ReferenceLine
-                x={legalRetirementAge}
-                stroke="#6366f1"
-                strokeWidth={2}
-                strokeDasharray="6 6"
-                label={{
-                  value: `${t('legal_retirement_age')} ${legalRetirementAge}`,
-                  position: 'insideBottomLeft',
-                  style: { fill: '#6366f1', fontWeight: 'bold', fontSize: '12px' }
-                }}
-              />
-            )}
-
-            {/* 零线参考 */}
-            <ReferenceLine
-              y={0}
-              stroke="#ef4444"
-              strokeWidth={2}
-              strokeDasharray="4 4"
-            />
-          </ComposedChart>
-        </ResponsiveContainer>
-
-        {/* 图例说明 */}
-        <Group justify="center" gap="lg">
-          <Group gap="xs">
-            <div style={{ width: 16, height: 4, backgroundColor: '#1e3a8a' }}></div>
-            <Text size="xs" fw={600}>{t('net_worth_line')}</Text>
-          </Group>
-          <Group gap="xs">
-            <div style={{ width: 16, height: 2, backgroundColor: '#22c55e' }}></div>
-            <Text size="xs">{t('safety_buffer_line', { months: safetyBufferMonths })}</Text>
-          </Group>
-          <Group gap="xs">
-            <div style={{
-              width: 16,
-              height: 1,
-              backgroundColor: '#9333ea',
-              opacity: 0.6,
-              backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent 2px, #9333ea 2px, #9333ea 4px)'
-            }}></div>
-            <Text size="xs" c="dimmed">{t('annual_cash_flow_line')}</Text>
-          </Group>
-          <Group gap="xs">
-            <div style={{ width: 16, height: 2, backgroundColor: '#f59e0b', borderStyle: 'dashed' }}></div>
-            <Text size="xs">{t('target_fire_age')}</Text>
-          </Group>
-          {legalRetirementAge && (
-            <Group gap="xs">
-              <div style={{ width: 16, height: 2, backgroundColor: '#6366f1', borderStyle: 'dashed' }}></div>
-              <Text size="xs">{t('legal_retirement_age')}</Text>
-            </Group>
           )}
-        </Group>
+        </ResponsiveFullscreenChartWrapper>
+
+        {/* 图例说明 - 移动端竖屏时隐藏 */}
+        {!isMobilePortrait && (
+          <LegendExplanation
+            t={t}
+            safetyBufferMonths={safetyBufferMonths}
+            legalRetirementAge={legalRetirementAge}
+          />
+        )}
       </Stack>
     </Card>
   );

@@ -20,7 +20,10 @@ export interface FIRECalculationState {
   results: PlannerResults | null;
 }
 
-export function useFIRECalculation(currentStage: PlannerStage) {
+export function useFIRECalculation(currentStage: PlannerStage): FIRECalculationState & {
+  runCalculation: () => Promise<void>;
+  hasResults: boolean;
+} {
   const [calculationState, setCalculationState] = useState<FIRECalculationState>({
     isCalculating: false,
     progress: 0,
@@ -28,18 +31,17 @@ export function useFIRECalculation(currentStage: PlannerStage) {
     results: null
   });
 
-  const plannerResults = usePlannerStore(state => state.results);
-  const plannerData = usePlannerStore(state => state.data);
+  const plannerResults = usePlannerStore(state => state.data.results);
 
-  // Stage3进入时自动触发计算
+  // 只要二进三就计算
   useEffect(() => {
     if (currentStage === PlannerStage.STAGE3_ANALYSIS) {
-      // 检查是否需要重新计算
-      const needsCalculation = !plannerResults ||
-        !plannerResults.calculation_timestamp;
+      // 获取全局的 stage 变化信息
+      const transition = (window as any).__fireStageTransition; // eslint-disable-line @typescript-eslint/no-explicit-any
+      const prevStage = transition?.from;
 
-      if (needsCalculation) {
-        // 立即显示进度条
+      // 只要是从 Stage2 进入 Stage3 就计算
+      if (prevStage === PlannerStage.STAGE2_ADJUSTMENT) {
         setCalculationState(prev => ({
           ...prev,
           isCalculating: true,
@@ -47,22 +49,25 @@ export function useFIRECalculation(currentStage: PlannerStage) {
           error: null
         }));
 
-        // 稍微延迟一下再开始计算，确保UI更新
         setTimeout(() => {
           runCalculation();
         }, 100);
-      } else {
-        // 使用已有结果
-        setCalculationState(prev => ({
-          ...prev,
-          results: plannerResults,
-          error: null
-        }));
       }
     }
-  }, [currentStage]); // 只依赖 currentStage，避免无限循环
+  }, [currentStage]);
 
-  const runCalculation = async () => {
+  // 单独处理 plannerResults 的显示 - 当有结果且在 Stage3 时显示
+  useEffect(() => {
+    if (currentStage === PlannerStage.STAGE3_ANALYSIS && plannerResults?.fire_calculation) {
+      setCalculationState(prev => ({
+        ...prev,
+        results: plannerResults,
+        error: null
+      }));
+    }
+  }, [plannerResults, currentStage]);
+
+  const runCalculation = async (): Promise<void> => {
     setCalculationState(prev => ({
       ...prev,
       isCalculating: true,
@@ -79,6 +84,8 @@ export function useFIRECalculation(currentStage: PlannerStage) {
           }));
         }
       );
+
+      // 计算完成
 
       setCalculationState(prev => ({
         ...prev,
