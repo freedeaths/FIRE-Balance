@@ -245,7 +245,7 @@ function runCalculations(planner: FIREPlanner): boolean {
   return true;
 }
 
-function runAnalysis(planner: FIREPlanner): PlannerResults | null {
+async function runAnalysis(planner: FIREPlanner): Promise<PlannerResults | null> {
   printHeader("FIRE ANALYSIS RESULTS");
 
   console.log("⚙️ Running FIRE calculations...");
@@ -261,7 +261,7 @@ function runAnalysis(planner: FIREPlanner): PlannerResults | null {
 
   let results: PlannerResults;
   try {
-    results = planner.runCalculations(progressCallback);
+    results = await planner.runCalculations(progressCallback);
     console.log("\n✅ Calculations completed successfully");
   } catch (error) {
     console.log(`❌ Error during calculations: ${error}`);
@@ -551,7 +551,7 @@ function generateAnalysisReport(planner: FIREPlanner, results: PlannerResults): 
 // Main Function
 // =============================================================================
 
-function main(): void {
+async function main(): Promise<void> {
   const args = parseArgs(process.argv);
 
   if (args.help) {
@@ -609,7 +609,7 @@ function main(): void {
     }
 
     // Run analysis and show results
-    const results = runAnalysis(planner);
+    const results = await runAnalysis(planner);
     if (!results) {
       process.exit(1);
     }
@@ -635,5 +635,8 @@ function main(): void {
 
 // Run if called directly
 if (import.meta.url === `file://${process.argv[1]}`) {
-  main();
+  main().catch(error => {
+    console.error('❌ CLI error:', error);
+    process.exit(1);
+  });
 }

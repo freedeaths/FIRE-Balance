@@ -324,7 +324,7 @@ describe('FIREPlanner', () => {
       expect(updatedSettings.num_simulations).toBe(2000);
     });
 
-    test('run calculations', () => {
+    test('run calculations', async () => {
       const planner = new FIREPlanner();
       planner.setUserProfile(sampleUserProfile);
       planner.addIncomeItem(sampleIncomeItem);
@@ -334,7 +334,7 @@ describe('FIREPlanner', () => {
       // Use minimal simulations for testing
       planner.setSimulationSettings({ num_simulations: 10 });
 
-      const results = planner.runCalculations();
+      const results = await planner.runCalculations();
 
       expect(results).toBeDefined();
       expect(results.fire_calculation).toBeDefined();
@@ -342,15 +342,15 @@ describe('FIREPlanner', () => {
       expect(planner.data.results).toBe(results);
     });
 
-    test('run calculations without projection data', () => {
+    test('run calculations without projection data', async () => {
       const planner = new FIREPlanner();
 
-      expect(() => planner.runCalculations()).toThrow(
+      await expect(planner.runCalculations()).rejects.toThrow(
         'No projection data available for calculation'
       );
     });
 
-    test('calculate fire results with custom projection', () => {
+    test('calculate fire results with custom projection', async () => {
       const planner = new FIREPlanner();
       planner.setUserProfile(sampleUserProfile);
       planner.addIncomeItem(sampleIncomeItem);
@@ -362,7 +362,7 @@ describe('FIREPlanner', () => {
       ];
 
       planner.setSimulationSettings({ num_simulations: 10 });
-      const results = planner.calculateFireResults(customProjection);
+      const results = await planner.calculateFireResults(customProjection);
 
       expect(results).toBeDefined();
       expect(results.fire_calculation).toBeDefined();
@@ -535,7 +535,7 @@ describe('FIREPlanner', () => {
       expect(planner.data.overrides).toHaveLength(0);
     });
 
-    test('progression callback in calculations', () => {
+    test('progression callback in calculations', async () => {
       const planner = new FIREPlanner();
       planner.setUserProfile(sampleUserProfile);
       planner.addIncomeItem(sampleIncomeItem);
@@ -548,7 +548,7 @@ describe('FIREPlanner', () => {
         progressValues.push(progress);
       };
 
-      planner.runCalculations(progressCallback);
+      await planner.runCalculations(progressCallback);
 
       expect(progressValues.length).toBeGreaterThan(0);
       expect(progressValues).toContain(1.0); // Should reach 100%

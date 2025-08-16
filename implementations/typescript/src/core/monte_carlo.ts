@@ -138,7 +138,9 @@ export class MonteCarloSimulator {
   /**
    * Run complete Monte Carlo simulation
    */
-  run_simulation(progress_callback?: (current: number, total: number) => void): MonteCarloResult {
+  async run_simulation(progress_callback?: (current: number, total: number) => void): Promise<MonteCarloResult> {
+    // Monte Carlo 模拟开始
+
     // Reset random seed for reproducible results (equivalent to Python's behavior)
     this._reset_rng_state();
     const final_net_worths: Decimal[] = [];
@@ -154,8 +156,14 @@ export class MonteCarloSimulator {
 
     for (let run_id = 0; run_id < this.settings.num_simulations; run_id++) {
       // Report progress if callback provided
-      if (progress_callback && (run_id % Math.max(1, Math.floor(this.settings.num_simulations / 100)) === 0)) {
+      const progressInterval = Math.max(1, Math.floor(this.settings.num_simulations / 100));
+      if (progress_callback && (run_id % progressInterval === 0)) {
         progress_callback(run_id, this.settings.num_simulations);
+
+        // 给UI时间更新，但只在大量模拟时添加延迟（避免测试中的小数据集问题）
+        if (this.settings.num_simulations > 100 && run_id % (progressInterval * 10) === 0 && run_id > 0) {
+          await new Promise(resolve => setTimeout(resolve, 10));
+        }
       }
 
       // Generate random scenario with black swan events
@@ -423,7 +431,7 @@ export class MonteCarloSimulator {
   /**
    * Analyze sensitivity to a specific parameter
    */
-  analyze_sensitivity(parameter: string, variations: number[]): number[] {
+  async analyze_sensitivity(parameter: string, variations: number[]): Promise<number[]> {
     const results: number[] = [];
 
     for (const variation of variations) {
@@ -469,7 +477,7 @@ export class MonteCarloSimulator {
 
       // Run simulation with modified parameter (use same seed for consistency)
       const temp_simulator = new MonteCarloSimulator(this.engine, modified_settings, this.seed);
-      const result = temp_simulator.run_simulation();
+      const result = await temp_simulator.run_simulation();
       results.push(result.success_rate.toNumber());
     }
 

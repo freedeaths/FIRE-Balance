@@ -48,7 +48,6 @@ def render_recommendation(
             "increase_income_description",
             fireAge=params["fire_age"],
             percentage=params["percentage"],
-            amount=f"{params['amount']:,.0f}",
         )
 
     elif rec_type == "reduce_expenses":
@@ -57,7 +56,6 @@ def render_recommendation(
             "reduce_expenses_description",
             fireAge=params["fire_age"],
             percentage=params["percentage"],
-            amount=f"{params['amount']:,.0f}",
         )
     else:
         # Fallback for unknown recommendation types

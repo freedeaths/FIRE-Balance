@@ -1,6 +1,6 @@
 /**
  * Internationalization support for FIRE Planner
- * Direct TypeScript port from Python i18n.py
+ * Browser-compatible TypeScript port from Python i18n.py
  *
  * This module provides translation management with:
  * - Loading translations from shared JSON files
@@ -9,8 +9,10 @@
  * - Singleton pattern for global access
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
+// Import translations using @shared alias
+import enTranslations from '@shared/i18n/en.json';
+import zhTranslations from '@shared/i18n/zh-CN.json';
+import jaTranslations from '@shared/i18n/ja.json';
 
 // =============================================================================
 // Types
@@ -24,7 +26,14 @@ type TranslationData = Record<string, any>;
 /**
  * Language codes supported by the application
  */
-type LanguageCode = 'en' | 'zh' | 'ja';
+type LanguageCode = 'en' | 'zh-CN' | 'ja';
+
+// Translation data mapping
+const TRANSLATIONS: Record<LanguageCode, TranslationData> = {
+  'en': enTranslations,
+  'zh-CN': zhTranslations,
+  'ja': jaTranslations,
+};
 
 // =============================================================================
 // I18nManager Class
@@ -50,31 +59,21 @@ export class I18nManager {
    * Load translation data for current language
    */
   private _loadTranslations(): TranslationData {
-    // Get shared i18n directory path
-    const currentDir = __dirname;
-    const repoRoot = path.resolve(currentDir, '..', '..', '..', '..');
-    const i18nDir = path.join(repoRoot, 'shared', 'i18n');
+    // Use pre-imported translations (browser-compatible)
+    const translations = TRANSLATIONS[this.language];
 
-    let translationFile = path.join(i18nDir, `${this.language}.json`);
-
-    // Check if the primary language file exists
-    if (!fs.existsSync(translationFile)) {
-      // Fallback to English
-      translationFile = path.join(i18nDir, 'en.json');
+    if (translations && typeof translations === 'object') {
+      return translations;
     }
 
-    try {
-      if (fs.existsSync(translationFile)) {
-        const data = fs.readFileSync(translationFile, 'utf-8');
-        const parsed = JSON.parse(data);
-        return typeof parsed === 'object' && parsed !== null ? parsed : {};
-      }
-    } catch (error) {
-      // Return empty object if translation file is missing/invalid
-      console.warn(`Failed to load translations for ${this.language}:`, error);
+    // Fallback to English
+    const fallback = TRANSLATIONS['en'];
+    if (fallback && typeof fallback === 'object') {
+      console.warn(`Translations not found for ${this.language}, falling back to English`);
+      return fallback;
     }
 
-    // Return empty dict if translation file is missing/invalid
+    console.error('No translations available');
     return {};
   }
 
@@ -131,7 +130,7 @@ export class I18nManager {
    * Get list of supported language codes
    */
   getSupportedLanguages(): LanguageCode[] {
-    return ['en', 'zh', 'ja'];
+    return ['en', 'zh-CN', 'ja'];
   }
 
   /**
@@ -346,6 +345,6 @@ export class BrowserI18nManager {
   }
 
   getSupportedLanguages(): LanguageCode[] {
-    return ['en', 'zh', 'ja'];
+    return ['en', 'zh-CN', 'ja'];
   }
 }

@@ -500,9 +500,9 @@ describe('SensitivityAnalysis', () => {
     simulator = new MonteCarloSimulator(engine, settings);
   });
 
-  test('income volatility sensitivity', () => {
+  test('income volatility sensitivity', async () => {
     const variations = [0.05, 0.1, 0.15, 0.2];
-    const results = simulator.analyze_sensitivity("income_volatility", variations);
+    const results = await simulator.analyze_sensitivity("income_volatility", variations);
 
     // Should return results for each variation
     expect(results.length).toBe(4);
@@ -514,9 +514,9 @@ describe('SensitivityAnalysis', () => {
     }
   });
 
-  test('expense volatility sensitivity', () => {
+  test('expense volatility sensitivity', async () => {
     const variations = [0.02, 0.05, 0.08];
-    const results = simulator.analyze_sensitivity("expense_volatility", variations);
+    const results = await simulator.analyze_sensitivity("expense_volatility", variations);
 
     expect(results.length).toBe(3);
     for (const result of results) {
@@ -525,9 +525,9 @@ describe('SensitivityAnalysis', () => {
     }
   });
 
-  test('black swan probability sensitivity', () => {
+  test('black swan probability sensitivity', async () => {
     const variations = [0.0, 1.0]; // Off vs On
-    const results = simulator.analyze_sensitivity("black_swan_probability", variations);
+    const results = await simulator.analyze_sensitivity("black_swan_probability", variations);
 
     expect(results.length).toBe(2);
 
@@ -538,10 +538,10 @@ describe('SensitivityAnalysis', () => {
     }
   });
 
-  test('invalid parameter raises error', () => {
-    expect(() => {
-      simulator.analyze_sensitivity("invalid_parameter", [0.1, 0.2]);
-    }).toThrow();
+  test('invalid parameter raises error', async () => {
+    await expect(
+      simulator.analyze_sensitivity("invalid_parameter", [0.1, 0.2])
+    ).rejects.toThrow();
   });
 });
 
@@ -577,15 +577,15 @@ describe('SeedReproducibility', () => {
     });
   });
 
-  test('seed reproducibility', () => {
+  test('seed reproducibility', async () => {
     const seed = 12345;
 
     // Run simulation twice with same seed
     const simulator1 = new MonteCarloSimulator(engine, settings, seed);
-    const result1 = simulator1.run_simulation();
+    const result1 = await simulator1.run_simulation();
 
     const simulator2 = new MonteCarloSimulator(engine, settings, seed);
-    const result2 = simulator2.run_simulation();
+    const result2 = await simulator2.run_simulation();
 
     // Results should be identical
     expect(result1.success_rate.eq(result2.success_rate)).toBe(true);
@@ -593,13 +593,13 @@ describe('SeedReproducibility', () => {
     expect(result1.median_final_net_worth.eq(result2.median_final_net_worth)).toBe(true);
   });
 
-  test('different seeds produce different results', () => {
+  test('different seeds produce different results', async () => {
     // Run simulation with different seeds
     const simulator1 = new MonteCarloSimulator(engine, settings, 111);
-    const result1 = simulator1.run_simulation();
+    const result1 = await simulator1.run_simulation();
 
     const simulator2 = new MonteCarloSimulator(engine, settings, 222);
-    const result2 = simulator2.run_simulation();
+    const result2 = await simulator2.run_simulation();
 
     // Results should be different (with high probability)
     const different_results = (
@@ -610,13 +610,13 @@ describe('SeedReproducibility', () => {
     expect(different_results).toBe(true);
   });
 
-  test('no seed produces random results', () => {
+  test('no seed produces random results', async () => {
     // Run simulation twice without seed
     const simulator1 = new MonteCarloSimulator(engine, settings);
-    const result1 = simulator1.run_simulation();
+    const result1 = await simulator1.run_simulation();
 
     const simulator2 = new MonteCarloSimulator(engine, settings);
-    const result2 = simulator2.run_simulation();
+    const result2 = await simulator2.run_simulation();
 
     // Results should be different (with very high probability)
     const different_results = (
@@ -627,14 +627,14 @@ describe('SeedReproducibility', () => {
     expect(different_results).toBe(true);
   });
 
-  test('sensitivity analysis seed consistency', () => {
+  test('sensitivity analysis seed consistency', async () => {
     const seed = 54321;
     const simulator = new MonteCarloSimulator(engine, settings, seed);
 
     // Run sensitivity analysis twice
     const variations = [0.1, 0.2];
-    const results1 = simulator.analyze_sensitivity("income_volatility", variations);
-    const results2 = simulator.analyze_sensitivity("income_volatility", variations);
+    const results1 = await simulator.analyze_sensitivity("income_volatility", variations);
+    const results2 = await simulator.analyze_sensitivity("income_volatility", variations);
 
     // Results should be identical when using same seed
     expect(results1).toEqual(results2);
@@ -670,7 +670,7 @@ describe('MonteCarloIntegration', () => {
     engine = new FIREEngine(engine_input);
   });
 
-  test('complete simulation run', () => {
+  test('complete simulation run', async () => {
     const settings = createSimulationSettings({
       num_simulations: 50, // Small number for fast testing
       confidence_level: new Decimal(0.95),
@@ -682,7 +682,7 @@ describe('MonteCarloIntegration', () => {
     });
 
     const simulator = new MonteCarloSimulator(engine, settings);
-    const result = simulator.run_simulation();
+    const result = await simulator.run_simulation();
 
     // Check result structure
     expect(result).toBeDefined();
@@ -705,7 +705,7 @@ describe('MonteCarloIntegration', () => {
     expect(result.median_final_net_worth.lte(result.percentile_95_net_worth)).toBe(true);
   });
 
-  test('simulation without black swan events', () => {
+  test('simulation without black swan events', async () => {
     const settings = createSimulationSettings({
       num_simulations: 20,
       confidence_level: new Decimal(0.95),
@@ -717,7 +717,7 @@ describe('MonteCarloIntegration', () => {
     });
 
     const simulator = new MonteCarloSimulator(engine, settings);
-    const result = simulator.run_simulation();
+    const result = await simulator.run_simulation();
 
     // Should still have basic results
     expect(result).toBeDefined();

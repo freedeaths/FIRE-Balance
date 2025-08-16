@@ -240,15 +240,15 @@ export class FIREPlanner {
   /**
    * Run FIRE calculations and update results
    */
-  runCalculations(
+  async runCalculations(
     progressCallback?: (progress: number) => void,
     numSimulations?: number
-  ): PlannerResults {
+  ): Promise<PlannerResults> {
     if (!this.data.projection_df) {
       throw new Error('No projection data available for calculation');
     }
 
-    const results = this._runCalculations(progressCallback, numSimulations);
+    const results = await this._runCalculations(progressCallback, numSimulations);
     this.data.results = results;
     this.data = updatePlannerDataTimestamp(this.data);
 
@@ -318,11 +318,11 @@ export class FIREPlanner {
   /**
    * Calculate FIRE results from projection table without stage constraints
    */
-  calculateFireResults(
+  async calculateFireResults(
     projectionData?: AnnualProjectionRow[],
     progressCallback?: (progress: number) => void,
     numSimulations?: number
-  ): PlannerResults {
+  ): Promise<PlannerResults> {
     if (!projectionData) {
       if (!this.data.projection_df) {
         throw new Error('No projection data available for calculation');
@@ -334,7 +334,7 @@ export class FIREPlanner {
     const originalProjection = this.data.projection_df;
     this.data.projection_df = projectionData;
 
-    const results = this._runCalculations(progressCallback, numSimulations);
+    const results = await this._runCalculations(progressCallback, numSimulations);
 
     // Restore original projection
     this.data.projection_df = originalProjection;
@@ -535,10 +535,10 @@ export class FIREPlanner {
   /**
    * Run FIRE calculations and generate recommendations
    */
-  private _runCalculations(
+  private async _runCalculations(
     progressCallback?: (progress: number) => void,
     numSimulations?: number
-  ): PlannerResults {
+  ): Promise<PlannerResults> {
     if (!this.data.projection_df || !this.data.user_profile) {
       throw new Error('Missing data for calculations');
     }
@@ -581,10 +581,30 @@ export class FIREPlanner {
         : this.data.simulation_settings;
 
       const mcSimulator = new MonteCarloSimulator(engine, simulationSettings);
-      const mcResult = mcSimulator.run_simulation();
+
+      // 创建Monte Carlo专属的进度回调
+      const mcProgressCallback = progressCallback ? (current: number, total: number) => {
+        // Monte Carlo 占整体进度的30%-80% (50%的范围)
+        const mcProgress = current / total;
+        const overallProgress = 0.3 + (mcProgress * 0.5);
+
+        // 进度转换：Monte Carlo进度 -> 整体进度
+
+        // 使用setTimeout确保进度更新有时间被UI渲染
+        setTimeout(() => {
+          progressCallback(overallProgress);
+        }, 5);
+
+        // 在某些关键节点添加小延迟，让用户能看到进度
+        if (current % Math.max(1, Math.floor(total / 20)) === 0) {
+          // 每5%的进度添加一个小延迟
+        }
+      } : undefined;
+
+      const mcResult = await mcSimulator.run_simulation(mcProgressCallback);
       monteCarloSuccessRate = mcResult.success_rate;
 
-      progressCallback?.(0.7); // 70% - Monte Carlo done
+      progressCallback?.(0.8); // 80% - Monte Carlo done
 
       // Generate advisor recommendations
       const advisor = new FIREAdvisor(engineInput);

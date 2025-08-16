@@ -23,18 +23,18 @@ describe('I18nManager', () => {
     });
 
     test('custom language', () => {
-      const i18n = new I18nManager('zh');
+      const i18n = new I18nManager('zh-CN');
 
-      expect(i18n.getCurrentLanguage()).toBe('zh');
+      expect(i18n.getCurrentLanguage()).toBe('zh-CN');
     });
 
     test('supported languages', () => {
       const i18n = new I18nManager();
       const languages = i18n.getSupportedLanguages();
 
-      expect(languages).toEqual(['en', 'zh', 'ja']);
+      expect(languages).toEqual(['en', 'zh-CN', 'ja']);
       expect(languages).toContain('en');
-      expect(languages).toContain('zh');
+      expect(languages).toContain('zh-CN');
       expect(languages).toContain('ja');
     });
   });
@@ -116,8 +116,8 @@ describe('I18nManager', () => {
 
       expect(i18n.getCurrentLanguage()).toBe('en');
 
-      i18n.setLanguage('zh');
-      expect(i18n.getCurrentLanguage()).toBe('zh');
+      i18n.setLanguage('zh-CN');
+      expect(i18n.getCurrentLanguage()).toBe('zh-CN');
 
       i18n.setLanguage('ja');
       expect(i18n.getCurrentLanguage()).toBe('ja');
@@ -134,7 +134,7 @@ describe('I18nManager', () => {
         return { test: `loaded-${loadCallCount}` };
       };
 
-      i18n.setLanguage('zh'); // Should trigger reload
+      i18n.setLanguage('zh-CN'); // Should trigger reload
       expect(loadCallCount).toBe(1);
       expect((i18n as any).translations.test).toBe('loaded-1');
 
@@ -208,16 +208,16 @@ describe('Singleton Functions', () => {
   });
 
   test('set language affects global instance', () => {
-    setLanguage('zh');
+    setLanguage('zh-CN');
 
-    expect(getCurrentLanguage()).toBe('zh');
-    expect(getI18n().getCurrentLanguage()).toBe('zh');
+    expect(getCurrentLanguage()).toBe('zh-CN');
+    expect(getI18n().getCurrentLanguage()).toBe('zh-CN');
   });
 
   test('get supported languages from global', () => {
     const languages = getSupportedLanguages();
 
-    expect(languages).toEqual(['en', 'zh', 'ja']);
+    expect(languages).toEqual(['en', 'zh-CN', 'ja']);
   });
 
   test('convenience translation function', () => {
@@ -235,14 +235,14 @@ describe('Singleton Functions', () => {
 describe('Factory Functions', () => {
   test('create i18n manager', () => {
     const i18n1 = createI18nManager('en');
-    const i18n2 = createI18nManager('zh');
+    const i18n2 = createI18nManager('zh-CN');
 
     expect(i18n1).toBeInstanceOf(I18nManager);
     expect(i18n2).toBeInstanceOf(I18nManager);
     expect(i18n1).not.toBe(i18n2); // Should be different instances
 
     expect(i18n1.getCurrentLanguage()).toBe('en');
-    expect(i18n2.getCurrentLanguage()).toBe('zh');
+    expect(i18n2.getCurrentLanguage()).toBe('zh-CN');
   });
 });
 
@@ -251,7 +251,7 @@ describe('BrowserI18nManager', () => {
     const browserI18n = new BrowserI18nManager('en', '/custom-i18n');
 
     expect(browserI18n.getCurrentLanguage()).toBe('en');
-    expect(browserI18n.getSupportedLanguages()).toEqual(['en', 'zh', 'ja']);
+    expect(browserI18n.getSupportedLanguages()).toEqual(['en', 'zh-CN', 'ja']);
   });
 
   test('translation without loaded data', () => {

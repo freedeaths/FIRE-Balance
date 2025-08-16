@@ -36,6 +36,9 @@ const config: Config = {
     '@utils/(.*)$': '<rootDir>/src/utils/$1',
     '@types/(.*)$': '<rootDir>/src/types/$1',
     '@core/(.*)$': '<rootDir>/src/core/$1',
+
+    // Handle JSON imports from shared directory
+    '^@shared/i18n/(.*)\.json$': '<rootDir>/../../shared/i18n/$1.json',
   },
 
   // Transform configuration (updated to avoid deprecated globals)
@@ -43,13 +46,8 @@ const config: Config = {
     '^.+\\.(ts|tsx)$': [
       'ts-jest',
       {
-        // TypeScript configuration for ts-jest
-        tsconfig: {
-          jsx: 'react-jsx',
-          esModuleInterop: true,
-          allowSyntheticDefaultImports: true,
-        },
-        // Use the app tsconfig for path resolution
+        // Point to the correct tsconfig file (includes all necessary settings)
+        tsconfig: './tsconfig.app.json',
         useESM: false,
       },
     ],

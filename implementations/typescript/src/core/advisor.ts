@@ -117,10 +117,12 @@ export class FIREAdvisor {
       const income_rec = this._find_required_income_increase();
       const expense_rec = this._find_required_expense_reduction();
 
-      // Always add all three recommendations since we now return non-null recommendations
-      recommendations.push(delayed_rec);
-      recommendations.push(income_rec);
-      recommendations.push(expense_rec);
+      // Filter out null recommendations (matching Python behavior)
+      for (const rec of [delayed_rec, income_rec, expense_rec]) {
+        if (rec) {
+          recommendations.push(rec);
+        }
+      }
     }
 
     return recommendations;
@@ -227,7 +229,7 @@ export class FIREAdvisor {
   /**
    * Find the minimum age required for FIRE to be achievable
    */
-  private _find_required_delayed_retirement(): SimpleRecommendation {
+  private _find_required_delayed_retirement(): SimpleRecommendation | null {
     const current_expected_age = this.profile.expected_fire_age;
     const legal_retirement_age = this.profile.legal_retirement_age;
 
@@ -299,7 +301,7 @@ export class FIREAdvisor {
   /**
    * Find required income increase using binary search
    */
-  private _find_required_income_increase(): SimpleRecommendation {
+  private _find_required_income_increase(): SimpleRecommendation | null {
     const max_multiplier = new Decimal(5.0); // Maximum 500% income increase
     const precision = new Decimal(0.01); // Match Python's epsilon = 0.01
     let low = new Decimal(1.0);
@@ -355,27 +357,25 @@ export class FIREAdvisor {
       };
     }
 
-    // If no feasible income increase found within reasonable limits
-    return {
-      type: 'increase_income',
-      params: {
-        fire_age: this.profile.expected_fire_age,
-        percentage: max_multiplier.sub(new Decimal(1.0)).mul(100).toNumber(),
-        amount: 0
-      },
-      is_achievable: false,
-    };
+    // If no feasible income increase found within reasonable limits, return null like Python
+    return null;
   }
 
   /**
    * Find required expense reduction using binary search
    */
-  private _find_required_expense_reduction(): SimpleRecommendation {
+  private _find_required_expense_reduction(): SimpleRecommendation | null {
     // Binary search for the minimum expense reduction (matching Python logic)
     let low = new Decimal(0.0); // 0% reduction
     let high = new Decimal(0.8); // 80% reduction
     const epsilon = new Decimal(0.001); // Precision for binary search
     let optimal_reduction: Decimal | null = null;
+
+    console.log('🔍 [DEBUG] Starting expense reduction binary search:', {
+      projection_df_length: this.projection_df.length,
+      first_row: this.projection_df[0],
+      first_expense: this.projection_df[0]?.total_expense?.toString()
+    });
 
     while (high.sub(low).gt(epsilon)) {
       const mid = low.add(high).div(2);
@@ -404,8 +404,40 @@ export class FIREAdvisor {
 
     if (optimal_reduction && optimal_reduction.gt(new Decimal(0.001))) {
       // Calculate annual savings needed (matching Python logic)
-      const original_expense = this.projection_df[0]?.total_expense || new Decimal(0);
+      // Find first non-zero expense or use average if all are problematic
+      let original_expense = new Decimal(0);
+
+      // Try to find first non-zero expense
+      for (const row of this.projection_df) {
+        if (row.total_expense && row.total_expense.gt(0)) {
+          original_expense = row.total_expense;
+          break;
+        }
+      }
+
+      // If still zero, calculate average expense from all non-zero rows
+      if (original_expense.eq(0)) {
+        const nonZeroExpenses = this.projection_df
+          .map(row => row.total_expense)
+          .filter(exp => exp && exp.gt(0));
+
+        if (nonZeroExpenses.length > 0) {
+          const sum = nonZeroExpenses.reduce((acc, exp) => acc.add(exp), new Decimal(0));
+          original_expense = sum.div(nonZeroExpenses.length);
+        }
+      }
+
       const annual_savings = original_expense.mul(optimal_reduction);
+
+      console.log('🔍 [DEBUG] Expense reduction calculation:', {
+        optimal_reduction: optimal_reduction.toString(),
+        original_expense: original_expense.toString(),
+        annual_savings: annual_savings.toString(),
+        percentage: optimal_reduction.mul(100).toNumber(),
+        amount: annual_savings.toNumber(),
+        projection_df_length: this.projection_df.length,
+        first_expense: this.projection_df[0]?.total_expense?.toString()
+      });
 
       return {
         type: 'reduce_expenses',
@@ -420,16 +452,7 @@ export class FIREAdvisor {
     }
 
     // If no feasible expense reduction found within reasonable limits, return null like Python
-    return {
-      type: 'reduce_expenses',
-      params: {
-        fire_age: this.profile.expected_fire_age,
-        percentage: 0,
-        amount: 0.0
-      },
-      is_achievable: false,
-      monte_carlo_success_rate: undefined,
-    };
+    return null;
   }
 
   // =============================================================================
