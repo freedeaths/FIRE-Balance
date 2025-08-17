@@ -1,0 +1,27 @@
+# SPA fallback for client-side routing
+/* /index.html 200
+
+# PWA manifest with correct content type
+/manifest.json /manifest.json 200
+  Content-Type: application/manifest+json
+
+# Service Worker with correct headers
+/sw.js /sw.js 200
+  Content-Type: application/javascript
+  Service-Worker-Allowed: /
+
+# Workbox files
+/workbox-*.js /workbox-*.js 200
+  Content-Type: application/javascript
+
+# Static assets caching
+/assets/* /assets/* 200
+  Cache-Control: public, max-age=31536000, immutable
+
+# Images and icons
+/apple-touch-icon.png /apple-touch-icon.png 200
+  Cache-Control: public, max-age=31536000
+/pwa-*.png /pwa-*.png 200
+  Cache-Control: public, max-age=31536000
+/favicon.ico /favicon.ico 200
+  Cache-Control: public, max-age=31536000

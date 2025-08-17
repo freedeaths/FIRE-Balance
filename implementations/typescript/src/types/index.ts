@@ -19,20 +19,19 @@
  * Frequency type for income/expense items
  * Maps to Python's ItemFrequency enum
  */
-export type ItemFrequency = 'recurring' | 'one-time';
+export type ItemFrequency = "recurring" | "one-time";
 
 /**
  * Time unit for amount input
  * Maps to Python's TimeUnit enum
  */
-export type TimeUnit = 'monthly' | 'quarterly' | 'annually';
-
+export type TimeUnit = "monthly" | "quarterly" | "annually";
 
 /**
  * Asset liquidity levels for cash flow optimization
  * Maps to Python's LiquidityLevel enum
  */
-export type LiquidityLevel = 'high' | 'medium' | 'low';
+export type LiquidityLevel = "high" | "medium" | "low";
 
 // =============================================================================
 // Portfolio and Investment Types
@@ -89,36 +88,36 @@ export interface PortfolioConfiguration {
 export const DEFAULT_PORTFOLIO: PortfolioConfiguration = {
   asset_classes: [
     {
-      name: 'stocks',
-      display_name: 'Stocks',
+      name: "stocks",
+      display_name: "Stocks",
       allocation_percentage: 20.0,
       expected_return: 5.0,
       volatility: 15.0,
-      liquidity_level: 'medium',
+      liquidity_level: "medium",
     },
     {
-      name: 'bonds',
-      display_name: 'Bonds',
+      name: "bonds",
+      display_name: "Bonds",
       allocation_percentage: 0.0,
       expected_return: 3.0,
       volatility: 5.0,
-      liquidity_level: 'low',
+      liquidity_level: "low",
     },
     {
-      name: 'savings',
-      display_name: 'Savings',
+      name: "savings",
+      display_name: "Savings",
       allocation_percentage: 60.0,
       expected_return: 1.0,
       volatility: 5.0,
-      liquidity_level: 'low',
+      liquidity_level: "low",
     },
     {
-      name: 'cash',
-      display_name: 'Cash',
+      name: "cash",
+      display_name: "Cash",
       allocation_percentage: 20.0,
       expected_return: 0.0,
       volatility: 1.0,
-      liquidity_level: 'high',
+      liquidity_level: "high",
     },
   ],
   enable_rebalancing: true,
@@ -161,7 +160,7 @@ export interface UserProfile {
 /**
  * Default user profile matching Python defaults
  */
-export const DEFAULT_USER_PROFILE: Omit<UserProfile, 'birth_year'> = {
+export const DEFAULT_USER_PROFILE: Omit<UserProfile, "birth_year"> = {
   expected_fire_age: 50,
   legal_retirement_age: 65,
   life_expectancy: 85,
@@ -409,7 +408,7 @@ export type Result<T, E = Error> =
 /**
  * Language codes for internationalization
  */
-export type LanguageCode = 'en' | 'zh' | 'ja';
+export type LanguageCode = "en" | "zh" | "zh-CN" | "ja";
 
 /**
  * Annual projection row for stage 2 table
@@ -439,9 +438,9 @@ export interface AnnualProjectionRow {
  * Planner stages enumeration
  */
 export enum PlannerStage {
-  STAGE1_INPUT = 'stage1_input',
-  STAGE2_ADJUSTMENT = 'stage2_adjustment',
-  STAGE3_ANALYSIS = 'stage3_analysis',
+  STAGE1_INPUT = "stage1_input",
+  STAGE2_ADJUSTMENT = "stage2_adjustment",
+  STAGE3_ANALYSIS = "stage3_analysis",
 }
 
 /**
@@ -549,8 +548,14 @@ export interface EngineInput {
  */
 export interface SimpleRecommendation {
   /** Type of recommendation */
-  type: 'early_retirement' | 'delayed_retirement' | 'delayed_retirement_not_feasible' |
-        'income_adjustment' | 'increase_income' | 'expense_reduction' | 'reduce_expenses';
+  type:
+    | "early_retirement"
+    | "delayed_retirement"
+    | "delayed_retirement_not_feasible"
+    | "income_adjustment"
+    | "increase_income"
+    | "expense_reduction"
+    | "reduce_expenses";
 
   /** Parameters specific to this recommendation */
   params: Record<string, any>;

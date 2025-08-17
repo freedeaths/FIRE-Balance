@@ -8,8 +8,15 @@
  * - 全局样式设置
  */
 
-import { createTheme } from '@mantine/core';
-import { colors, typography, spacing, borderRadius, boxShadow, breakpoints } from './design-tokens';
+import { createTheme } from "@mantine/core";
+import {
+  colors,
+  typography,
+  spacing,
+  borderRadius,
+  boxShadow,
+  breakpoints,
+} from "./design-tokens";
 
 // =============================================================================
 // Custom Color Tuples for Mantine
@@ -83,14 +90,14 @@ export const theme = createTheme({
     // Use Mantine's built-in colors for other needs
   },
 
-  primaryColor: 'primary',
+  primaryColor: "primary",
   primaryShade: { light: 6, dark: 4 },
 
   // =============================================================================
   // Typography
   // =============================================================================
-  fontFamily: typography.fontFamily.sans.join(', '),
-  fontFamilyMonospace: typography.fontFamily.mono.join(', '),
+  fontFamily: typography.fontFamily.sans.join(", "),
+  fontFamilyMonospace: typography.fontFamily.mono.join(", "),
 
   fontSizes: {
     xs: typography.fontSize.xs,
@@ -112,11 +119,11 @@ export const theme = createTheme({
   // Spacing
   // =============================================================================
   spacing: {
-    xs: spacing[2],    // 8px
-    sm: spacing[3],    // 12px
-    md: spacing[4],    // 16px
-    lg: spacing[6],    // 24px
-    xl: spacing[8],    // 32px
+    xs: spacing[2], // 8px
+    sm: spacing[3], // 12px
+    md: spacing[4], // 16px
+    lg: spacing[6], // 24px
+    xl: spacing[8], // 32px
   },
 
   // =============================================================================
@@ -158,20 +165,20 @@ export const theme = createTheme({
   components: {
     Button: {
       defaultProps: {
-        radius: 'md',
+        radius: "md",
       },
       styles: (theme) => ({
         root: {
           fontWeight: typography.fontWeight.medium,
-          transition: `all ${theme.other?.transitionDuration || '200ms'} ${theme.other?.transitionEasing || 'ease-in-out'}`,
+          transition: `all ${theme.other?.transitionDuration || "200ms"} ${theme.other?.transitionEasing || "ease-in-out"}`,
 
-          '&:hover': {
-            transform: 'translateY(-1px)',
+          "&:hover": {
+            transform: "translateY(-1px)",
             boxShadow: theme.shadows.md,
           },
 
-          '&:active': {
-            transform: 'translateY(0)',
+          "&:active": {
+            transform: "translateY(0)",
           },
         },
       }),
@@ -179,15 +186,15 @@ export const theme = createTheme({
 
     Card: {
       defaultProps: {
-        shadow: 'sm',
-        radius: 'lg',
-        padding: 'lg',
+        shadow: "sm",
+        radius: "lg",
+        padding: "lg",
       },
       styles: (theme) => ({
         root: {
-          transition: `box-shadow ${theme.other?.transitionDuration || '200ms'} ${theme.other?.transitionEasing || 'ease-in-out'}`,
+          transition: `box-shadow ${theme.other?.transitionDuration || "200ms"} ${theme.other?.transitionEasing || "ease-in-out"}`,
 
-          '&:hover': {
+          "&:hover": {
             boxShadow: theme.shadows.md,
           },
         },
@@ -196,14 +203,14 @@ export const theme = createTheme({
 
     TextInput: {
       defaultProps: {
-        radius: 'md',
-        size: 'sm',
+        radius: "md",
+        size: "sm",
       },
       styles: (theme) => ({
         input: {
-          transition: `border-color ${theme.other?.transitionDuration || '200ms'} ${theme.other?.transitionEasing || 'ease-in-out'}`,
+          transition: `border-color ${theme.other?.transitionDuration || "200ms"} ${theme.other?.transitionEasing || "ease-in-out"}`,
 
-          '&:focus': {
+          "&:focus": {
             borderColor: theme.colors.primary[5],
             boxShadow: `0 0 0 3px ${theme.colors.primary[1]}`,
           },
@@ -213,14 +220,14 @@ export const theme = createTheme({
 
     NumberInput: {
       defaultProps: {
-        radius: 'md',
-        size: 'sm',
+        radius: "md",
+        size: "sm",
       },
       styles: (theme) => ({
         input: {
-          transition: `border-color ${theme.other?.transitionDuration || '200ms'} ${theme.other?.transitionEasing || 'ease-in-out'}`,
+          transition: `border-color ${theme.other?.transitionDuration || "200ms"} ${theme.other?.transitionEasing || "ease-in-out"}`,
 
-          '&:focus': {
+          "&:focus": {
             borderColor: theme.colors.primary[5],
             boxShadow: `0 0 0 3px ${theme.colors.primary[1]}`,
           },
@@ -230,14 +237,14 @@ export const theme = createTheme({
 
     Select: {
       defaultProps: {
-        radius: 'md',
-        size: 'sm',
+        radius: "md",
+        size: "sm",
       },
       styles: (theme) => ({
         input: {
-          transition: `border-color ${theme.other?.transitionDuration || '200ms'} ${theme.other?.transitionEasing || 'ease-in-out'}`,
+          transition: `border-color ${theme.other?.transitionDuration || "200ms"} ${theme.other?.transitionEasing || "ease-in-out"}`,
 
-          '&:focus': {
+          "&:focus": {
             borderColor: theme.colors.primary[5],
             boxShadow: `0 0 0 3px ${theme.colors.primary[1]}`,
           },
@@ -249,13 +256,13 @@ export const theme = createTheme({
       styles: (theme) => ({
         root: {
           borderRadius: theme.radius.lg,
-          overflow: 'hidden',
+          overflow: "hidden",
         },
 
         thead: {
           backgroundColor: theme.colors.gray[0],
 
-          '& th': {
+          "& th": {
             borderBottom: `2px solid ${theme.colors.gray[2]}`,
             fontWeight: typography.fontWeight.semibold,
             fontSize: typography.fontSize.sm,
@@ -264,15 +271,15 @@ export const theme = createTheme({
         },
 
         tbody: {
-          '& tr': {
-            transition: `background-color ${theme.other?.transitionDuration || '200ms'} ${theme.other?.transitionEasing || 'ease-in-out'}`,
+          "& tr": {
+            transition: `background-color ${theme.other?.transitionDuration || "200ms"} ${theme.other?.transitionEasing || "ease-in-out"}`,
 
-            '&:hover': {
+            "&:hover": {
               backgroundColor: theme.colors.gray[0],
             },
           },
 
-          '& td': {
+          "& td": {
             padding: `${spacing[3]} ${spacing[4]}`,
             borderBottom: `1px solid ${theme.colors.gray[1]}`,
           },
@@ -282,14 +289,14 @@ export const theme = createTheme({
 
     Modal: {
       defaultProps: {
-        radius: 'lg',
-        shadow: 'xl',
+        radius: "lg",
+        shadow: "xl",
         centered: true,
       },
       styles: (theme) => ({
         content: {
-          maxHeight: '90vh',
-          overflowY: 'auto',
+          maxHeight: "90vh",
+          overflowY: "auto",
         },
       }),
     },
@@ -298,7 +305,7 @@ export const theme = createTheme({
       styles: (theme) => ({
         header: {
           borderBottom: `1px solid ${theme.colors.gray[2]}`,
-          backdropFilter: 'blur(10px)',
+          backdropFilter: "blur(10px)",
           backgroundColor: `${theme.white}f0`, // 94% opacity
         },
 
@@ -318,8 +325,8 @@ export const theme = createTheme({
   // =============================================================================
   other: {
     // Custom properties that can be used in component styles
-    transitionDuration: '200ms',
-    transitionEasing: 'cubic-bezier(0.4, 0, 0.2, 1)',
+    transitionDuration: "200ms",
+    transitionEasing: "cubic-bezier(0.4, 0, 0.2, 1)",
 
     // Financial chart colors
     chartColors: colors.financial,
@@ -333,9 +340,8 @@ export const theme = createTheme({
     },
   },
 
-  // =============================================================================
-  // Global Styles
-  // =============================================================================
+  // NOTE: globalStyles is not supported in Mantine v7, removed to fix build errors
+  /*
   globalStyles: (theme) => ({
     // Reset and base styles
     '*, *::before, *::after': {
@@ -431,7 +437,7 @@ export const theme = createTheme({
     '.text-negative': {
       color: colors.error[600],
     },
-  }),
+  */
 });
 
 // =============================================================================
@@ -452,7 +458,7 @@ export const getResponsiveValue = <T>(
     lg?: T;
     xl?: T;
   },
-  defaultValue: T
+  defaultValue: T,
 ): T => {
   // This would be used for responsive values, but Mantine handles this internally
   return values.md || defaultValue;

@@ -1,0 +1,40 @@
+# PWA 和 Service Worker 支持的 HTTP 头设置
+
+# Service Worker 文件
+/sw.js
+  Content-Type: application/javascript
+  Service-Worker-Allowed: /
+  Cache-Control: no-cache
+
+# Workbox 文件
+/workbox-*.js
+  Content-Type: application/javascript
+  Cache-Control: public, max-age=31536000
+
+# PWA Manifest
+/manifest.json
+  Content-Type: application/manifest+json
+  Cache-Control: public, max-age=86400
+
+# 静态资源优化
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# 图标和图片
+/*.png
+  Cache-Control: public, max-age=31536000
+/*.ico
+  Cache-Control: public, max-age=31536000
+/*.svg
+  Cache-Control: public, max-age=31536000
+
+# HTML 文件 - 禁用缓存以确保更新
+/*.html
+  Cache-Control: no-cache, no-store, must-revalidate
+
+# 安全头
+/*
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: geolocation=(), camera=(), microphone=(), accelerometer=(), gyroscope=(), magnetometer=(), payment=()

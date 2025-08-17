@@ -7,8 +7,8 @@
  * - 关键里程碑标记
  */
 
-import React, { useMemo, useState } from 'react';
-import { useMediaQuery } from '@mantine/hooks';
+import React, { useMemo, useState } from "react";
+import { useMediaQuery } from "@mantine/hooks";
 import {
   LineChart,
   Line,
@@ -21,13 +21,16 @@ import {
   ReferenceLine,
   Area,
   ComposedChart,
-  ReferenceArea
-} from 'recharts';
-import { Card, Title, Text, Group, Badge, Stack } from '@mantine/core';
-import { IconTrendingUp } from '@tabler/icons-react';
-import type { YearlyState } from '../../core';
-import { getI18n } from '../../core/i18n';
-import { ResponsiveFullscreenChartWrapper, useMobileDisplay } from './ResponsiveFullscreenChartWrapper';
+  ReferenceArea,
+} from "recharts";
+import { Card, Title, Text, Group, Badge, Stack } from "@mantine/core";
+import { IconTrendingUp } from "@tabler/icons-react";
+import type { YearlyState } from "../../core";
+import { getI18n } from "../../core/i18n";
+import {
+  ResponsiveFullscreenChartWrapper,
+  useMobileDisplay,
+} from "./ResponsiveFullscreenChartWrapper";
 
 // =============================================================================
 // Types
@@ -68,9 +71,9 @@ interface ChartDataPoint {
 
 // 区域定义
 interface ZoneDefinition {
-  type: 'safe' | 'warning' | 'danger';
-  x1: number;  // 起始年龄
-  x2: number;  // 结束年龄
+  type: "safe" | "warning" | "danger";
+  x1: number; // 起始年龄
+  x2: number; // 结束年龄
   color: string;
 }
 
@@ -79,7 +82,7 @@ interface ZoneDefinition {
 // =============================================================================
 
 const formatCurrency = (value: number): string => {
-  return new Intl.NumberFormat('en-US', {
+  return new Intl.NumberFormat("en-US", {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(value);
@@ -106,18 +109,27 @@ const formatCurrencyMobile = (value: number): string => {
   }
 };
 
-const getZoneColor = (type: 'safe' | 'warning' | 'danger'): string => {
+const getZoneColor = (type: "safe" | "warning" | "danger"): string => {
   switch (type) {
-    case 'safe': return 'rgba(34, 197, 94, 0.3)';
-    case 'warning': return 'rgba(255, 193, 7, 0.4)';
-    case 'danger': return 'rgba(239, 68, 68, 0.5)';
+    case "safe":
+      return "rgba(34, 197, 94, 0.3)";
+    case "warning":
+      return "rgba(255, 193, 7, 0.4)";
+    case "danger":
+      return "rgba(239, 68, 68, 0.5)";
   }
 };
 
 // 线性插值计算交叉点
 const findIntersection = (
-  x1: number, y1: number, x2: number, y2: number,
-  x3: number, y3: number, x4: number, y4: number
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  x3: number,
+  y3: number,
+  x4: number,
+  y4: number,
 ): number | null => {
   // 计算两条线的交点
   const denominator = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
@@ -135,17 +147,23 @@ const calculateZones = (data: ChartDataPoint[]): ZoneDefinition[] => {
 
   if (data.length === 0) return zones;
 
-  const getZoneType = (netWorth: number, safetyBuffer: number): 'safe' | 'warning' | 'danger' => {
-    if (netWorth > safetyBuffer) return 'safe';
-    if (netWorth > 0) return 'warning';
-    return 'danger';
+  const getZoneType = (
+    netWorth: number,
+    safetyBuffer: number,
+  ): "safe" | "warning" | "danger" => {
+    if (netWorth > safetyBuffer) return "safe";
+    if (netWorth > 0) return "warning";
+    return "danger";
   };
 
-  const getZoneColor = (type: 'safe' | 'warning' | 'danger'): string => {
+  const getZoneColor = (type: "safe" | "warning" | "danger"): string => {
     switch (type) {
-      case 'safe': return 'rgba(34, 197, 94, 0.3)';
-      case 'warning': return 'rgba(255, 193, 7, 0.4)';
-      case 'danger': return 'rgba(239, 68, 68, 0.5)';
+      case "safe":
+        return "rgba(34, 197, 94, 0.3)";
+      case "warning":
+        return "rgba(255, 193, 7, 0.4)";
+      case "danger":
+        return "rgba(239, 68, 68, 0.5)";
     }
   };
 
@@ -155,43 +173,60 @@ const calculateZones = (data: ChartDataPoint[]): ZoneDefinition[] => {
   for (let i = 1; i < data.length; i++) {
     const prevPoint = data[i - 1];
     const currentPoint = data[i];
-    const zoneType = getZoneType(currentPoint.netWorth, currentPoint.safetyBuffer);
+    const zoneType = getZoneType(
+      currentPoint.netWorth,
+      currentPoint.safetyBuffer,
+    );
 
     if (currentZoneType !== zoneType) {
       // 区域变化，计算精确交点
       let exactBoundary = currentPoint.age; // 默认值
 
       // 1. 检查净值与安全缓冲区的交点 (safe ↔ warning 边界)
-      if ((currentZoneType === 'safe' && zoneType !== 'safe') ||
-          (currentZoneType !== 'safe' && zoneType === 'safe')) {
-
+      if (
+        (currentZoneType === "safe" && zoneType !== "safe") ||
+        (currentZoneType !== "safe" && zoneType === "safe")
+      ) {
         const intersection = findIntersection(
-          prevPoint.age, prevPoint.netWorth,        // 净值线点1
-          currentPoint.age, currentPoint.netWorth,  // 净值线点2
-          prevPoint.age, prevPoint.safetyBuffer,    // 安全缓冲区线点1
-          currentPoint.age, currentPoint.safetyBuffer // 安全缓冲区线点2
+          prevPoint.age,
+          prevPoint.netWorth, // 净值线点1
+          currentPoint.age,
+          currentPoint.netWorth, // 净值线点2
+          prevPoint.age,
+          prevPoint.safetyBuffer, // 安全缓冲区线点1
+          currentPoint.age,
+          currentPoint.safetyBuffer, // 安全缓冲区线点2
         );
 
         if (intersection !== null) {
           exactBoundary = intersection;
-          console.log(`Safe/Warning boundary at age ${intersection.toFixed(2)}`);
+          console.log(
+            `Safe/Warning boundary at age ${intersection.toFixed(2)}`,
+          );
         }
       }
 
       // 2. 检查净值与零线的交点 (warning ↔ danger 边界)
-      else if ((currentZoneType === 'warning' && zoneType === 'danger') ||
-               (currentZoneType === 'danger' && zoneType === 'warning')) {
-
+      else if (
+        (currentZoneType === "warning" && zoneType === "danger") ||
+        (currentZoneType === "danger" && zoneType === "warning")
+      ) {
         const intersection = findIntersection(
-          prevPoint.age, prevPoint.netWorth,        // 净值线点1
-          currentPoint.age, currentPoint.netWorth,  // 净值线点2
-          prevPoint.age, 0,                         // 零线点1
-          currentPoint.age, 0                       // 零线点2
+          prevPoint.age,
+          prevPoint.netWorth, // 净值线点1
+          currentPoint.age,
+          currentPoint.netWorth, // 净值线点2
+          prevPoint.age,
+          0, // 零线点1
+          currentPoint.age,
+          0, // 零线点2
         );
 
         if (intersection !== null) {
           exactBoundary = intersection;
-          console.log(`Warning/Danger boundary at age ${intersection.toFixed(2)}`);
+          console.log(
+            `Warning/Danger boundary at age ${intersection.toFixed(2)}`,
+          );
         }
       }
 
@@ -200,9 +235,9 @@ const calculateZones = (data: ChartDataPoint[]): ZoneDefinition[] => {
         type: currentZoneType,
         x1: currentZoneStart,
         x2: exactBoundary,
-        color: getZoneColor(currentZoneType)
+        color: getZoneColor(currentZoneType),
       };
-      console.log('Adding zone:', newZone);
+      console.log("Adding zone:", newZone);
       zones.push(newZone);
 
       // 开始新区域
@@ -216,9 +251,9 @@ const calculateZones = (data: ChartDataPoint[]): ZoneDefinition[] => {
     type: currentZoneType,
     x1: currentZoneStart,
     x2: data[data.length - 1].age,
-    color: getZoneColor(currentZoneType)
+    color: getZoneColor(currentZoneType),
   };
-  console.log('Adding final zone:', finalZone);
+  console.log("Adding final zone:", finalZone);
   zones.push(finalZone);
 
   return zones;
@@ -251,7 +286,7 @@ function NetWorthChartContent({
   targetFireAge,
   legalRetirementAge,
   safetyBufferMonths,
-  t
+  t,
 }: NetWorthChartContentProps) {
   const { isMobilePortrait } = useMobileDisplay();
 
@@ -260,46 +295,49 @@ function NetWorthChartContent({
     if (active && payload && payload.length) {
       const data = payload[0].payload as ChartDataPoint;
       return (
-        <div style={{
-          backgroundColor: 'white',
-          padding: '12px',
-          border: '1px solid #ccc',
-          borderRadius: '8px',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-        }}>
+        <div
+          style={{
+            backgroundColor: "white",
+            padding: "12px",
+            border: "1px solid #ccc",
+            borderRadius: "8px",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+          }}
+        >
           <Text size="sm" fw={600} mb="xs">
-            {data.year} ({data.age} {t('years')})
+            {data.year} ({data.age} {t("years")})
           </Text>
           <Stack gap="xs">
             <div>
-              <Text size="xs" c="dimmed">{t('chart_net_worth_label')}</Text>
-              <Text size="sm" fw={500} c={data.netWorth >= 0 ? 'green' : 'red'}>
+              <Text size="xs" c="dimmed">
+                {t("chart_net_worth_label")}
+              </Text>
+              <Text size="sm" fw={500} c={data.netWorth >= 0 ? "green" : "red"}>
                 {formatCurrency(data.netWorth)}
               </Text>
             </div>
             <div>
-              <Text size="xs" c="dimmed">{t('safety_buffer_line', { months: safetyBufferMonths })}</Text>
-              <Text size="sm">
-                {formatCurrency(data.safetyBuffer)}
+              <Text size="xs" c="dimmed">
+                {t("safety_buffer_line", { months: safetyBufferMonths })}
               </Text>
+              <Text size="sm">{formatCurrency(data.safetyBuffer)}</Text>
             </div>
             <div>
-              <Text size="xs" c="dimmed">{t('chart_net_cash_flow_label')}</Text>
-              <Text size="sm" c={data.netCashFlow >= 0 ? 'green' : 'red'}>
+              <Text size="xs" c="dimmed">
+                {t("chart_net_cash_flow_label")}
+              </Text>
+              <Text size="sm" c={data.netCashFlow >= 0 ? "green" : "red"}>
                 {formatCurrency(data.netCashFlow)}
               </Text>
             </div>
             <div>
-              <Text size="xs" c="dimmed">{t('fire_progress')}</Text>
-              <Text size="sm">
-                {(data.fireProgress * 100).toFixed(1)}%
+              <Text size="xs" c="dimmed">
+                {t("fire_progress")}
               </Text>
+              <Text size="sm">{(data.fireProgress * 100).toFixed(1)}%</Text>
             </div>
-            <Badge
-              size="xs"
-              color={data.isSustainable ? 'green' : 'red'}
-            >
-              {data.isSustainable ? t('feasible') : t('needs_adjustment')}
+            <Badge size="xs" color={data.isSustainable ? "green" : "red"}>
+              {data.isSustainable ? t("feasible") : t("needs_adjustment")}
             </Badge>
           </Stack>
         </div>
@@ -312,23 +350,27 @@ function NetWorthChartContent({
     <ResponsiveContainer width="100%" height={height}>
       <ComposedChart
         data={chartData}
-        margin={isMobilePortrait ?
-          // 移动端竖屏：最小边距，最大化利用空间
-          { top: 2, right: 2, left: 2, bottom: 2 } :
-          // 桌面端/横屏：正常边距
-          { top: 5, right: 30, left: 20, bottom: 5 }
+        margin={
+          isMobilePortrait
+            ? // 移动端竖屏：最小边距，最大化利用空间
+              { top: 2, right: 2, left: 2, bottom: 2 }
+            : // 桌面端/横屏：正常边距
+              { top: 5, right: 30, left: 20, bottom: 5 }
         }
       >
         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
         <XAxis
           dataKey="age"
           type="number"
-          domain={['dataMin', 'dataMax']}
-          ticks={isMobilePortrait ?
-            // 移动端竖屏：更少的刻度
-            chartData.filter((_, index) => index % 8 === 0).map(d => d.age) :
-            // 桌面端/横屏：正常刻度
-            chartData.map(d => d.age)
+          domain={["dataMin", "dataMax"]}
+          ticks={
+            isMobilePortrait
+              ? // 移动端竖屏：更少的刻度
+                chartData
+                  .filter((_, index) => index % 8 === 0)
+                  .map((d) => d.age)
+              : // 桌面端/横屏：正常刻度
+                chartData.map((d) => d.age)
           }
           stroke="#666"
           fontSize={isMobilePortrait ? 10 : 12}
@@ -338,7 +380,9 @@ function NetWorthChartContent({
           domain={yAxisDomain}
           stroke="#666"
           fontSize={isMobilePortrait ? 8 : 12}
-          tickFormatter={isMobilePortrait ? formatCurrencyMobile : formatCurrencyCompact}
+          tickFormatter={
+            isMobilePortrait ? formatCurrencyMobile : formatCurrencyCompact
+          }
           width={isMobilePortrait ? 25 : 55} // 移动端更窄的Y轴
           axisLine={false} // 移动端隐藏Y轴线
           tickLine={isMobilePortrait ? false : true} // 移动端隐藏刻度线
@@ -348,8 +392,8 @@ function NetWorthChartContent({
         {/* Legend - 移动端竖屏时隐藏 */}
         {!isMobilePortrait && (
           <Legend
-            onClick={(props) => handleLegendClick(props.dataKey)}
-            wrapperStyle={{ paddingTop: '20px' }}
+            onClick={(props) => handleLegendClick(String(props.dataKey))}
+            wrapperStyle={{ paddingTop: "20px" }}
           />
         )}
 
@@ -374,8 +418,8 @@ function NetWorthChartContent({
             strokeWidth={2}
             strokeDasharray="5 2"
             dot={false}
-            name={t('annual_cash_flow_line')}
-            hide={hiddenSeries.includes('netCashFlow')}
+            name={t("annual_cash_flow_line")}
+            hide={hiddenSeries.includes("netCashFlow")}
             opacity={0.6}
           />
         )}
@@ -387,8 +431,8 @@ function NetWorthChartContent({
           stroke="#22c55e"
           strokeWidth={2}
           dot={false}
-          name={t('safety_buffer_line', { months: safetyBufferMonths })}
-          hide={hiddenSeries.includes('safetyBuffer')}
+          name={t("safety_buffer_line", { months: safetyBufferMonths })}
+          hide={hiddenSeries.includes("safetyBuffer")}
         />
 
         {/* 净值曲线 - 主线 */}
@@ -398,8 +442,8 @@ function NetWorthChartContent({
           stroke="#1e3a8a"
           strokeWidth={4}
           dot={false}
-          name={t('net_worth_line')}
-          hide={hiddenSeries.includes('netWorth')}
+          name={t("net_worth_line")}
+          hide={hiddenSeries.includes("netWorth")}
         />
 
         {/* FIRE 目标年龄参考线 */}
@@ -411,8 +455,8 @@ function NetWorthChartContent({
             strokeDasharray="8 4"
             label={{
               value: `FIRE ${targetFireAge}`,
-              position: 'insideBottomLeft',
-              style: { fill: '#f59e0b', fontWeight: 'bold', fontSize: '12px' }
+              position: "insideBottomLeft",
+              style: { fill: "#f59e0b", fontWeight: "bold", fontSize: "12px" },
             }}
           />
         ) : (
@@ -425,17 +469,21 @@ function NetWorthChartContent({
         )}
 
         {/* 法定退休年龄参考线 */}
-        {legalRetirementAge && (
-          !isMobilePortrait ? (
+        {legalRetirementAge &&
+          (!isMobilePortrait ? (
             <ReferenceLine
               x={legalRetirementAge}
               stroke="#6366f1"
               strokeWidth={2}
               strokeDasharray="6 6"
               label={{
-                value: `${t('legal_retirement_age')} ${legalRetirementAge}`,
-                position: 'insideBottomLeft',
-                style: { fill: '#6366f1', fontWeight: 'bold', fontSize: '12px' }
+                value: `${t("legal_retirement_age")} ${legalRetirementAge}`,
+                position: "insideBottomLeft",
+                style: {
+                  fill: "#6366f1",
+                  fontWeight: "bold",
+                  fontSize: "12px",
+                },
               }}
             />
           ) : (
@@ -445,8 +493,7 @@ function NetWorthChartContent({
               strokeWidth={2}
               strokeDasharray="6 6"
             />
-          )
-        )}
+          ))}
 
         {/* 零线参考 */}
         <ReferenceLine
@@ -470,7 +517,11 @@ interface LegendExplanationProps {
   legalRetirementAge?: number;
 }
 
-function LegendExplanation({ t, safetyBufferMonths, legalRetirementAge }: LegendExplanationProps) {
+function LegendExplanation({
+  t,
+  safetyBufferMonths,
+  legalRetirementAge,
+}: LegendExplanationProps) {
   const { isMobilePortrait } = useMobileDisplay();
 
   // 移动端竖屏时隐藏图例说明
@@ -481,31 +532,54 @@ function LegendExplanation({ t, safetyBufferMonths, legalRetirementAge }: Legend
   return (
     <Group justify="center" gap="lg">
       <Group gap="xs">
-        <div style={{ width: 16, height: 4, backgroundColor: '#1e3a8a' }}></div>
-        <Text size="xs" fw={600}>{t('net_worth_line')}</Text>
+        <div style={{ width: 16, height: 4, backgroundColor: "#1e3a8a" }}></div>
+        <Text size="xs" fw={600}>
+          {t("net_worth_line")}
+        </Text>
       </Group>
       <Group gap="xs">
-        <div style={{ width: 16, height: 2, backgroundColor: '#22c55e' }}></div>
-        <Text size="xs">{t('safety_buffer_line', { months: safetyBufferMonths })}</Text>
+        <div style={{ width: 16, height: 2, backgroundColor: "#22c55e" }}></div>
+        <Text size="xs">
+          {t("safety_buffer_line", { months: safetyBufferMonths })}
+        </Text>
       </Group>
       <Group gap="xs">
-        <div style={{
-          width: 16,
-          height: 1,
-          backgroundColor: '#9333ea',
-          opacity: 0.6,
-          backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent 2px, #9333ea 2px, #9333ea 4px)'
-        }}></div>
-        <Text size="xs" c="dimmed">{t('annual_cash_flow_line')}</Text>
+        <div
+          style={{
+            width: 16,
+            height: 1,
+            backgroundColor: "#9333ea",
+            opacity: 0.6,
+            backgroundImage:
+              "repeating-linear-gradient(90deg, transparent, transparent 2px, #9333ea 2px, #9333ea 4px)",
+          }}
+        ></div>
+        <Text size="xs" c="dimmed">
+          {t("annual_cash_flow_line")}
+        </Text>
       </Group>
       <Group gap="xs">
-        <div style={{ width: 16, height: 2, backgroundColor: '#f59e0b', borderStyle: 'dashed' }}></div>
-        <Text size="xs">{t('target_fire_age')}</Text>
+        <div
+          style={{
+            width: 16,
+            height: 2,
+            backgroundColor: "#f59e0b",
+            borderStyle: "dashed",
+          }}
+        ></div>
+        <Text size="xs">{t("target_fire_age")}</Text>
       </Group>
       {legalRetirementAge && (
         <Group gap="xs">
-          <div style={{ width: 16, height: 2, backgroundColor: '#6366f1', borderStyle: 'dashed' }}></div>
-          <Text size="xs">{t('legal_retirement_age')}</Text>
+          <div
+            style={{
+              width: 16,
+              height: 2,
+              backgroundColor: "#6366f1",
+              borderStyle: "dashed",
+            }}
+          ></div>
+          <Text size="xs">{t("legal_retirement_age")}</Text>
         </Group>
       )}
     </Group>
@@ -529,11 +603,12 @@ export function NetWorthTrajectoryChart({
   showCashFlowArea = false,
 }: NetWorthTrajectoryChartProps) {
   const i18n = getI18n();
-  const t = (key: string, variables?: Record<string, any>) => i18n.t(key, variables);
+  const t = (key: string, variables?: Record<string, any>) =>
+    i18n.t(key, variables);
 
   // 检测是否为移动端
-  const isMobile = useMediaQuery('(max-width: 768px)');
-  const isPortrait = useMediaQuery('(orientation: portrait)');
+  const isMobile = useMediaQuery("(max-width: 768px)");
+  const isPortrait = useMediaQuery("(orientation: portrait)");
   const isMobilePortrait = isMobile && isPortrait;
 
   // Legend 交互状态：控制哪些线条被隐藏
@@ -542,7 +617,7 @@ export function NetWorthTrajectoryChart({
   // Legend 点击处理
   const handleLegendClick = (dataKey: string) => {
     if (hiddenSeries.includes(dataKey)) {
-      setHiddenSeries(hiddenSeries.filter(el => el !== dataKey));
+      setHiddenSeries(hiddenSeries.filter((el) => el !== dataKey));
     } else {
       setHiddenSeries([...hiddenSeries, dataKey]);
     }
@@ -554,11 +629,23 @@ export function NetWorthTrajectoryChart({
     const maxAge = lifeExpectancy || 85;
 
     return yearlyStates
-      .filter(state => state.age >= minAge && state.age <= maxAge)
-      .map(state => {
-        const netWorth = typeof state.net_worth === 'object' ? state.net_worth.toNumber() : state.net_worth;
-        const totalExpense = typeof state.total_expense === 'object' ? state.total_expense.toNumber() : state.total_expense;
-        const netCashFlow = typeof state.net_cash_flow === 'object' ? state.net_cash_flow.toNumber() : state.net_cash_flow;
+      .filter((state) => state.age >= minAge && state.age <= maxAge)
+      .map((state) => {
+        const netWorth = state.net_worth
+          ? typeof state.net_worth === "object"
+            ? (state.net_worth as any).toNumber()
+            : state.net_worth
+          : 0;
+        const totalExpense = state.total_expense
+          ? typeof state.total_expense === "object"
+            ? (state.total_expense as any).toNumber()
+            : state.total_expense
+          : 0;
+        const netCashFlow = state.net_cash_flow
+          ? typeof state.net_cash_flow === "object"
+            ? (state.net_cash_flow as any).toNumber()
+            : state.net_cash_flow
+          : 0;
 
         // 计算安全缓冲区：N个月的年支出（包含通胀调整）
         const safetyBuffer = (totalExpense * safetyBufferMonths) / 12;
@@ -570,33 +657,37 @@ export function NetWorthTrajectoryChart({
           safetyBuffer,
           netCashFlow,
           isSustainable: state.is_sustainable,
-          fireProgress: typeof state.fire_progress === 'object' ? state.fire_progress.toNumber() : state.fire_progress,
+          fireProgress: state.fire_progress
+            ? typeof state.fire_progress === "object"
+              ? (state.fire_progress as any).toNumber()
+              : state.fire_progress
+            : 0,
         };
       });
   }, [yearlyStates, currentAge, lifeExpectancy, safetyBufferMonths]);
 
   // 计算Y轴动态范围 - 根据可见线条调整
   const yAxisDomain = useMemo(() => {
-    if (chartData.length === 0) return ['auto', 'auto'];
+    if (chartData.length === 0) return ["auto", "auto"];
 
     // 根据隐藏的线条确定要包含的数据
     const visibleValues: number[] = [];
 
-    chartData.forEach(d => {
-      if (!hiddenSeries.includes('netWorth')) {
+    chartData.forEach((d) => {
+      if (!hiddenSeries.includes("netWorth")) {
         visibleValues.push(d.netWorth);
       }
-      if (!hiddenSeries.includes('safetyBuffer')) {
+      if (!hiddenSeries.includes("safetyBuffer")) {
         visibleValues.push(d.safetyBuffer);
       }
-      if (!hiddenSeries.includes('netCashFlow')) {
+      if (!hiddenSeries.includes("netCashFlow")) {
         visibleValues.push(d.netCashFlow);
       }
     });
 
     // 如果所有线条都被隐藏，使用默认范围
     if (visibleValues.length === 0) {
-      return ['auto', 'auto'];
+      return ["auto", "auto"];
     }
 
     const minValue = Math.min(...visibleValues);
@@ -607,7 +698,10 @@ export function NetWorthTrajectoryChart({
     const paddingTop = range * 0.1;
     const paddingBottom = range * 0.1;
 
-    return [minValue - paddingBottom, maxValue + paddingTop];
+    return [minValue - paddingBottom, maxValue + paddingTop] as [
+      number,
+      number,
+    ];
   }, [chartData, hiddenSeries]);
 
   // 计算区域定义 - 使用简化的连续扫描方法
@@ -617,21 +711,25 @@ export function NetWorthTrajectoryChart({
     const zones: ZoneDefinition[] = [];
 
     // 获取区域类型的辅助函数
-    const getZoneType = (netWorth: number, safetyBuffer: number): 'safe' | 'warning' | 'danger' => {
-      if (netWorth > safetyBuffer) return 'safe';
-      if (netWorth > 0) return 'warning';
-      return 'danger';
+    const getZoneType = (
+      netWorth: number,
+      safetyBuffer: number,
+    ): "safe" | "warning" | "danger" => {
+      if (netWorth > safetyBuffer) return "safe";
+      if (netWorth > 0) return "warning";
+      return "danger";
     };
 
     // 收集所有关键点（数据点 + 交点）
-    const allPoints: {age: number, netWorth: number, safetyBuffer: number}[] = [];
+    const allPoints: { age: number; netWorth: number; safetyBuffer: number }[] =
+      [];
 
     for (let i = 0; i < chartData.length; i++) {
       const current = chartData[i];
       allPoints.push({
         age: current.age,
         netWorth: current.netWorth,
-        safetyBuffer: current.safetyBuffer
+        safetyBuffer: current.safetyBuffer,
       });
 
       // 如果有下一个点，计算交点
@@ -639,22 +737,32 @@ export function NetWorthTrajectoryChart({
         const next = chartData[i + 1];
 
         // 检查净值与安全缓冲区的交点
-        const nwCrossBuffer = (current.netWorth - current.safetyBuffer) * (next.netWorth - next.safetyBuffer) < 0;
+        const nwCrossBuffer =
+          (current.netWorth - current.safetyBuffer) *
+            (next.netWorth - next.safetyBuffer) <
+          0;
         if (nwCrossBuffer) {
           const intersection = findIntersection(
-            current.age, current.netWorth,
-            next.age, next.netWorth,
-            current.age, current.safetyBuffer,
-            next.age, next.safetyBuffer
+            current.age,
+            current.netWorth,
+            next.age,
+            next.netWorth,
+            current.age,
+            current.safetyBuffer,
+            next.age,
+            next.safetyBuffer,
           );
           if (intersection !== null) {
             // 在交点处，净值等于安全缓冲区
-            const bufferValue = current.safetyBuffer +
-              (intersection - current.age) * (next.safetyBuffer - current.safetyBuffer) / (next.age - current.age);
+            const bufferValue =
+              current.safetyBuffer +
+              ((intersection - current.age) *
+                (next.safetyBuffer - current.safetyBuffer)) /
+                (next.age - current.age);
             allPoints.push({
               age: intersection,
               netWorth: bufferValue,
-              safetyBuffer: bufferValue
+              safetyBuffer: bufferValue,
             });
           }
         }
@@ -663,19 +771,26 @@ export function NetWorthTrajectoryChart({
         const nwCrossZero = current.netWorth * next.netWorth < 0;
         if (nwCrossZero) {
           const intersection = findIntersection(
-            current.age, current.netWorth,
-            next.age, next.netWorth,
-            current.age, 0,
-            next.age, 0
+            current.age,
+            current.netWorth,
+            next.age,
+            next.netWorth,
+            current.age,
+            0,
+            next.age,
+            0,
           );
           if (intersection !== null) {
             // 在交点处，净值为0
-            const bufferValue = current.safetyBuffer +
-              (intersection - current.age) * (next.safetyBuffer - current.safetyBuffer) / (next.age - current.age);
+            const bufferValue =
+              current.safetyBuffer +
+              ((intersection - current.age) *
+                (next.safetyBuffer - current.safetyBuffer)) /
+                (next.age - current.age);
             allPoints.push({
               age: intersection,
               netWorth: 0,
-              safetyBuffer: bufferValue
+              safetyBuffer: bufferValue,
             });
           }
         }
@@ -687,7 +802,10 @@ export function NetWorthTrajectoryChart({
 
     // 创建连续区域 - 根据交点性质正确切换区域类型
     let currentZoneStart = chartData[0].age;
-    let currentZoneType = getZoneType(chartData[0].netWorth, chartData[0].safetyBuffer);
+    let currentZoneType = getZoneType(
+      chartData[0].netWorth,
+      chartData[0].safetyBuffer,
+    );
 
     // 遍历原始数据点，在交点处切换区域
     for (let i = 0; i < chartData.length - 1; i++) {
@@ -695,13 +813,20 @@ export function NetWorthTrajectoryChart({
       const next = chartData[i + 1];
 
       // 检查净值与安全缓冲区的交点
-      const nwCrossBuffer = (current.netWorth - current.safetyBuffer) * (next.netWorth - next.safetyBuffer) < 0;
+      const nwCrossBuffer =
+        (current.netWorth - current.safetyBuffer) *
+          (next.netWorth - next.safetyBuffer) <
+        0;
       if (nwCrossBuffer) {
         const intersection = findIntersection(
-          current.age, current.netWorth,
-          next.age, next.netWorth,
-          current.age, current.safetyBuffer,
-          next.age, next.safetyBuffer
+          current.age,
+          current.netWorth,
+          next.age,
+          next.netWorth,
+          current.age,
+          current.safetyBuffer,
+          next.age,
+          next.safetyBuffer,
         );
         if (intersection !== null) {
           // 结束当前区域
@@ -709,12 +834,12 @@ export function NetWorthTrajectoryChart({
             type: currentZoneType,
             x1: currentZoneStart,
             x2: intersection,
-            color: getZoneColor(currentZoneType)
+            color: getZoneColor(currentZoneType),
           });
 
           // 开始新区域：Safe ↔ Warning 切换
           currentZoneStart = intersection;
-          currentZoneType = currentZoneType === 'safe' ? 'warning' : 'safe';
+          currentZoneType = currentZoneType === "safe" ? "warning" : "safe";
         }
       }
 
@@ -722,10 +847,14 @@ export function NetWorthTrajectoryChart({
       const nwCrossZero = current.netWorth * next.netWorth < 0;
       if (nwCrossZero) {
         const intersection = findIntersection(
-          current.age, current.netWorth,
-          next.age, next.netWorth,
-          current.age, 0,
-          next.age, 0
+          current.age,
+          current.netWorth,
+          next.age,
+          next.netWorth,
+          current.age,
+          0,
+          next.age,
+          0,
         );
         if (intersection !== null) {
           // 结束当前区域
@@ -733,12 +862,13 @@ export function NetWorthTrajectoryChart({
             type: currentZoneType,
             x1: currentZoneStart,
             x2: intersection,
-            color: getZoneColor(currentZoneType)
+            color: getZoneColor(currentZoneType),
           });
 
           // 开始新区域：Warning ↔ Danger 切换
           currentZoneStart = intersection;
-          currentZoneType = currentZoneType === 'warning' ? 'danger' : 'warning';
+          currentZoneType =
+            currentZoneType === "warning" ? "danger" : "warning";
         }
       }
     }
@@ -748,7 +878,7 @@ export function NetWorthTrajectoryChart({
       type: currentZoneType,
       x1: currentZoneStart,
       x2: chartData[chartData.length - 1].age,
-      color: getZoneColor(currentZoneType)
+      color: getZoneColor(currentZoneType),
     });
 
     return zones;
@@ -758,17 +888,17 @@ export function NetWorthTrajectoryChart({
   const keyMetrics = useMemo(() => {
     if (chartData.length === 0) return null;
 
-    const fireAgeData = chartData.find(d => d.age === targetFireAge);
+    const fireAgeData = chartData.find((d) => d.age === targetFireAge);
     const finalData = chartData[chartData.length - 1];
-    const peakNetWorth = Math.max(...chartData.map(d => d.netWorth));
-    const minNetWorth = Math.min(...chartData.map(d => d.netWorth));
+    const peakNetWorth = Math.max(...chartData.map((d) => d.netWorth));
+    const minNetWorth = Math.min(...chartData.map((d) => d.netWorth));
 
     return {
       fireAgeNetWorth: fireAgeData?.netWorth || 0,
       finalNetWorth: finalData.netWorth,
       peakNetWorth,
       minNetWorth,
-      sustainableYears: chartData.filter(d => d.isSustainable).length,
+      sustainableYears: chartData.filter((d) => d.isSustainable).length,
       totalYears: chartData.length,
     };
   }, [chartData, targetFireAge]);
@@ -778,46 +908,49 @@ export function NetWorthTrajectoryChart({
     if (active && payload && payload.length) {
       const data = payload[0].payload as ChartDataPoint;
       return (
-        <div style={{
-          backgroundColor: 'white',
-          padding: '12px',
-          border: '1px solid #ccc',
-          borderRadius: '8px',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-        }}>
+        <div
+          style={{
+            backgroundColor: "white",
+            padding: "12px",
+            border: "1px solid #ccc",
+            borderRadius: "8px",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+          }}
+        >
           <Text size="sm" fw={600} mb="xs">
-            {data.year} ({data.age} {t('years')})
+            {data.year} ({data.age} {t("years")})
           </Text>
           <Stack gap="xs">
             <div>
-              <Text size="xs" c="dimmed">{t('chart_net_worth_label')}</Text>
-              <Text size="sm" fw={500} c={data.netWorth >= 0 ? 'green' : 'red'}>
+              <Text size="xs" c="dimmed">
+                {t("chart_net_worth_label")}
+              </Text>
+              <Text size="sm" fw={500} c={data.netWorth >= 0 ? "green" : "red"}>
                 {formatCurrency(data.netWorth)}
               </Text>
             </div>
             <div>
-              <Text size="xs" c="dimmed">{t('safety_buffer_line', { months: safetyBufferMonths })}</Text>
-              <Text size="sm">
-                {formatCurrency(data.safetyBuffer)}
+              <Text size="xs" c="dimmed">
+                {t("safety_buffer_line", { months: safetyBufferMonths })}
               </Text>
+              <Text size="sm">{formatCurrency(data.safetyBuffer)}</Text>
             </div>
             <div>
-              <Text size="xs" c="dimmed">{t('chart_net_cash_flow_label')}</Text>
-              <Text size="sm" c={data.netCashFlow >= 0 ? 'green' : 'red'}>
+              <Text size="xs" c="dimmed">
+                {t("chart_net_cash_flow_label")}
+              </Text>
+              <Text size="sm" c={data.netCashFlow >= 0 ? "green" : "red"}>
                 {formatCurrency(data.netCashFlow)}
               </Text>
             </div>
             <div>
-              <Text size="xs" c="dimmed">{t('fire_progress')}</Text>
-              <Text size="sm">
-                {(data.fireProgress * 100).toFixed(1)}%
+              <Text size="xs" c="dimmed">
+                {t("fire_progress")}
               </Text>
+              <Text size="sm">{(data.fireProgress * 100).toFixed(1)}%</Text>
             </div>
-            <Badge
-              size="xs"
-              color={data.isSustainable ? 'green' : 'red'}
-            >
-              {data.isSustainable ? t('feasible') : t('needs_adjustment')}
+            <Badge size="xs" color={data.isSustainable ? "green" : "red"}>
+              {data.isSustainable ? t("feasible") : t("needs_adjustment")}
             </Badge>
           </Stack>
         </div>
@@ -830,7 +963,7 @@ export function NetWorthTrajectoryChart({
     return (
       <Card withBorder>
         <Text c="dimmed" ta="center" py="xl">
-          {t('cannot_generate_trajectory_chart')}
+          {t("cannot_generate_trajectory_chart")}
         </Text>
       </Card>
     );
@@ -843,32 +976,49 @@ export function NetWorthTrajectoryChart({
         <Group justify="space-between" align="flex-start">
           <div>
             <Group mb="xs">
-              <IconTrendingUp size={20} color="var(--mantine-primary-color-6)" />
+              <IconTrendingUp
+                size={20}
+                color="var(--mantine-primary-color-6)"
+              />
               <Title order={4}>
-                {title || t('net_worth_trajectory_chart_title')}
+                {title || t("net_worth_trajectory_chart_title")}
               </Title>
             </Group>
             <Text size="sm" c="dimmed">
-              {t('trajectory_description')}
+              {t("trajectory_description")}
             </Text>
           </div>
 
           {keyMetrics && (
             <Group gap="lg">
               <div>
-                <Text size="xs" c="dimmed">{t('fire_net_worth')}</Text>
-                <Text size="sm" fw={600} c={keyMetrics.fireAgeNetWorth >= 0 ? 'green' : 'red'}>
+                <Text size="xs" c="dimmed">
+                  {t("fire_net_worth")}
+                </Text>
+                <Text
+                  size="sm"
+                  fw={600}
+                  c={keyMetrics.fireAgeNetWorth >= 0 ? "green" : "red"}
+                >
                   {formatCurrency(keyMetrics.fireAgeNetWorth)}
                 </Text>
               </div>
               <div>
-                <Text size="xs" c="dimmed">{t('final_net_worth')}</Text>
-                <Text size="sm" fw={600} c={keyMetrics.finalNetWorth >= 0 ? 'green' : 'red'}>
+                <Text size="xs" c="dimmed">
+                  {t("final_net_worth")}
+                </Text>
+                <Text
+                  size="sm"
+                  fw={600}
+                  c={keyMetrics.finalNetWorth >= 0 ? "green" : "red"}
+                >
                   {formatCurrency(keyMetrics.finalNetWorth)}
                 </Text>
               </div>
               <div>
-                <Text size="xs" c="dimmed">{t('no_debt_years')}</Text>
+                <Text size="xs" c="dimmed">
+                  {t("no_debt_years")}
+                </Text>
                 <Text size="sm" fw={600}>
                   {keyMetrics.sustainableYears}/{keyMetrics.totalYears}
                 </Text>
@@ -889,7 +1039,7 @@ export function NetWorthTrajectoryChart({
             <NetWorthChartContent
               chartData={chartData}
               height={adjustedHeight}
-              yAxisDomain={yAxisDomain}
+              yAxisDomain={yAxisDomain as [number, number]}
               zones={zones}
               hiddenSeries={hiddenSeries}
               handleLegendClick={handleLegendClick}

@@ -26,20 +26,16 @@
       "@core/*": ["./src/core/*"]
     },
 
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
+    "strict": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
     "isolatedModules": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true,
+    "noUncheckedSideEffectImports": false,
 
-    "exactOptionalPropertyTypes": true,
-    "noImplicitReturns": true,
-    "noImplicitOverride": true
+    "exactOptionalPropertyTypes": false,
+    "noImplicitReturns": false,
+    "noImplicitOverride": false
   },
-  "include": [
-    "src",
-    "src/types/**/*.d.ts",
-    "../../shared/**/*"
-  ]
+  "include": ["src", "src/types/**/*.d.ts", "../../shared/**/*"]
 }

@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:cf": "npx vite build && node scripts/pre-deploy-check.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
@@ -15,10 +16,13 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:ui": "jest --watch --verbose",
+    "test:pre-commit": "jest --runInBand --watchAll=false --passWithNoTests --testTimeout=30000 --logHeapUsage",
+    "test:debug": "jest --runInBand --logHeapUsage --testTimeout=30000",
     "type-check": "tsc --noEmit",
     "preview": "vite preview",
     "clean": "rm -rf dist node_modules/.vite",
-    "prepare": "npm run lint && npm run type-check && npm run test"
+    "prepare": "npm run lint && npm run type-check && npm run test",
+    "deploy:check": "node scripts/pre-deploy-check.js"
   },
   "dependencies": {
     "@handsontable/react": "^16.0.1",

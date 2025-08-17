@@ -10,22 +10,15 @@
  * - 撤销功能：删除 override，恢复到 base 值
  */
 
-import React, { useRef, useEffect, useMemo, useCallback } from 'react';
-import {
-  Card,
-  Title,
-  Text,
-  Stack,
-  Group,
-  Alert,
-} from '@mantine/core';
-import { useMediaQuery } from '@mantine/hooks';
-import { IconTable, IconInfoCircle } from '@tabler/icons-react';
-import Handsontable from 'handsontable';
-import 'handsontable/dist/handsontable.full.min.css';
-import { usePlannerStore } from '../../stores/plannerStore';
-import { useAppStore } from '../../stores/appStore';
-import { getI18n } from '../../core/i18n';
+import React, { useRef, useEffect, useMemo, useCallback } from "react";
+import { Card, Title, Text, Stack, Group, Alert } from "@mantine/core";
+import { useMediaQuery } from "@mantine/hooks";
+import { IconTable, IconInfoCircle } from "@tabler/icons-react";
+import Handsontable from "handsontable";
+import "handsontable/dist/handsontable.full.min.css";
+import { usePlannerStore } from "../../stores/plannerStore";
+import { useAppStore } from "../../stores/appStore";
+import { getI18n } from "../../core/i18n";
 // 移除未使用的导入
 // import type { IncomeExpenseItem } from '../../types';
 
@@ -53,38 +46,40 @@ interface Stage2FinancialTableProps {
 // =============================================================================
 
 export function Stage2FinancialTable({
-  title = '财务规划表',
+  title = "财务规划表",
   showInstructions = false,
   style,
 }: Stage2FinancialTableProps) {
-
   const hotRef = useRef<HTMLDivElement>(null);
   const hotInstance = useRef<Handsontable | null>(null);
 
   // 响应式设计 - 检测移动端
-  const isMobile = useMediaQuery('(max-width: 768px)');
+  const isMobile = useMediaQuery("(max-width: 768px)");
 
   // 统一的渲染调度器，避免多个setTimeout冲突
   const renderSchedulerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const scheduleRender = useCallback((preserveScroll: boolean = true, delay: number = 10) => {
-    // 清除之前的渲染调度，避免冲突
-    if (renderSchedulerRef.current) {
-      clearTimeout(renderSchedulerRef.current);
-    }
-
-    renderSchedulerRef.current = setTimeout(() => {
-      if (!hotInstance.current) return;
-
-      if (preserveScroll) {
-        renderWithScrollPosition();
-      } else {
-        hotInstance.current.render();
+  const scheduleRender = useCallback(
+    (preserveScroll: boolean = true, delay: number = 10) => {
+      // 清除之前的渲染调度，避免冲突
+      if (renderSchedulerRef.current) {
+        clearTimeout(renderSchedulerRef.current);
       }
 
-      renderSchedulerRef.current = null;
-    }, delay);
-  }, []);
+      renderSchedulerRef.current = setTimeout(() => {
+        if (!hotInstance.current) return;
+
+        if (preserveScroll) {
+          renderWithScrollPosition();
+        } else {
+          hotInstance.current.render();
+        }
+
+        renderSchedulerRef.current = null;
+      }, delay);
+    },
+    [],
+  );
 
   // 保持滚动位置的重新渲染函数
   const renderWithScrollPosition = useCallback(() => {
@@ -92,9 +87,10 @@ export function Stage2FinancialTable({
 
     try {
       // 尝试获取滚动容器，使用更安全的路径
-      const scrollHolder = hotInstance.current.view?.wt?.wtTable?.holder ||
-                          hotInstance.current.rootElement?.querySelector('.wtHolder') ||
-                          hotInstance.current.rootElement;
+      const scrollHolder =
+        (hotInstance.current as any).view?.wt?.wtTable?.holder ||
+        hotInstance.current.rootElement?.querySelector(".wtHolder") ||
+        hotInstance.current.rootElement;
 
       if (!scrollHolder) {
         // 如果找不到滚动容器，直接渲染
@@ -118,25 +114,29 @@ export function Stage2FinancialTable({
       }, 0);
     } catch (error) {
       // 如果出错，至少保证渲染能执行
-      console.warn('Failed to preserve scroll position:', error);
+      console.warn("Failed to preserve scroll position:", error);
       hotInstance.current.render();
     }
   }, []);
 
   // i18n
-  const currentLanguage = useAppStore(state => state.currentLanguage);
+  const currentLanguage = useAppStore((state) => state.currentLanguage);
   const i18n = getI18n();
-  const t = useCallback((key: string, variables?: Record<string, unknown>) => i18n.t(key, variables), [i18n]);
+  const t = useCallback(
+    (key: string, variables?: Record<string, unknown>) =>
+      i18n.t(key, variables),
+    [i18n],
+  );
 
   // 使用正确的选择器避免无限循环
-  const userProfile = usePlannerStore(state => state.data.user_profile);
-  const incomeItems = usePlannerStore(state => state.data.income_items);
-  const expenseItems = usePlannerStore(state => state.data.expense_items);
-  const overrides = usePlannerStore(state => state.data.overrides);
+  const userProfile = usePlannerStore((state) => state.data.user_profile);
+  const incomeItems = usePlannerStore((state) => state.data.income_items);
+  const expenseItems = usePlannerStore((state) => state.data.expense_items);
+  const overrides = usePlannerStore((state) => state.data.overrides);
 
   // 窗口宽度状态，用于响应式计算
   const [windowWidth, setWindowWidth] = React.useState(() =>
-    typeof window !== 'undefined' ? window.innerWidth : 1024
+    typeof window !== "undefined" ? window.innerWidth : 1024,
   );
 
   // 监听窗口大小变化
@@ -145,13 +145,14 @@ export function Stage2FinancialTable({
       setWindowWidth(window.innerWidth);
     };
 
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   // 智能响应式列宽计算
   const columnWidths = useMemo(() => {
-    const totalColumns = (incomeItems?.length || 0) + (expenseItems?.length || 0);
+    const totalColumns =
+      (incomeItems?.length || 0) + (expenseItems?.length || 0);
 
     if (isMobile) {
       // 移动端：更紧凑的自适应列宽
@@ -161,17 +162,26 @@ export function Stage2FinancialTable({
       if (totalColumns <= 2) {
         // 列数少时，适度空间
         const firstColumnWidth = Math.min(100, availableWidth * 0.28);
-        const dataColumnWidth = Math.max(75, (availableWidth - firstColumnWidth) / totalColumns);
+        const dataColumnWidth = Math.max(
+          75,
+          (availableWidth - firstColumnWidth) / totalColumns,
+        );
         return [firstColumnWidth, ...Array(totalColumns).fill(dataColumnWidth)];
       } else if (totalColumns <= 4) {
         // 中等列数，紧凑布局
         const firstColumnWidth = Math.min(85, availableWidth * 0.22);
-        const dataColumnWidth = Math.max(65, (availableWidth - firstColumnWidth) / totalColumns);
+        const dataColumnWidth = Math.max(
+          65,
+          (availableWidth - firstColumnWidth) / totalColumns,
+        );
         return [firstColumnWidth, ...Array(totalColumns).fill(dataColumnWidth)];
       } else {
         // 列数多时，极致压缩布局
         const firstColumnWidth = Math.min(75, availableWidth * 0.18);
-        const dataColumnWidth = Math.max(55, (availableWidth - firstColumnWidth) / totalColumns);
+        const dataColumnWidth = Math.max(
+          55,
+          (availableWidth - firstColumnWidth) / totalColumns,
+        );
         return [firstColumnWidth, ...Array(totalColumns).fill(dataColumnWidth)];
       }
     } else {
@@ -186,87 +196,98 @@ export function Stage2FinancialTable({
     }
   }, [incomeItems, expenseItems, isMobile, windowWidth]);
 
-  const addOverride = usePlannerStore(state => state.addOverride);
-  const updateOverride = usePlannerStore(state => state.updateOverride);
-  const removeOverride = usePlannerStore(state => state.removeOverride);
-  const updateProjectionData = usePlannerStore(state => state.updateProjectionData);
+  const addOverride = usePlannerStore((state) => state.addOverride);
+  const updateOverride = usePlannerStore((state) => state.updateOverride);
+  const removeOverride = usePlannerStore((state) => state.removeOverride);
+  const updateProjectionData = usePlannerStore(
+    (state) => state.updateProjectionData,
+  );
 
   // 检测数值序列类型
-  const detectSequenceType = useCallback((values: number[]): 'copy' | 'arithmetic' | 'geometric' | 'mixed' => {
-    if (values.length === 1) return 'copy';
-    if (values.length === 2) return 'arithmetic';
+  const detectSequenceType = useCallback(
+    (values: number[]): "copy" | "arithmetic" | "geometric" | "mixed" => {
+      if (values.length === 1) return "copy";
+      if (values.length === 2) return "arithmetic";
 
-    // 检测等差数列
-    const diff = values[1] - values[0];
-    let isArithmetic = true;
-    for (let i = 2; i < values.length; i++) {
-      if (Math.abs((values[i] - values[i-1]) - diff) > 0.01) {
-        isArithmetic = false;
-        break;
-      }
-    }
-    if (isArithmetic) return 'arithmetic';
-
-    // 检测等比数列（用乘法验证）
-    if (values[0] !== 0 && values[1] !== 0) {
-      const ratio = values[1] / values[0];
-      let isGeometric = true;
+      // 检测等差数列
+      const diff = values[1] - values[0];
+      let isArithmetic = true;
       for (let i = 2; i < values.length; i++) {
-        if (values[i-1] === 0 || Math.abs(values[i] - values[i-1] * ratio) > 0.01) {
-          isGeometric = false;
+        if (Math.abs(values[i] - values[i - 1] - diff) > 0.01) {
+          isArithmetic = false;
           break;
         }
       }
-      if (isGeometric && Math.abs(ratio - 1) > 0.01) return 'geometric';
-    }
+      if (isArithmetic) return "arithmetic";
 
-    return 'mixed';
-  }, []);
+      // 检测等比数列（用乘法验证）
+      if (values[0] !== 0 && values[1] !== 0) {
+        const ratio = values[1] / values[0];
+        let isGeometric = true;
+        for (let i = 2; i < values.length; i++) {
+          if (
+            values[i - 1] === 0 ||
+            Math.abs(values[i] - values[i - 1] * ratio) > 0.01
+          ) {
+            isGeometric = false;
+            break;
+          }
+        }
+        if (isGeometric && Math.abs(ratio - 1) > 0.01) return "geometric";
+      }
+
+      return "mixed";
+    },
+    [],
+  );
 
   // 生成自动填充值
-  const generateAutofillValues = useCallback((selectedValues: number[], targetLength: number): number[] => {
-    const sequenceType = detectSequenceType(selectedValues);
-    const result: number[] = [...selectedValues];
+  const generateAutofillValues = useCallback(
+    (selectedValues: number[], targetLength: number): number[] => {
+      const sequenceType = detectSequenceType(selectedValues);
+      const result: number[] = [...selectedValues];
 
-    switch (sequenceType) {
-      case 'copy':
-        const copyValue = selectedValues[0];
-        for (let i = selectedValues.length; i < targetLength; i++) {
-          result.push(copyValue);
-        }
-        break;
+      switch (sequenceType) {
+        case "copy":
+          const copyValue = selectedValues[0];
+          for (let i = selectedValues.length; i < targetLength; i++) {
+            result.push(copyValue);
+          }
+          break;
 
-      case 'arithmetic':
-        const diff = selectedValues[1] - selectedValues[0];
-        let lastValue = selectedValues[selectedValues.length - 1];
-        for (let i = selectedValues.length; i < targetLength; i++) {
-          lastValue += diff;
-          result.push(lastValue);
-        }
-        break;
+        case "arithmetic":
+          const diff = selectedValues[1] - selectedValues[0];
+          let lastValue = selectedValues[selectedValues.length - 1];
+          for (let i = selectedValues.length; i < targetLength; i++) {
+            lastValue += diff;
+            result.push(lastValue);
+          }
+          break;
 
-      case 'geometric':
-        const ratio = selectedValues[1] / selectedValues[0];
-        let lastGeoValue = selectedValues[selectedValues.length - 1];
-        for (let i = selectedValues.length; i < targetLength; i++) {
-          lastGeoValue *= ratio;
-          result.push(lastGeoValue);
-        }
-        break;
+        case "geometric":
+          const ratio = selectedValues[1] / selectedValues[0];
+          let lastGeoValue = selectedValues[selectedValues.length - 1];
+          for (let i = selectedValues.length; i < targetLength; i++) {
+            lastGeoValue *= ratio;
+            result.push(lastGeoValue);
+          }
+          break;
 
-      case 'mixed':
-        const lastTwo = selectedValues.slice(-2);
-        const mixedDiff = lastTwo[1] - lastTwo[0];
-        let lastMixedValue = selectedValues[selectedValues.length - 1];
-        for (let i = selectedValues.length; i < targetLength; i++) {
-          lastMixedValue += mixedDiff;
-          result.push(lastMixedValue);
-        }
-        break;
-    }
+        case "mixed":
+          const lastTwo = selectedValues.slice(-2);
+          const mixedDiff = lastTwo[1] - lastTwo[0];
+          let lastMixedValue = selectedValues[selectedValues.length - 1];
+          for (let i = selectedValues.length; i < targetLength; i++) {
+            lastMixedValue += mixedDiff;
+            result.push(lastMixedValue);
+          }
+          break;
+      }
 
-    return result;
-  }, [detectSequenceType]);
+      return result;
+    },
+    [detectSequenceType],
+  );
 
   // 判断列是否可编辑
   const isColumnEditable = useCallback((col: number): boolean => {
@@ -297,32 +318,36 @@ export function Stage2FinancialTable({
       const year = birthYear + age;
       const row: Stage2ProjectionRow = { year, age };
 
-      allItems.forEach(item => {
+      allItems.forEach((item) => {
         if (age >= item.start_age && age <= (item.end_age || 999)) {
           const yearsFromStart = age - item.start_age;
           let baseAmount = item.after_tax_amount_per_period;
 
-          if (item.frequency === 'recurring') {
-            if (item.time_unit === 'monthly') {
+          if (item.frequency === "recurring") {
+            if (item.time_unit === "monthly") {
               baseAmount = baseAmount * 12;
             }
-          } else if (item.frequency === 'one-time') {
+          } else if (item.frequency === "one-time") {
             if (yearsFromStart !== 0) {
               row[item.id as string] = 0;
               return;
             }
           }
 
-          const isIncomeItem = incomeItems.some((inc: any) => inc.id === item.id);
+          const isIncomeItem = incomeItems.some(
+            (inc: any) => inc.id === item.id,
+          );
           let currentAmount: number;
 
           if (isIncomeItem) {
             const itemGrowthRate = (item.annual_growth_rate || 0) / 100;
-            currentAmount = baseAmount * Math.pow(1 + itemGrowthRate, yearsFromStart);
+            currentAmount =
+              baseAmount * Math.pow(1 + itemGrowthRate, yearsFromStart);
           } else {
             const itemGrowthRate = (item.annual_growth_rate || 0) / 100;
             const totalGrowthRate = inflationRate + itemGrowthRate;
-            currentAmount = baseAmount * Math.pow(1 + totalGrowthRate, yearsFromStart);
+            currentAmount =
+              baseAmount * Math.pow(1 + totalGrowthRate, yearsFromStart);
           }
 
           row[item.id as string] = Math.round(currentAmount);
@@ -341,11 +366,11 @@ export function Stage2FinancialTable({
   const finalProjectionData = useMemo((): Stage2ProjectionRow[] => {
     if (overrides.length === 0) return baseProjectionData;
 
-    return baseProjectionData.map(row => {
+    return baseProjectionData.map((row) => {
       const finalRow = { ...row };
 
       // 应用该年龄的所有 override
-      overrides.forEach(override => {
+      overrides.forEach((override) => {
         if (override.age === row.age) {
           finalRow[override.item_id] = override.value;
         }
@@ -357,24 +382,25 @@ export function Stage2FinancialTable({
 
   // 计算并保存聚合投影数据到 plannerStore（供 Stage3 使用）
   useEffect(() => {
-    if (finalProjectionData.length === 0 || !incomeItems || !expenseItems) return;
+    if (finalProjectionData.length === 0 || !incomeItems || !expenseItems)
+      return;
 
-    const aggregatedProjectionData = finalProjectionData.map(row => {
+    const aggregatedProjectionData = finalProjectionData.map((row) => {
       let totalIncome = 0;
       let totalExpense = 0;
 
       // 计算该行的总收入
-      incomeItems.forEach(item => {
+      incomeItems.forEach((item) => {
         const value = row[item.id as string];
-        if (typeof value === 'number') {
+        if (typeof value === "number") {
           totalIncome += value;
         }
       });
 
       // 计算该行的总支出
-      expenseItems.forEach(item => {
+      expenseItems.forEach((item) => {
         const value = row[item.id as string];
-        if (typeof value === 'number') {
+        if (typeof value === "number") {
           totalExpense += value;
         }
       });
@@ -399,7 +425,7 @@ export function Stage2FinancialTable({
     const tableData = [];
 
     // 表头
-    const headers = [t('table.headers.year_age')];
+    const headers = [t("table.headers.year_age")];
     incomeItems.forEach((item: any) => {
       headers.push(`💰 ${item.name}`);
     });
@@ -409,10 +435,15 @@ export function Stage2FinancialTable({
     tableData.push(headers);
 
     // 数据行
-    finalProjectionData.forEach(rowData => {
-      const row = [t('table.row.year_age_format', { year: rowData.year, age: rowData.age })];
+    finalProjectionData.forEach((rowData) => {
+      const row = [
+        t("table.row.year_age_format", {
+          year: rowData.year,
+          age: rowData.age,
+        }),
+      ];
       allItems.forEach((item: any) => {
-        row.push(rowData[item.id as string] || 0);
+        row.push(String(rowData[item.id] || 0));
       });
       tableData.push(row);
     });
@@ -428,20 +459,25 @@ export function Stage2FinancialTable({
     const tableData = [];
 
     // 表头
-    const headers = [t('table.headers.year_age')];
-    incomeItems.forEach(item => {
+    const headers = [t("table.headers.year_age")];
+    incomeItems.forEach((item) => {
       headers.push(`💰 ${item.name}`);
     });
-    expenseItems.forEach(item => {
+    expenseItems.forEach((item) => {
       headers.push(`💸 ${item.name}`);
     });
     tableData.push(headers);
 
     // 数据行
-    baseProjectionData.forEach(rowData => {
-      const row = [t('table.row.year_age_format', { year: rowData.year, age: rowData.age })];
+    baseProjectionData.forEach((rowData) => {
+      const row = [
+        t("table.row.year_age_format", {
+          year: rowData.year,
+          age: rowData.age,
+        }),
+      ];
       allItems.forEach((item: any) => {
-        row.push(rowData[item.id as string] || 0);
+        row.push(String(rowData[item.id] || 0));
       });
       tableData.push(row);
     });
@@ -450,66 +486,80 @@ export function Stage2FinancialTable({
   }, [baseProjectionData, incomeItems, expenseItems, t, currentLanguage]);
 
   // 工具函数：根据列索引获取项目ID
-  const getItemIdFromColumn = useCallback((col: number): string | null => {
-    if (col < 1) return null; // 第0列是年份
+  const getItemIdFromColumn = useCallback(
+    (col: number): string | null => {
+      if (col < 1) return null; // 第0列是年份
 
-    const allItems = [...(incomeItems || []), ...(expenseItems || [])];
-    const itemIndex = col - 1;
+      const allItems = [...(incomeItems || []), ...(expenseItems || [])];
+      const itemIndex = col - 1;
 
-    return allItems[itemIndex]?.id || null;
-  }, [incomeItems, expenseItems]);
+      return allItems[itemIndex]?.id || null;
+    },
+    [incomeItems, expenseItems],
+  );
 
   // 工具函数：检查单元格是否被 override
-  const isCellOverridden = useCallback((row: number, col: number): boolean => {
-    if (row === 0 || col < 1) return false; // 跳过表头和年份列
+  const isCellOverridden = useCallback(
+    (row: number, col: number): boolean => {
+      if (row === 0 || col < 1) return false; // 跳过表头和年份列
 
-    // 使用 baseProjectionData 保持与 handleUndoOverride 一致
-    const age = baseProjectionData[row - 1]?.age;
-    const itemId = getItemIdFromColumn(col);
+      // 使用 baseProjectionData 保持与 handleUndoOverride 一致
+      const age = baseProjectionData[row - 1]?.age;
+      const itemId = getItemIdFromColumn(col);
 
-    if (!age || !itemId) return false;
+      if (!age || !itemId) return false;
 
-    // 动态获取最新的 overrides 状态，避免依赖闭包
-    const currentOverrides = usePlannerStore.getState().data.overrides || [];
-    return currentOverrides.some(override =>
-      override.age === age && override.item_id === itemId
-    );
-  }, [baseProjectionData, getItemIdFromColumn]);
+      // 动态获取最新的 overrides 状态，避免依赖闭包
+      const currentOverrides = usePlannerStore.getState().data.overrides || [];
+      return currentOverrides.some(
+        (override) => override.age === age && override.item_id === itemId,
+      );
+    },
+    [baseProjectionData, getItemIdFromColumn],
+  );
 
   // 处理撤销 override
-  const handleUndoOverride = useCallback((row: number, col: number) => {
-    // 使用 baseProjectionData 获取正确的年龄信息
-    const age = baseProjectionData[row - 1]?.age;
-    const itemId = getItemIdFromColumn(col);
-    const originalValue = baseTableData[row]?.[col];
+  const handleUndoOverride = useCallback(
+    (row: number, col: number) => {
+      // 使用 baseProjectionData 获取正确的年龄信息
+      const age = baseProjectionData[row - 1]?.age;
+      const itemId = getItemIdFromColumn(col);
+      const originalValue = baseTableData[row]?.[col];
 
+      if (age && itemId && originalValue !== undefined) {
+        // 恢复到原始值
+        hotInstance.current?.setDataAtCell(row, col, originalValue);
 
-    if (age && itemId && originalValue !== undefined) {
-      // 恢复到原始值
-      hotInstance.current?.setDataAtCell(row, col, originalValue);
+        // 删除 override - 动态获取最新的 overrides 状态
+        const currentOverrides =
+          usePlannerStore.getState().data.overrides || [];
+        const existingIndex = currentOverrides.findIndex(
+          (override) => override.age === age && override.item_id === itemId,
+        );
+        if (existingIndex >= 0) {
+          removeOverride(existingIndex);
+        }
 
-      // 删除 override - 动态获取最新的 overrides 状态
-      const currentOverrides = usePlannerStore.getState().data.overrides || [];
-      const existingIndex = currentOverrides.findIndex(
-        override => override.age === age && override.item_id === itemId
-      );
-      if (existingIndex >= 0) {
-        removeOverride(existingIndex);
+        // 重新渲染以更新样式，保持滚动位置
+        // 使用合适延迟，确保 setDataAtCell 完成
+        scheduleRender(true, 30);
       }
-
-      // 重新渲染以更新样式，保持滚动位置
-      // 使用合适延迟，确保 setDataAtCell 完成
-      scheduleRender(true, 30);
-    }
-  }, [baseProjectionData, getItemIdFromColumn, baseTableData, removeOverride, scheduleRender]);
+    },
+    [
+      baseProjectionData,
+      getItemIdFromColumn,
+      baseTableData,
+      removeOverride,
+      scheduleRender,
+    ],
+  );
 
   // 创建 Handsontable
   useEffect(() => {
     if (!hotRef.current || tableData.length === 0) return;
 
-
     hotInstance.current = new Handsontable(hotRef.current, {
-      licenseKey: 'non-commercial-and-evaluation',
+      licenseKey: "non-commercial-and-evaluation",
       data: tableData,
       colWidths: columnWidths,
       rowHeights: 35,
@@ -518,8 +568,8 @@ export function Stage2FinancialTable({
       fixedRowsTop: 1, // 冻结首行作为表头
       contextMenu: {
         items: {
-          'undo_override': {
-            name: t('table.context_menu.undo_override'),
+          undo_override: {
+            name: t("table.context_menu.undo_override"),
             callback: () => {
               const selection = hotInstance.current?.getSelected();
               if (selection) {
@@ -528,9 +578,9 @@ export function Stage2FinancialTable({
                   handleUndoOverride(row, col);
                 }
               }
-            }
-          }
-        }
+            },
+          },
+        },
       },
       manualColumnResize: !isMobile, // 移动端禁用手动调整列宽，保持响应式设计
 
@@ -541,13 +591,13 @@ export function Stage2FinancialTable({
 
       // 列配置
       columns: [
-        { type: 'text', readOnly: true, className: 'htCenter htMiddle' }, // 年份列
+        { type: "text", readOnly: true, className: "htCenter htMiddle" }, // 年份列
         ...Array(incomeItems.length + expenseItems.length).fill({
-          type: 'numeric',
-          numericFormat: { pattern: '0,0' },
-          className: 'htRight',
-          readOnly: false
-        })
+          type: "numeric",
+          numericFormat: { pattern: "0,0" },
+          className: "htRight",
+          readOnly: false,
+        }),
       ],
 
       // 单元格渲染
@@ -556,62 +606,76 @@ export function Stage2FinancialTable({
 
         if (row === 0) {
           // 表头
-          cellProperties.className = 'htCenter htMiddle';
-          cellProperties.renderer = function(_instance: any, td: HTMLElement) {
+          cellProperties.className = "htCenter htMiddle";
+          cellProperties.renderer = function (_instance: any, td: HTMLElement) {
             Handsontable.renderers.TextRenderer.apply(this, arguments as any);
-            td.style.backgroundColor = '#f8f9fa';
-            td.style.fontWeight = 'bold';
-            td.style.color = '#495057';
-            td.style.borderBottom = '2px solid #dee2e6';
+            td.style.backgroundColor = "#f8f9fa";
+            td.style.fontWeight = "bold";
+            td.style.color = "#495057";
+            td.style.borderBottom = "2px solid #dee2e6";
           };
           cellProperties.readOnly = true;
         } else if (col === 0) {
           // 年份列
-          cellProperties.className = 'htCenter htMiddle';
-          cellProperties.renderer = function(_instance: any, td: HTMLElement) {
+          cellProperties.className = "htCenter htMiddle";
+          cellProperties.renderer = function (_instance: any, td: HTMLElement) {
             Handsontable.renderers.TextRenderer.apply(this, arguments as any);
-            td.style.backgroundColor = '#f8f9fa';
-            td.style.fontWeight = 'bold';
-            td.style.color = '#495057';
-            td.style.borderRight = '2px solid #dee2e6';
+            td.style.backgroundColor = "#f8f9fa";
+            td.style.fontWeight = "bold";
+            td.style.color = "#495057";
+            td.style.borderRight = "2px solid #dee2e6";
           };
           cellProperties.readOnly = true;
         } else {
           // 数据列
-          cellProperties.renderer = function(_instance: any, td: HTMLElement, row: number, col: number, _prop: any, value: any) {
-            Handsontable.renderers.NumericRenderer.apply(this, arguments as any);
+          cellProperties.renderer = function (
+            _instance: any,
+            td: HTMLElement,
+            row: number,
+            col: number,
+            _prop: any,
+            value: any,
+          ) {
+            Handsontable.renderers.NumericRenderer.apply(
+              this,
+              arguments as any,
+            );
 
             const isOverridden = isCellOverridden(row, col);
             const itemId = getItemIdFromColumn(col);
-            const isIncomeItem = itemId && incomeItems.some(item => item.id === itemId);
+            const isIncomeItem =
+              itemId && incomeItems.some((item) => item.id === itemId);
 
             // 背景色
-            let baseColor = '';
+            let baseColor = "";
             if (isIncomeItem) {
-              baseColor = '#e8f5e8'; // 收入 - 绿色系
+              baseColor = "#e8f5e8"; // 收入 - 绿色系
             } else {
-              baseColor = '#ffeaea'; // 支出 - 红色系
+              baseColor = "#ffeaea"; // 支出 - 红色系
             }
             td.style.backgroundColor = baseColor;
 
             // Override 橙色边框
             if (isOverridden) {
-              td.style.border = '3px solid #ff9f40';
-              td.style.boxSizing = 'border-box';
+              td.style.border = "3px solid #ff9f40";
+              td.style.boxSizing = "border-box";
 
               // 添加 tooltip
               const originalValue = baseTableData[row]?.[col];
               if (originalValue !== undefined) {
-                td.title = t('table.override.tooltip_full', { value, originalValue });
+                td.title = t("table.override.tooltip_full", {
+                  value,
+                  originalValue,
+                });
               }
             } else {
-              td.style.border = '';
-              td.title = '';
+              td.style.border = "";
+              td.title = "";
             }
 
             // 负数红色
-            if (typeof value === 'number' && value < 0) {
-              td.style.color = '#dc3545';
+            if (typeof value === "number" && value < 0) {
+              td.style.color = "#dc3545";
             }
           };
         }
@@ -624,7 +688,7 @@ export function Stage2FinancialTable({
         if (!changes) return;
 
         // 处理自动填充
-        if (source === 'Autofill.fill') {
+        if (source === "Autofill.fill") {
           // 获取选择的范围
           const selection = hotInstance.current?.getSelected();
           if (!selection) return;
@@ -632,7 +696,7 @@ export function Stage2FinancialTable({
           const [startRow, startCol, endRow, endCol] = selection[0];
 
           // 只允许编辑可编辑列
-          const validChanges = changes.filter(change => {
+          const validChanges = changes.filter((change) => {
             const [row, col] = change;
             return row > 0 && isColumnEditable(col);
           });
@@ -646,7 +710,7 @@ export function Stage2FinancialTable({
           const selectedData: number[] = [];
           for (let row = startRow; row <= endRow; row++) {
             const cellValue = hotInstance.current?.getDataAtCell(row, startCol);
-            if (typeof cellValue === 'number') {
+            if (typeof cellValue === "number") {
               selectedData.push(cellValue);
             }
           }
@@ -658,7 +722,10 @@ export function Stage2FinancialTable({
 
           // 生成自动填充数据
           const fillLength = validChanges.length + selectedData.length;
-          const autofillValues = generateAutofillValues(selectedData, fillLength);
+          const autofillValues = generateAutofillValues(
+            selectedData,
+            fillLength,
+          );
 
           // 应用自动填充的值
           validChanges.forEach((change, index) => {
@@ -672,7 +739,7 @@ export function Stage2FinancialTable({
         }
 
         // 处理常规编辑
-        changes.forEach(change => {
+        changes.forEach((change) => {
           const [row, col, oldValue, newValue] = change;
 
           // 表头行和不可编辑列不允许编辑
@@ -682,8 +749,8 @@ export function Stage2FinancialTable({
           }
 
           // 数值验证和格式化
-          if (typeof newValue === 'string' && newValue.trim() !== '') {
-            const numValue = parseFloat(newValue.replace(/,/g, ''));
+          if (typeof newValue === "string" && newValue.trim() !== "") {
+            const numValue = parseFloat(newValue.replace(/,/g, ""));
             if (!isNaN(numValue)) {
               change[3] = numValue;
             }
@@ -695,10 +762,11 @@ export function Stage2FinancialTable({
 
       // 处理数据变更
       afterChange: (changes: any[] | null, source: string) => {
-        if (!changes || source === 'loadData') return;
+        if (!changes || source === "loadData") return;
 
         changes.forEach(([row, col, , newValue]) => {
-          if (row > 0 && col > 0) { // 跳过表头和年份列
+          if (row > 0 && col > 0) {
+            // 跳过表头和年份列
             const age = finalProjectionData[row - 1]?.age;
             const itemId = getItemIdFromColumn(col);
             const originalValue = baseTableData[row]?.[col];
@@ -706,21 +774,29 @@ export function Stage2FinancialTable({
             if (age && itemId && originalValue !== undefined) {
               if (newValue !== originalValue) {
                 // 添加或更新 override - 动态获取最新状态
-                const currentOverrides = usePlannerStore.getState().data.overrides || [];
+                const currentOverrides =
+                  usePlannerStore.getState().data.overrides || [];
                 const existingIndex = currentOverrides.findIndex(
-                  override => override.age === age && override.item_id === itemId
+                  (override) =>
+                    override.age === age && override.item_id === itemId,
                 );
 
                 if (existingIndex >= 0) {
-                  updateOverride(existingIndex, { age, item_id: itemId, value: newValue });
+                  updateOverride(existingIndex, {
+                    age,
+                    item_id: itemId,
+                    value: newValue,
+                  });
                 } else {
                   addOverride({ age, item_id: itemId, value: newValue });
                 }
               } else {
                 // 值等于原始值，删除 override - 动态获取最新状态
-                const currentOverrides2 = usePlannerStore.getState().data.overrides || [];
+                const currentOverrides2 =
+                  usePlannerStore.getState().data.overrides || [];
                 const existingIndex2 = currentOverrides2.findIndex(
-                  override => override.age === age && override.item_id === itemId
+                  (override) =>
+                    override.age === age && override.item_id === itemId,
                 );
                 if (existingIndex2 >= 0) {
                   removeOverride(existingIndex2);
@@ -739,7 +815,12 @@ export function Stage2FinancialTable({
       beforeKeyDown: (event: KeyboardEvent) => {
         // MacBook: Backspace键 或 fn+Delete键
         // Windows/Linux: Delete键
-        if ((event.key === 'Delete' || event.key === 'Backspace') && !event.ctrlKey && !event.metaKey && !event.altKey) {
+        if (
+          (event.key === "Delete" || event.key === "Backspace") &&
+          !event.ctrlKey &&
+          !event.metaKey &&
+          !event.altKey
+        ) {
           const selection = hotInstance.current?.getSelected();
           if (selection) {
             const [row, col] = selection[0];
@@ -751,7 +832,7 @@ export function Stage2FinancialTable({
           }
         }
         return true;
-      }
+      },
     });
 
     return () => {
@@ -766,7 +847,21 @@ export function Stage2FinancialTable({
         hotInstance.current = null;
       }
     };
-  }, [currentLanguage, t, incomeItems, expenseItems, isColumnEditable, generateAutofillValues, isCellOverridden, handleUndoOverride, getItemIdFromColumn, addOverride, updateOverride, removeOverride, scheduleRender]); // 包含所有必要的函数依赖
+  }, [
+    currentLanguage,
+    t,
+    incomeItems,
+    expenseItems,
+    isColumnEditable,
+    generateAutofillValues,
+    isCellOverridden,
+    handleUndoOverride,
+    getItemIdFromColumn,
+    addOverride,
+    updateOverride,
+    removeOverride,
+    scheduleRender,
+  ]); // 包含所有必要的函数依赖
 
   // 仅数据变化时更新表格内容，不重新创建
   useEffect(() => {
@@ -812,13 +907,15 @@ export function Stage2FinancialTable({
         {showInstructions && (
           <Alert icon={<IconInfoCircle size={16} />} color="blue" mb="md">
             <Stack gap="xs">
-              <Text size="sm" fw={600}>{t('table.instructions.title', { title })}</Text>
-              <Text size="xs">{t('table.instructions.data_structure')}</Text>
-              <Text size="xs">{t('table.instructions.editable_columns')}</Text>
-              <Text size="xs">{t('table.instructions.autofill')}</Text>
-              <Text size="xs">{t('table.instructions.edit')}</Text>
-              <Text size="xs">{t('table.instructions.override_feature')}</Text>
-              <Text size="xs">{t('table.instructions.undo_override')}</Text>
+              <Text size="sm" fw={600}>
+                {t("table.instructions.title", { title })}
+              </Text>
+              <Text size="xs">{t("table.instructions.data_structure")}</Text>
+              <Text size="xs">{t("table.instructions.editable_columns")}</Text>
+              <Text size="xs">{t("table.instructions.autofill")}</Text>
+              <Text size="xs">{t("table.instructions.edit")}</Text>
+              <Text size="xs">{t("table.instructions.override_feature")}</Text>
+              <Text size="xs">{t("table.instructions.undo_override")}</Text>
             </Stack>
           </Alert>
         )}
@@ -826,11 +923,11 @@ export function Stage2FinancialTable({
         <div
           ref={hotRef}
           style={{
-            width: '100%',
-            height: '400px',
-            overflow: 'hidden',
-            border: '1px solid var(--mantine-color-gray-3)',
-            borderRadius: '8px'
+            width: "100%",
+            height: "400px",
+            overflow: "hidden",
+            border: "1px solid var(--mantine-color-gray-3)",
+            borderRadius: "8px",
           }}
         />
 

@@ -2,9 +2,64 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+
+    <!-- PWA Primary Meta Tags -->
+    <title>FIRE Balance Calculator</title>
+    <meta name="title" content="FIRE Balance Calculator">
+    <meta name="description" content="Financial Independence, Retire Early (FIRE) planning tool with Monte Carlo analysis">
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + React + TS</title>
+
+    <!-- 权限策略：只禁用明确不需要的权限，保留PWA相关权限 -->
+    <meta http-equiv="Permissions-Policy" content="geolocation=(), camera=(), microphone=(), accelerometer=(), gyroscope=(), magnetometer=(), payment=()">
+
+    <!-- PWA Theme Configuration -->
+    <meta name="theme-color" content="#1a1a1a">
+    <meta name="background-color" content="#1a1a1a">
+    <meta name="display" content="standalone">
+    <meta name="msapplication-navbutton-color" content="#1a1a1a">
+
+    <!-- PWA Icons -->
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="/pwa-192x192.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
+
+    <!-- PWA Support -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="FIRE Balance">
+
+    <!-- iOS Launch Screen Images - 更精确的匹配 -->
+    <link rel="apple-touch-startup-image" href="/splash-mobile-640x1138.png" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+    <link rel="apple-touch-startup-image" href="/splash-mobile-640x1138.png" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+    <link rel="apple-touch-startup-image" href="/splash-mobile-640x1138.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+    <link rel="apple-touch-startup-image" href="/splash-mobile-640x1138.png" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+    <link rel="apple-touch-startup-image" href="/splash-mobile-640x1138.png" media="(max-device-width: 480px) and (orientation: portrait)">
+    <link rel="apple-touch-startup-image" href="/splash-hires-desktop-1200x900.png" media="(min-device-width: 768px)">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://fire-balance.app/">
+    <meta property="og:title" content="FIRE Balance Calculator">
+    <meta property="og:description" content="Plan your Financial Independence and Early Retirement with advanced Monte Carlo analysis">
+    <meta property="og:image" content="/pwa-512x512.png">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://fire-balance.app/">
+    <meta property="twitter:title" content="FIRE Balance Calculator">
+    <meta property="twitter:description" content="Plan your Financial Independence and Early Retirement with advanced Monte Carlo analysis">
+    <meta property="twitter:image" content="/pwa-512x512.png">
+
+    <!-- PWA App Store Badges -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="FIRE Balance">
+
+    <!-- Debug Script removed to fix manifest error -->
   </head>
   <body>
     <div id="root"></div>

@@ -8,30 +8,26 @@
  * - 底部导航按钮
  */
 
-import React from 'react';
-import {
-  Container,
-  Group,
-  Title,
-  Menu,
-  ActionIcon,
-} from '@mantine/core';
-import { IconFlame, IconLanguage } from '@tabler/icons-react';
-import { useAppStore } from '../../stores/appStore';
-import { usePlannerStore } from '../../stores/plannerStore';
-import { getI18n } from '../../core/i18n';
-import { PlannerStage } from '../../types';
-import { getLanguageDetectionInfo } from '../../utils/languageDetection';
+import React from "react";
+import { Container, Group, Title, Menu, ActionIcon } from "@mantine/core";
+import { IconFlame, IconLanguage } from "@tabler/icons-react";
+import { useAppStore } from "../../stores/appStore";
+import { usePlannerStore } from "../../stores/plannerStore";
+import { getI18n } from "../../core/i18n";
+import { PlannerStage } from "../../types";
+import { getLanguageDetectionInfo } from "../../utils/languageDetection";
 
 // Import stage content components
-import { Stage1Content } from '../contents/Stage1Content';
-import { Stage2Content } from '../contents/Stage2Content';
-import { Stage3Content } from '../contents/Stage3Content';
+import { Stage1Content } from "../contents/Stage1Content";
+import { Stage2Content } from "../contents/Stage2Content";
+import { Stage3Content } from "../contents/Stage3Content";
 
 // Import shared components
-import { StageProgress } from '../common/StageProgress';
-import { StageNavigation } from '../common/StageNavigation';
-import { ImportExportControls } from '../common/ImportExportControls';
+import { StageProgress } from "../common/StageProgress";
+import { StageNavigation } from "../common/StageNavigation";
+import { ImportExportControls } from "../common/ImportExportControls";
+import { PWAInstallButton } from "../common/PWAInstallButton";
+import { OfflineIndicator } from "../common/OfflineIndicator";
 
 // 简化的标题组件 - 用 Tailwind 处理样式，按最长语言(中文)设计
 const SimpleTitle = ({ t }: { t: any }) => {
@@ -47,7 +43,7 @@ const SimpleTitle = ({ t }: { t: any }) => {
         transition-all duration-200
       "
     >
-      {t('app_title')}
+      {t("app_title")}
     </Title>
   );
 };
@@ -55,7 +51,7 @@ const SimpleTitle = ({ t }: { t: any }) => {
 export function Layout() {
   // Store hooks
   const { currentLanguage, setLanguage } = useAppStore();
-  const currentStage = usePlannerStore(state => state.currentStage);
+  const currentStage = usePlannerStore((state) => state.currentStage);
 
   // 全局跟踪上一次的 stage，避免组件卸载导致的状态丢失
   const prevStageRef = React.useRef<PlannerStage | undefined>(undefined);
@@ -68,7 +64,7 @@ export function Layout() {
     (window as any).__fireStageTransition = {
       from: prevStage,
       to: currentStage,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
 
     prevStageRef.current = currentStage;
@@ -82,10 +78,9 @@ export function Layout() {
     return i18n.t(key, variables);
   };
 
-
   // Handle language change
   const handleLanguageChange = (value: string | null) => {
-    if (value && ['en', 'zh-CN', 'ja'].includes(value)) {
+    if (value && ["en", "zh-CN", "ja"].includes(value)) {
       setLanguage(value as any);
     }
   };
@@ -105,31 +100,44 @@ export function Layout() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div
+      style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}
+    >
       {/* Header */}
-      <header style={{
-        backgroundColor: 'white',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-        borderBottom: '1px solid #e5e7eb'
-      }}>
+      <header
+        style={{
+          backgroundColor: "white",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+          borderBottom: "1px solid #e5e7eb",
+        }}
+      >
         <Container size="xl" py="md">
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            minHeight: '48px' // 确保最小高度，防止抖动
-          }}>
-            <Group gap="sm" style={{ flex: '1', minWidth: 0 }}> {/* flex: 1 让左侧占据可用空间，minWidth: 0 允许收缩 */}
+          {/* 第一行：标题和语言选择器 */}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              minHeight: "48px", // 确保最小高度，防止抖动
+            }}
+          >
+            <Group gap="sm" style={{ flex: "1", minWidth: 0 }}>
+              {" "}
+              {/* flex: 1 让左侧占据可用空间，minWidth: 0 允许收缩 */}
               <IconFlame size={32} color="var(--mantine-primary-color-6)" />
-              <div className="min-w-0 flex-1"> {/* 允许标题区域收缩 */}
+              <div className="min-w-0 flex-1">
+                {" "}
+                {/* 允许标题区域收缩 */}
                 <SimpleTitle t={t} />
-                <div className="text-sm text-gray-500">
-                  {t('app_subtitle')}
-                </div>
+                <div className="text-sm text-gray-500">{t("app_subtitle")}</div>
               </div>
             </Group>
 
-            <div style={{ flexShrink: 0 }}> {/* 防止语言选择器收缩 */}
+            <div
+              style={{ flexShrink: 0, display: "flex", alignItems: "center" }}
+            >
+              {" "}
+              {/* 只放语言选择器 */}
               <Menu shadow="md" width={120} position="bottom-end">
                 <Menu.Target>
                   <ActionIcon
@@ -143,20 +151,22 @@ export function Layout() {
                 </Menu.Target>
                 <Menu.Dropdown>
                   <Menu.Item
-                    onClick={() => handleLanguageChange('en')}
-                    className={currentLanguage === 'en' ? 'bg-blue-50' : ''}
+                    onClick={() => handleLanguageChange("en")}
+                    className={currentLanguage === "en" ? "bg-blue-50" : ""}
                   >
                     🇺🇸 English
                   </Menu.Item>
                   <Menu.Item
-                    onClick={() => handleLanguageChange('zh-CN')}
-                    className={String(currentLanguage) === 'zh-CN' ? 'bg-blue-50' : ''}
+                    onClick={() => handleLanguageChange("zh-CN")}
+                    className={
+                      String(currentLanguage) === "zh-CN" ? "bg-blue-50" : ""
+                    }
                   >
                     🇨🇳 中文
                   </Menu.Item>
                   <Menu.Item
-                    onClick={() => handleLanguageChange('ja')}
-                    className={currentLanguage === 'ja' ? 'bg-blue-50' : ''}
+                    onClick={() => handleLanguageChange("ja")}
+                    className={currentLanguage === "ja" ? "bg-blue-50" : ""}
                   >
                     🇯🇵 日本語
                   </Menu.Item>
@@ -164,34 +174,50 @@ export function Layout() {
               </Menu>
             </div>
           </div>
+
+          {/* 第二行：PWA安装按钮 */}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              marginTop: "8px",
+            }}
+          >
+            <PWAInstallButton />
+          </div>
         </Container>
       </header>
 
       {/* 三阶段状态指示器 */}
-      <div style={{ backgroundColor: 'white', borderBottom: '1px solid #e5e7eb' }}>
+      <div
+        style={{ backgroundColor: "white", borderBottom: "1px solid #e5e7eb" }}
+      >
         <Container size="xl" py="lg">
           <StageProgress currentStage={currentStage} />
 
           {/* 数据管理工具栏 */}
-          <div style={{ marginTop: '12px' }}>
+          <div style={{ marginTop: "12px" }}>
             <ImportExportControls />
           </div>
         </Container>
       </div>
 
       {/* 主内容区域 */}
-      <main style={{ flex: 1, backgroundColor: '#f8fafc' }}>
+      <main style={{ flex: 1, backgroundColor: "#f8fafc" }}>
         <Container size="xl" py="xl">
           {renderStageContent()}
         </Container>
       </main>
 
       {/* 底部导航 */}
-      <div style={{ backgroundColor: 'white' }}>
+      <div style={{ backgroundColor: "white" }}>
         <Container size="xl" py="md">
           <StageNavigation currentStage={currentStage} />
         </Container>
       </div>
+
+      {/* PWA 离线指示器 */}
+      <OfflineIndicator />
     </div>
   );
 }

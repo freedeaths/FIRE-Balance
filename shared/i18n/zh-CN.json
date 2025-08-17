@@ -2,6 +2,9 @@
   "app_title": "🔥 FIRE(Financial Independence, Retire Early)财务规划器",
   "app_title_short": "🔥 FIRE财务规划器",
   "app_subtitle": "三阶段FIRE规划系统",
+  "pwa": {
+    "install_app": "安装应用"
+  },
   "app_caption": "您的个人财务自由提前退休规划工具。概念和使用方法请参考 [使用说明](https://github.com/freedeaths/FIRE-Balance/blob/main/docs/usage_cn.md)",
   "navigation": "导航",
   "language": "语言",

@@ -7,15 +7,15 @@
  * Stage 3: Run calculations and provide recommendations
  */
 
-import Decimal from 'decimal.js';
+import Decimal from "decimal.js";
 import type {
   UserProfile,
   IncomeExpenseItem,
   SimulationSettings,
   FIRECalculationResult,
-} from './data_models';
+} from "./data_models";
 
-import { createSimulationSettings, getCurrentAge } from './data_models';
+import { createSimulationSettings, getCurrentAge } from "./data_models";
 
 import type {
   PlannerData,
@@ -24,7 +24,7 @@ import type {
   AnnualProjectionRow,
   PlannerStage,
   PlannerConfigV1,
-} from './planner_models';
+} from "./planner_models";
 
 import {
   createPlannerData,
@@ -33,11 +33,11 @@ import {
   configToPlannerData,
   plannerDataToConfig,
   PlannerStage as Stage,
-} from './planner_models';
+} from "./planner_models";
 
-import { FIREEngine, createEngineInput } from './engine';
-import { FIREAdvisor } from './advisor';
-import { MonteCarloSimulator } from './monte_carlo';
+import { FIREEngine, createEngineInput } from "./engine";
+import { FIREAdvisor } from "./advisor";
+import { MonteCarloSimulator } from "./monte_carlo";
 
 // =============================================================================
 // Main FIRE Planner Class
@@ -51,7 +51,7 @@ export class FIREPlanner {
   public data: PlannerData;
   private currentLanguage: string;
 
-  constructor(language: string = 'en') {
+  constructor(language: string = "en") {
     this.data = createPlannerData({ language });
     this.currentLanguage = language;
   }
@@ -104,7 +104,9 @@ export class FIREPlanner {
    * Remove income item by ID. Returns true if removed
    */
   removeIncomeItem(itemId: string): boolean {
-    const index = this.data.income_items.findIndex(item => item.id === itemId);
+    const index = this.data.income_items.findIndex(
+      (item) => item.id === itemId,
+    );
     if (index >= 0) {
       this.data.income_items.splice(index, 1);
 
@@ -131,7 +133,9 @@ export class FIREPlanner {
    * Remove expense item by ID. Returns true if removed
    */
   removeExpenseItem(itemId: string): boolean {
-    const index = this.data.expense_items.findIndex(item => item.id === itemId);
+    const index = this.data.expense_items.findIndex(
+      (item) => item.id === itemId,
+    );
     if (index >= 0) {
       this.data.expense_items.splice(index, 1);
 
@@ -178,7 +182,7 @@ export class FIREPlanner {
   addOverride(age: number, itemId: string, value: number | Decimal): void {
     // Remove existing override for same age/item
     this.data.overrides = this.data.overrides.filter(
-      o => !(o.age === age && o.item_id === itemId)
+      (o) => !(o.age === age && o.item_id === itemId),
     );
 
     // Add new override
@@ -197,7 +201,7 @@ export class FIREPlanner {
   removeOverride(age: number, itemId: string): boolean {
     const initialLength = this.data.overrides.length;
     this.data.overrides = this.data.overrides.filter(
-      o => !(o.age === age && o.item_id === itemId)
+      (o) => !(o.age === age && o.item_id === itemId),
     );
 
     if (this.data.overrides.length < initialLength) {
@@ -242,13 +246,16 @@ export class FIREPlanner {
    */
   async runCalculations(
     progressCallback?: (progress: number) => void,
-    numSimulations?: number
+    numSimulations?: number,
   ): Promise<PlannerResults> {
     if (!this.data.projection_df) {
-      throw new Error('No projection data available for calculation');
+      throw new Error("No projection data available for calculation");
     }
 
-    const results = await this._runCalculations(progressCallback, numSimulations);
+    const results = await this._runCalculations(
+      progressCallback,
+      numSimulations,
+    );
     this.data.results = results;
     this.data = updatePlannerDataTimestamp(this.data);
 
@@ -270,7 +277,7 @@ export class FIREPlanner {
       this.data.expense_items.length === 0
     ) {
       throw new Error(
-        'Missing required data: user_profile, income_items, or expense_items'
+        "Missing required data: user_profile, income_items, or expense_items",
       );
     }
 
@@ -290,11 +297,11 @@ export class FIREPlanner {
    */
   applyOverridesToTable(
     baseData?: AnnualProjectionRow[],
-    overrides?: Override[]
+    overrides?: Override[],
   ): AnnualProjectionRow[] {
     if (!baseData) {
       if (!this.data.projection_df) {
-        throw new Error('No base projection data available');
+        throw new Error("No base projection data available");
       }
       baseData = this.data.projection_df;
     }
@@ -304,7 +311,7 @@ export class FIREPlanner {
     }
 
     // Apply overrides to a copy of the data
-    const resultData = baseData.map(row => ({ ...row }));
+    const resultData = baseData.map((row) => ({ ...row }));
 
     // Store original overrides temporarily
     const originalOverrides = this.data.overrides;
@@ -321,11 +328,11 @@ export class FIREPlanner {
   async calculateFireResults(
     projectionData?: AnnualProjectionRow[],
     progressCallback?: (progress: number) => void,
-    numSimulations?: number
+    numSimulations?: number,
   ): Promise<PlannerResults> {
     if (!projectionData) {
       if (!this.data.projection_df) {
-        throw new Error('No projection data available for calculation');
+        throw new Error("No projection data available for calculation");
       }
       projectionData = this.data.projection_df;
     }
@@ -334,7 +341,10 @@ export class FIREPlanner {
     const originalProjection = this.data.projection_df;
     this.data.projection_df = projectionData;
 
-    const results = await this._runCalculations(progressCallback, numSimulations);
+    const results = await this._runCalculations(
+      progressCallback,
+      numSimulations,
+    );
 
     // Restore original projection
     this.data.projection_df = originalProjection;
@@ -357,14 +367,14 @@ export class FIREPlanner {
   /**
    * Export current state to configuration
    */
-  exportToConfig(description: string = ''): PlannerConfigV1 {
+  exportToConfig(description: string = ""): PlannerConfigV1 {
     return plannerDataToConfig(this.data, description);
   }
 
   /**
    * Save configuration to JSON string
    */
-  saveToJSON(description: string = ''): string {
+  saveToJSON(description: string = ""): string {
     const config = this.exportToConfig(description);
     return JSON.stringify(config, null, 2);
   }
@@ -390,7 +400,7 @@ export class FIREPlanner {
    */
   private _generateInitialProjection(): AnnualProjectionRow[] {
     if (!this.data.user_profile) {
-      throw new Error('User profile required');
+      throw new Error("User profile required");
     }
 
     const profile = this.data.user_profile;
@@ -411,17 +421,23 @@ export class FIREPlanner {
         if (this._isItemActiveAtAge(item, age)) {
           const yearsSinceStart = age - item.start_age;
           const growthRate = new Decimal(item.annual_growth_rate).div(100);
-          const growthFactor = new Decimal(1).add(growthRate).pow(yearsSinceStart);
+          const growthFactor = new Decimal(1)
+            .add(growthRate)
+            .pow(yearsSinceStart);
 
-          if (item.frequency === 'one-time') {
+          if (item.frequency === "one-time") {
             // One-time items only appear at start age
             if (age === item.start_age) {
-              const amount = new Decimal(item.after_tax_amount_per_period).mul(growthFactor);
+              const amount = new Decimal(item.after_tax_amount_per_period).mul(
+                growthFactor,
+              );
               totalIncome = totalIncome.add(amount);
             }
           } else {
             // Recurring items with growth
-            const amount = new Decimal(item.after_tax_amount_per_period).mul(growthFactor);
+            const amount = new Decimal(item.after_tax_amount_per_period).mul(
+              growthFactor,
+            );
             totalIncome = totalIncome.add(amount);
           }
         }
@@ -433,22 +449,38 @@ export class FIREPlanner {
         if (this._isItemActiveAtAge(item, age)) {
           const yearsSinceStart = age - item.start_age;
 
-          if (item.frequency === 'one-time') {
+          if (item.frequency === "one-time") {
             // One-time expenses only appear at start age
             if (age === item.start_age) {
               // Apply both individual growth rate and inflation
-              const itemGrowthRate = new Decimal(item.annual_growth_rate).div(100);
-              const itemGrowthFactor = new Decimal(1).add(itemGrowthRate).pow(yearsSinceStart);
-              const inflationFactor = new Decimal(1).add(inflationRate).pow(yearsSinceStart);
-              const amount = new Decimal(item.after_tax_amount_per_period).mul(itemGrowthFactor).mul(inflationFactor);
+              const itemGrowthRate = new Decimal(item.annual_growth_rate).div(
+                100,
+              );
+              const itemGrowthFactor = new Decimal(1)
+                .add(itemGrowthRate)
+                .pow(yearsSinceStart);
+              const inflationFactor = new Decimal(1)
+                .add(inflationRate)
+                .pow(yearsSinceStart);
+              const amount = new Decimal(item.after_tax_amount_per_period)
+                .mul(itemGrowthFactor)
+                .mul(inflationFactor);
               totalExpense = totalExpense.add(amount);
             }
           } else {
             // Recurring expenses with individual growth + inflation
-            const itemGrowthRate = new Decimal(item.annual_growth_rate).div(100);
-            const itemGrowthFactor = new Decimal(1).add(itemGrowthRate).pow(yearsSinceStart);
-            const inflationFactor = new Decimal(1).add(inflationRate).pow(yearsSinceStart);
-            const amount = new Decimal(item.after_tax_amount_per_period).mul(itemGrowthFactor).mul(inflationFactor);
+            const itemGrowthRate = new Decimal(item.annual_growth_rate).div(
+              100,
+            );
+            const itemGrowthFactor = new Decimal(1)
+              .add(itemGrowthRate)
+              .pow(yearsSinceStart);
+            const inflationFactor = new Decimal(1)
+              .add(inflationRate)
+              .pow(yearsSinceStart);
+            const amount = new Decimal(item.after_tax_amount_per_period)
+              .mul(itemGrowthFactor)
+              .mul(inflationFactor);
             totalExpense = totalExpense.add(amount);
           }
         }
@@ -469,32 +501,53 @@ export class FIREPlanner {
    * Check if an income/expense item is active at a given age
    */
   private _isItemActiveAtAge(item: IncomeExpenseItem, age: number): boolean {
-    return age >= item.start_age && (item.end_age === undefined || age <= item.end_age);
+    return (
+      age >= item.start_age &&
+      (item.end_age === undefined || age <= item.end_age)
+    );
   }
 
   /**
    * Apply overrides to projection data
    */
-  private _applyOverridesToProjection(projectionData: AnnualProjectionRow[]): void {
+  private _applyOverridesToProjection(
+    projectionData: AnnualProjectionRow[],
+  ): void {
     for (const override of this.data.overrides) {
-      const rowIndex = projectionData.findIndex(row => row.age === override.age);
+      const rowIndex = projectionData.findIndex(
+        (row) => row.age === override.age,
+      );
       if (rowIndex >= 0) {
         // For now, we'll apply overrides to total_income or total_expense
         // This is a simplification - the Python version has more complex logic
         const row = projectionData[rowIndex];
 
         // Determine if this is an income or expense item
-        const incomeItem = this.data.income_items.find(item => item.id === override.item_id);
-        const expenseItem = this.data.expense_items.find(item => item.id === override.item_id);
+        const incomeItem = this.data.income_items.find(
+          (item) => item.id === override.item_id,
+        );
+        const expenseItem = this.data.expense_items.find(
+          (item) => item.id === override.item_id,
+        );
 
         if (incomeItem) {
           // Find the current contribution of this item and replace it
-          const originalContribution = this._calculateItemContributionAtAge(incomeItem, override.age);
-          row.total_income = row.total_income.sub(originalContribution).add(new Decimal(override.value));
+          const originalContribution = this._calculateItemContributionAtAge(
+            incomeItem,
+            override.age,
+          );
+          row.total_income = row.total_income
+            .sub(originalContribution)
+            .add(new Decimal(override.value));
         } else if (expenseItem) {
           // Find the current contribution of this item and replace it
-          const originalContribution = this._calculateItemContributionAtAge(expenseItem, override.age);
-          row.total_expense = row.total_expense.sub(originalContribution).add(new Decimal(override.value));
+          const originalContribution = this._calculateItemContributionAtAge(
+            expenseItem,
+            override.age,
+          );
+          row.total_expense = row.total_expense
+            .sub(originalContribution)
+            .add(new Decimal(override.value));
         }
       }
     }
@@ -503,7 +556,10 @@ export class FIREPlanner {
   /**
    * Calculate an item's contribution at a specific age
    */
-  private _calculateItemContributionAtAge(item: IncomeExpenseItem, age: number): Decimal {
+  private _calculateItemContributionAtAge(
+    item: IncomeExpenseItem,
+    age: number,
+  ): Decimal {
     if (!this._isItemActiveAtAge(item, age)) {
       return new Decimal(0);
     }
@@ -512,19 +568,25 @@ export class FIREPlanner {
     const growthRate = new Decimal(item.annual_growth_rate).div(100);
     const growthFactor = new Decimal(1).add(growthRate).pow(yearsSinceStart);
 
-    if (item.frequency === 'one-time') {
+    if (item.frequency === "one-time") {
       if (age === item.start_age) {
         return new Decimal(item.after_tax_amount_per_period).mul(growthFactor);
       } else {
         return new Decimal(0);
       }
     } else {
-      let contribution = new Decimal(item.after_tax_amount_per_period).mul(growthFactor);
+      let contribution = new Decimal(item.after_tax_amount_per_period).mul(
+        growthFactor,
+      );
 
       // Apply inflation for expenses
       if (!item.is_income && this.data.user_profile) {
-        const inflationRate = new Decimal(this.data.user_profile.inflation_rate).div(100);
-        const inflationFactor = new Decimal(1).add(inflationRate).pow(yearsSinceStart);
+        const inflationRate = new Decimal(
+          this.data.user_profile.inflation_rate,
+        ).div(100);
+        const inflationFactor = new Decimal(1)
+          .add(inflationRate)
+          .pow(yearsSinceStart);
         contribution = contribution.mul(inflationFactor);
       }
 
@@ -537,10 +599,10 @@ export class FIREPlanner {
    */
   private async _runCalculations(
     progressCallback?: (progress: number) => void,
-    numSimulations?: number
+    numSimulations?: number,
   ): Promise<PlannerResults> {
     if (!this.data.projection_df || !this.data.user_profile) {
-      throw new Error('Missing data for calculations');
+      throw new Error("Missing data for calculations");
     }
 
     // Create a copy of projection and apply overrides for calculation
@@ -548,17 +610,17 @@ export class FIREPlanner {
     this._applyOverridesToProjection(calculationData);
 
     // Create engine input - convert AnnualProjectionRow to AnnualFinancialProjection
-    const financialProjection = calculationData.map(row => ({
+    const financialProjection = calculationData.map((row) => ({
       age: row.age,
       year: row.year,
       total_income: row.total_income,
-      total_expense: row.total_expense
+      total_expense: row.total_expense,
     }));
 
     const engineInput = createEngineInput(
       this.data.user_profile,
       financialProjection,
-      this.data.income_items
+      this.data.income_items,
     );
 
     // Run FIRE calculation
@@ -576,30 +638,32 @@ export class FIREPlanner {
       const simulationSettings = numSimulations
         ? createSimulationSettings({
             ...this.data.simulation_settings,
-            num_simulations: numSimulations
+            num_simulations: numSimulations,
           })
         : this.data.simulation_settings;
 
       const mcSimulator = new MonteCarloSimulator(engine, simulationSettings);
 
       // 创建Monte Carlo专属的进度回调
-      const mcProgressCallback = progressCallback ? (current: number, total: number) => {
-        // Monte Carlo 占整体进度的30%-80% (50%的范围)
-        const mcProgress = current / total;
-        const overallProgress = 0.3 + (mcProgress * 0.5);
+      const mcProgressCallback = progressCallback
+        ? (current: number, total: number) => {
+            // Monte Carlo 占整体进度的30%-80% (50%的范围)
+            const mcProgress = current / total;
+            const overallProgress = 0.3 + mcProgress * 0.5;
 
-        // 进度转换：Monte Carlo进度 -> 整体进度
+            // 进度转换：Monte Carlo进度 -> 整体进度
 
-        // 使用setTimeout确保进度更新有时间被UI渲染
-        setTimeout(() => {
-          progressCallback(overallProgress);
-        }, 5);
+            // 使用setTimeout确保进度更新有时间被UI渲染
+            setTimeout(() => {
+              progressCallback(overallProgress);
+            }, 5);
 
-        // 在某些关键节点添加小延迟，让用户能看到进度
-        if (current % Math.max(1, Math.floor(total / 20)) === 0) {
-          // 每5%的进度添加一个小延迟
-        }
-      } : undefined;
+            // 在某些关键节点添加小延迟，让用户能看到进度
+            if (current % Math.max(1, Math.floor(total / 20)) === 0) {
+              // 每5%的进度添加一个小延迟
+            }
+          }
+        : undefined;
 
       const mcResult = await mcSimulator.run_simulation(mcProgressCallback);
       monteCarloSuccessRate = mcResult.success_rate;
@@ -608,8 +672,8 @@ export class FIREPlanner {
 
       // Generate advisor recommendations
       const advisor = new FIREAdvisor(engineInput);
-      const advisorRecommendations = advisor.get_all_recommendations();
-      recommendations = advisorRecommendations.map(rec => ({
+      const advisorRecommendations = await advisor.get_all_recommendations();
+      recommendations = advisorRecommendations.map((rec) => ({
         type: rec.type,
         params: rec.params,
         is_achievable: rec.is_achievable,
@@ -617,15 +681,16 @@ export class FIREPlanner {
       }));
 
       progressCallback?.(1.0); // 100% - Complete
-
     } catch (error) {
-      console.warn('Monte Carlo or advisor analysis failed:', error);
+      console.warn("Monte Carlo or advisor analysis failed:", error);
       // Continue without Monte Carlo/advisor results
     }
 
     return createPlannerResults({
       fire_calculation: fireResult,
-      monte_carlo_success_rate: monteCarloSuccessRate ? monteCarloSuccessRate.toNumber() : undefined,
+      monte_carlo_success_rate: monteCarloSuccessRate
+        ? monteCarloSuccessRate.toNumber()
+        : undefined,
       recommendations,
       calculation_timestamp: new Date(),
     } as any);
@@ -644,17 +709,17 @@ export class FIREPlanner {
 
     // Remove overrides outside valid age range
     this.data.overrides = this.data.overrides.filter(
-      override => override.age >= currentAge && override.age <= maxAge
+      (override) => override.age >= currentAge && override.age <= maxAge,
     );
 
     // Remove overrides for non-existent items
     const allItemIds = new Set([
-      ...this.data.income_items.map(item => item.id!),
-      ...this.data.expense_items.map(item => item.id!),
+      ...this.data.income_items.map((item) => item.id!),
+      ...this.data.expense_items.map((item) => item.id!),
     ]);
 
-    this.data.overrides = this.data.overrides.filter(
-      override => allItemIds.has(override.item_id)
+    this.data.overrides = this.data.overrides.filter((override) =>
+      allItemIds.has(override.item_id),
     );
   }
 
@@ -663,7 +728,7 @@ export class FIREPlanner {
    */
   private _removeOverridesForItem(itemId: string): void {
     this.data.overrides = this.data.overrides.filter(
-      override => override.item_id !== itemId
+      (override) => override.item_id !== itemId,
     );
   }
 
@@ -671,11 +736,14 @@ export class FIREPlanner {
    * Generate a UUID v4 string (simplified implementation)
    */
   private _generateUUID(): string {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-      const r = Math.random() * 16 | 0;
-      const v = c == 'x' ? r : (r & 0x3 | 0x8);
-      return v.toString(16);
-    });
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(
+      /[xy]/g,
+      function (c) {
+        const r = (Math.random() * 16) | 0;
+        const v = c == "x" ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+      },
+    );
   }
 }
 
@@ -686,7 +754,7 @@ export class FIREPlanner {
 /**
  * Create a new FIRE planner instance
  */
-export function createPlanner(language: string = 'en'): FIREPlanner {
+export function createPlanner(language: string = "en"): FIREPlanner {
   return new FIREPlanner(language);
 }
 
@@ -694,7 +762,7 @@ export function createPlanner(language: string = 'en'): FIREPlanner {
  * Create planner from existing configuration
  */
 export function createPlannerFromConfig(config: PlannerConfigV1): FIREPlanner {
-  const planner = new FIREPlanner(config.metadata?.language ?? 'en');
+  const planner = new FIREPlanner(config.metadata?.language ?? "en");
   planner.loadFromConfig(config);
   return planner;
 }

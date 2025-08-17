@@ -1,0 +1,76 @@
+name: TypeScript Checks
+
+on:
+  push:
+    branches: [main, feat/typescript-implementation]
+    paths:
+      - 'implementations/typescript/**'
+      - '.github/workflows/typescript-checks.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'implementations/typescript/**'
+      - '.github/workflows/typescript-checks.yml'
+
+jobs:
+  typescript-checks:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: implementations/typescript
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: implementations/typescript/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check formatting
+        run: npm run format:check
+
+      - name: Run linting
+        run: npm run lint
+
+      - name: Run type checking
+        run: npm run type-check
+
+      - name: Run tests
+        run: npm run test
+        env:
+          CI: true
+
+      - name: Build project
+        run: npm run build
+
+      - name: Verify PWA functionality
+        run: |
+          # Check if manifest.json exists in build output
+          if [ ! -f "dist/manifest.json" ]; then
+            echo "❌ PWA manifest.json not found in build output"
+            exit 1
+          fi
+
+          # Check if service worker exists
+          if [ ! -f "dist/sw.js" ]; then
+            echo "❌ Service worker not found in build output"
+            exit 1
+          fi
+
+          echo "✅ PWA files verified"
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: typescript-build-${{ github.sha }}
+          path: implementations/typescript/dist/
+          retention-days: 7
