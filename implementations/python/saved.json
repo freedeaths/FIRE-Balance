@@ -140,6 +140,12 @@
             "predefined_type": null
         }
     ],
-    "overrides": [],
+    "overrides": [
+        {
+            "age": 51,
+            "item_id": "c509afef-7ce4-4afb-91f5-5c062399ad73",
+            "value": 10000.0
+        }
+    ],
     "simulation_settings": {}
 }

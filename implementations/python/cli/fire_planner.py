@@ -185,16 +185,10 @@ def run_analysis(planner: Any) -> bool:
                 )
             elif rec_type == "increase_income":
                 title = f"Increase Income by {params['percentage']:.1f}%"
-                description = (
-                    f"Increase income by {params['percentage']:.1f}% "
-                    f"(${params['amount']:,.0f} annually)."
-                )
+                description = f"Increase income by {params['percentage']:.1f}%."
             elif rec_type == "reduce_expenses":
                 title = f"Reduce Expenses by {params['percentage']:.1f}%"
-                description = (
-                    f"Reduce expenses by {params['percentage']:.1f}% "
-                    f"(${params['amount']:,.0f} annually)."
-                )
+                description = f"Reduce expenses by {params['percentage']:.1f}%."
             else:
                 title = f"Unknown recommendation: {rec_type}"
                 description = f"Parameters: {params}"
@@ -385,16 +379,10 @@ def generate_analysis_report(planner: Any, results: Any) -> dict:
                 )
             elif rec_type == "increase_income":
                 title = f"Increase Income by {params['percentage']:.1f}%"
-                description = (
-                    f"Increase income by {params['percentage']:.1f}% "
-                    f"(${params['amount']:,.0f} annually)."
-                )
+                description = f"Increase income by {params['percentage']:.1f}%."
             elif rec_type == "reduce_expenses":
                 title = f"Reduce Expenses by {params['percentage']:.1f}%"
-                description = (
-                    f"Reduce expenses by {params['percentage']:.1f}% "
-                    f"(${params['amount']:,.0f} annually)."
-                )
+                description = f"Reduce expenses by {params['percentage']:.1f}%."
             else:
                 title = f"Recommendation {i}"
                 description = "Details not available"

@@ -1,0 +1,739 @@
+{
+  "metadata": {
+    "export_timestamp": "2025-08-17T08:54:54.472Z",
+    "export_type": "fire_analysis_results",
+    "description": "Complete FIRE analysis results including calculations, projections, and recommendations"
+  },
+  "input_configuration": {
+    "version": "1.0",
+    "metadata": {
+      "created_at": "2025-08-17T08:54:53.958Z",
+      "updated_at": "2025-08-17T08:54:54.472Z",
+      "language": "en",
+      "description": "FIRE Results - 2025-08-17T08:54:54.472Z"
+    },
+    "profile": {
+      "birth_year": 1985,
+      "expected_fire_age": 50,
+      "legal_retirement_age": 65,
+      "life_expectancy": 85,
+      "current_net_worth": "3000000",
+      "inflation_rate": "3",
+      "safety_buffer_months": "12",
+      "portfolio": {
+        "asset_classes": [
+          {
+            "name": "stocks",
+            "display_name": "Stocks",
+            "allocation_percentage": 30,
+            "expected_return": 5,
+            "volatility": 15,
+            "liquidity_level": "medium"
+          },
+          {
+            "name": "bonds",
+            "display_name": "Bonds",
+            "allocation_percentage": 0,
+            "expected_return": 3,
+            "volatility": 5,
+            "liquidity_level": "low"
+          },
+          {
+            "name": "savings",
+            "display_name": "Savings",
+            "allocation_percentage": 60,
+            "expected_return": 1,
+            "volatility": 5,
+            "liquidity_level": "low"
+          },
+          {
+            "name": "cash",
+            "display_name": "Cash",
+            "allocation_percentage": 10,
+            "expected_return": 0,
+            "volatility": 1,
+            "liquidity_level": "high"
+          }
+        ],
+        "enable_rebalancing": true
+      }
+    },
+    "income_items": [
+      {
+        "id": "79555f3b-fe69-4acb-891b-f20316680bf2",
+        "name": "Salary",
+        "after_tax_amount_per_period": "100000",
+        "time_unit": "annually",
+        "frequency": "recurring",
+        "interval_periods": 1,
+        "start_age": 40,
+        "end_age": 50,
+        "annual_growth_rate": "1",
+        "is_income": true,
+        "category": "Other"
+      },
+      {
+        "id": "dbcb2081-728a-418c-9418-7acdf445970b",
+        "name": "Social Security Pension",
+        "after_tax_amount_per_period": "150000",
+        "time_unit": "annually",
+        "frequency": "recurring",
+        "interval_periods": 1,
+        "start_age": 65,
+        "end_age": 85,
+        "annual_growth_rate": "2",
+        "is_income": true,
+        "category": "Other"
+      },
+      {
+        "id": "05b5c94f-2174-4664-85fb-279ef35d0a85",
+        "name": "Biz Pension",
+        "after_tax_amount_per_period": "150000",
+        "time_unit": "annually",
+        "frequency": "recurring",
+        "interval_periods": 1,
+        "start_age": 65,
+        "end_age": 85,
+        "annual_growth_rate": "0",
+        "is_income": true,
+        "category": "Other"
+      }
+    ],
+    "expense_items": [
+      {
+        "id": "8b27a1f7-8a88-44c9-b298-60c0d35a6c07",
+        "name": "Daily Expenses",
+        "after_tax_amount_per_period": "100000",
+        "time_unit": "annually",
+        "frequency": "recurring",
+        "interval_periods": 1,
+        "start_age": 41,
+        "end_age": 85,
+        "annual_growth_rate": "0",
+        "is_income": false,
+        "category": "Other"
+      },
+      {
+        "id": "95d05445-1580-42ac-952e-8795da171b8f",
+        "name": "Trips",
+        "after_tax_amount_per_period": "50000",
+        "time_unit": "annually",
+        "frequency": "recurring",
+        "interval_periods": 1,
+        "start_age": 41,
+        "end_age": 70,
+        "annual_growth_rate": "0",
+        "is_income": false,
+        "category": "Other"
+      },
+      {
+        "id": "c509afef-7ce4-4afb-91f5-5c062399ad73",
+        "name": "Fix",
+        "after_tax_amount_per_period": "400000",
+        "time_unit": "annually",
+        "frequency": "one-time",
+        "interval_periods": 1,
+        "start_age": 50,
+        "end_age": 85,
+        "annual_growth_rate": "0",
+        "is_income": false,
+        "category": "Other"
+      }
+    ],
+    "overrides": [
+      {
+        "age": 51,
+        "item_id": "c509afef-7ce4-4afb-91f5-5c062399ad73",
+        "value": "10000"
+      }
+    ],
+    "simulation_settings": {
+      "num_simulations": 200,
+      "confidence_level": "0.95",
+      "include_black_swan_events": true,
+      "income_base_volatility": "0.1",
+      "income_minimum_factor": "0.1",
+      "expense_base_volatility": "0.05",
+      "expense_minimum_factor": "0.5"
+    }
+  },
+  "results": {
+    "fire_calculation": {
+      "is_fire_achievable": false,
+      "fire_net_worth": "2788957.1867339217047",
+      "min_net_worth_after_fire": "-422161.65583527896183",
+      "final_net_worth": "792207.45315576050391",
+      "safety_buffer_months": "12",
+      "min_safety_buffer_ratio": "-1.1942850863788628255",
+      "retirement_years": 36,
+      "total_years_simulated": 46,
+      "traditional_fire_number": "3137720.25",
+      "traditional_fire_achieved": true,
+      "fire_success_probability": null,
+      "yearly_results": [
+        {
+          "age": 40,
+          "total_income": "100000",
+          "total_expense": "0",
+          "investment_return": "63000",
+          "net_cash_flow": "100000",
+          "portfolio_value": "3163000",
+          "net_worth": "3163000",
+          "is_sustainable": true
+        },
+        {
+          "age": 41,
+          "total_income": "101000",
+          "total_expense": "150000",
+          "investment_return": "66423",
+          "net_cash_flow": "-49000",
+          "portfolio_value": "3180423",
+          "net_worth": "3180423",
+          "is_sustainable": true
+        },
+        {
+          "age": 42,
+          "total_income": "102010",
+          "total_expense": "154500",
+          "investment_return": "67817.883000000000001",
+          "net_cash_flow": "-52490",
+          "portfolio_value": "3195750.8830000000001",
+          "net_worth": "3195750.8830000000001",
+          "is_sustainable": true
+        },
+        {
+          "age": 43,
+          "total_income": "103030.1",
+          "total_expense": "159135",
+          "investment_return": "69264.000467582673439",
+          "net_cash_flow": "-56104.9",
+          "portfolio_value": "3208909.9834675826735",
+          "net_worth": "3208909.9834675826735",
+          "is_sustainable": true
+        },
+        {
+          "age": 44,
+          "total_income": "104060.401",
+          "total_expense": "163909.05",
+          "investment_return": "70765.213151679518543",
+          "net_cash_flow": "-59848.649",
+          "portfolio_value": "3219826.5476192621921",
+          "net_worth": "3219826.5476192621921",
+          "is_sustainable": true
+        },
+        {
+          "age": 45,
+          "total_income": "105101.00501",
+          "total_expense": "168826.3215",
+          "investment_return": "67616.357500004506034",
+          "net_cash_flow": "-63725.31649",
+          "portfolio_value": "3223717.5886292666981",
+          "net_worth": "3223717.5886292666981",
+          "is_sustainable": true
+        },
+        {
+          "age": 46,
+          "total_income": "106152.0150601",
+          "total_expense": "173891.111145",
+          "investment_return": "69036.301007504600662",
+          "net_cash_flow": "-67739.0960849",
+          "portfolio_value": "3225014.7935518712988",
+          "net_worth": "3225014.7935518712988",
+          "is_sustainable": true
+        },
+        {
+          "age": 47,
+          "total_income": "107213.535210701",
+          "total_expense": "179107.84447935",
+          "investment_return": "70514.721720785909288",
+          "net_cash_flow": "-71894.309268649",
+          "portfolio_value": "3223635.2060040082081",
+          "net_worth": "3223635.2060040082081",
+          "is_sustainable": true
+        },
+        {
+          "age": 48,
+          "total_income": "108285.67056280801",
+          "total_expense": "184481.0798137305",
+          "investment_return": "67696.33932608417237",
+          "net_cash_flow": "-76195.40925092249",
+          "portfolio_value": "3215136.1360791698905",
+          "net_worth": "3215136.1360791698905",
+          "is_sustainable": true
+        },
+        {
+          "age": 49,
+          "total_income": "109368.5272684360901",
+          "total_expense": "190015.512208142415",
+          "investment_return": "69117.96245193193999",
+          "net_cash_flow": "-80646.9849397063249",
+          "portfolio_value": "3203607.1135913955056",
+          "net_worth": "3203607.1135913955056",
+          "is_sustainable": true
+        },
+        {
+          "age": 50,
+          "total_income": "110462.212541120451",
+          "total_expense": "595715.97757438668745",
+          "investment_return": "70603.838175792435614",
+          "net_cash_flow": "-485253.76503326623645",
+          "portfolio_value": "2788957.1867339217047",
+          "net_worth": "2788957.1867339217047",
+          "is_sustainable": true
+        },
+        {
+          "age": 51,
+          "total_income": "0",
+          "total_expense": "211587.45690161828808",
+          "investment_return": "58568.100921412355799",
+          "net_cash_flow": "-211587.45690161828808",
+          "portfolio_value": "2635937.8307537157726",
+          "net_worth": "2635937.8307537157726",
+          "is_sustainable": true
+        },
+        {
+          "age": 52,
+          "total_income": "0",
+          "total_expense": "207635.08060866683672",
+          "investment_return": "55354.694445828031225",
+          "net_cash_flow": "-207635.08060866683672",
+          "portfolio_value": "2483657.444590876967",
+          "net_worth": "2483657.444590876967",
+          "is_sustainable": true
+        },
+        {
+          "age": 53,
+          "total_income": "0",
+          "total_expense": "213864.13302692684181",
+          "investment_return": "52156.806336408416307",
+          "net_cash_flow": "-213864.13302692684181",
+          "portfolio_value": "2321950.1179003585416",
+          "net_worth": "2321950.1179003585416",
+          "is_sustainable": true
+        },
+        {
+          "age": 54,
+          "total_income": "0",
+          "total_expense": "220280.05701773464707",
+          "investment_return": "48760.952475907529374",
+          "net_cash_flow": "-220280.05701773464707",
+          "portfolio_value": "2150431.0133585314238",
+          "net_worth": "2150431.0133585314238",
+          "is_sustainable": true
+        },
+        {
+          "age": 55,
+          "total_income": "0",
+          "total_expense": "226888.45872826668648",
+          "investment_return": "45159.0512805291599",
+          "net_cash_flow": "-226888.45872826668648",
+          "portfolio_value": "1968701.6059107938972",
+          "net_worth": "1968701.6059107938972",
+          "is_sustainable": true
+        },
+        {
+          "age": 56,
+          "total_income": "0",
+          "total_expense": "233695.11249011468708",
+          "investment_return": "41342.733724126671841",
+          "net_cash_flow": "-233695.11249011468708",
+          "portfolio_value": "1776349.2271448058819",
+          "net_worth": "1776349.2271448058819",
+          "is_sustainable": true
+        },
+        {
+          "age": 57,
+          "total_income": "0",
+          "total_expense": "240705.96586481812769",
+          "investment_return": "37303.33377004092352",
+          "net_cash_flow": "-240705.96586481812769",
+          "portfolio_value": "1572946.5950500286777",
+          "net_worth": "1572946.5950500286777",
+          "is_sustainable": true
+        },
+        {
+          "age": 58,
+          "total_income": "0",
+          "total_expense": "247927.14484076267153",
+          "investment_return": "33031.878496050602232",
+          "net_cash_flow": "-247927.14484076267153",
+          "portfolio_value": "1358051.3287053166084",
+          "net_worth": "1358051.3287053166084",
+          "is_sustainable": true
+        },
+        {
+          "age": 59,
+          "total_income": "0",
+          "total_expense": "255364.95918598555167",
+          "investment_return": "28519.077902811648776",
+          "net_cash_flow": "-255364.95918598555167",
+          "portfolio_value": "1131205.4474221427056",
+          "net_worth": "1131205.4474221427056",
+          "is_sustainable": true
+        },
+        {
+          "age": 60,
+          "total_income": "0",
+          "total_expense": "263025.90796156511822",
+          "investment_return": "23755.314395864996816",
+          "net_cash_flow": "-263025.90796156511822",
+          "portfolio_value": "891934.85385644258409",
+          "net_worth": "891934.85385644258409",
+          "is_sustainable": true
+        },
+        {
+          "age": 61,
+          "total_income": "0",
+          "total_expense": "270916.68520041207177",
+          "investment_return": "18730.631930985294266",
+          "net_cash_flow": "-270916.68520041207177",
+          "portfolio_value": "639748.80058701580659",
+          "net_worth": "639748.80058701580659",
+          "is_sustainable": true
+        },
+        {
+          "age": 62,
+          "total_income": "0",
+          "total_expense": "279044.18575642443392",
+          "investment_return": "13434.724812327331938",
+          "net_cash_flow": "-279044.18575642443392",
+          "portfolio_value": "374139.3396429187046",
+          "net_worth": "374139.3396429187046",
+          "is_sustainable": true
+        },
+        {
+          "age": 63,
+          "total_income": "0",
+          "total_expense": "287415.51132911716694",
+          "investment_return": "7856.9261325012927966",
+          "net_cash_flow": "-287415.51132911716694",
+          "portfolio_value": "94580.75444630283046",
+          "net_worth": "94580.75444630283046",
+          "is_sustainable": false
+        },
+        {
+          "age": 64,
+          "total_income": "0",
+          "total_expense": "296037.97666899068195",
+          "investment_return": "1986.1958433723594397",
+          "net_cash_flow": "-296037.97666899068195",
+          "portfolio_value": "0",
+          "net_worth": "-296037.97666899068195",
+          "is_sustainable": false
+        },
+        {
+          "age": 65,
+          "total_income": "300000",
+          "total_expense": "304919.11596906040241",
+          "investment_return": "0",
+          "net_cash_flow": "-4919.11596906040241",
+          "portfolio_value": "0",
+          "net_worth": "-300957.09263805108436",
+          "is_sustainable": false
+        },
+        {
+          "age": 66,
+          "total_income": "303000",
+          "total_expense": "314066.68944813221447",
+          "investment_return": "0",
+          "net_cash_flow": "-11066.68944813221447",
+          "portfolio_value": "0",
+          "net_worth": "-312023.78208618329883",
+          "is_sustainable": false
+        },
+        {
+          "age": 67,
+          "total_income": "306060",
+          "total_expense": "323488.6901315761809",
+          "investment_return": "0",
+          "net_cash_flow": "-17428.6901315761809",
+          "portfolio_value": "0",
+          "net_worth": "-329452.47221775947973",
+          "is_sustainable": false
+        },
+        {
+          "age": 68,
+          "total_income": "309181.2",
+          "total_expense": "333193.35083552346633",
+          "investment_return": "0",
+          "net_cash_flow": "-24012.15083552346633",
+          "portfolio_value": "0",
+          "net_worth": "-353464.62305328294606",
+          "is_sustainable": false
+        },
+        {
+          "age": 69,
+          "total_income": "312364.824",
+          "total_expense": "343189.15136058917033",
+          "investment_return": "0",
+          "net_cash_flow": "-30824.32736058917033",
+          "portfolio_value": "0",
+          "net_worth": "-384288.95041387211639",
+          "is_sustainable": false
+        },
+        {
+          "age": 70,
+          "total_income": "315612.12048",
+          "total_expense": "353484.82590140684544",
+          "investment_return": "0",
+          "net_cash_flow": "-37872.70542140684544",
+          "portfolio_value": "0",
+          "net_worth": "-422161.65583527896183",
+          "is_sustainable": false
+        },
+        {
+          "age": 71,
+          "total_income": "318924.3628896",
+          "total_expense": "242726.24711896603386",
+          "investment_return": "0",
+          "net_cash_flow": "76198.11577063396614",
+          "portfolio_value": "76198.115770633966142",
+          "net_worth": "76198.115770633966142",
+          "is_sustainable": false
+        },
+        {
+          "age": 72,
+          "total_income": "322302.850147392",
+          "total_expense": "250008.03453253501488",
+          "investment_return": "1600.1604311833132891",
+          "net_cash_flow": "72294.81561485698512",
+          "portfolio_value": "150093.09181667426456",
+          "net_worth": "150093.09181667426456",
+          "is_sustainable": false
+        },
+        {
+          "age": 73,
+          "total_income": "325748.90715033984",
+          "total_expense": "257508.27556851106533",
+          "investment_return": "3151.9549281501595556",
+          "net_cash_flow": "68240.63158182877467",
+          "portfolio_value": "221485.67832665319878",
+          "net_worth": "221485.67832665319878",
+          "is_sustainable": false
+        },
+        {
+          "age": 74,
+          "total_income": "329263.8852933466368",
+          "total_expense": "265233.52383556639729",
+          "investment_return": "4651.1992448597171744",
+          "net_cash_flow": "64030.36145778023951",
+          "portfolio_value": "290167.23902929315547",
+          "net_worth": "290167.23902929315547",
+          "is_sustainable": true
+        },
+        {
+          "age": 75,
+          "total_income": "332849.16299921356953",
+          "total_expense": "273190.5295506333892",
+          "investment_return": "6093.5120196151562649",
+          "net_cash_flow": "59658.63344858018033",
+          "portfolio_value": "355919.38449748849207",
+          "net_worth": "355919.38449748849207",
+          "is_sustainable": true
+        },
+        {
+          "age": 76,
+          "total_income": "336506.14625919784092",
+          "total_expense": "281386.24543715239088",
+          "investment_return": "7474.3070744472583335",
+          "net_cash_flow": "55119.90082204545004",
+          "portfolio_value": "418513.59239398120046",
+          "net_worth": "418513.59239398120046",
+          "is_sustainable": true
+        },
+        {
+          "age": 77,
+          "total_income": "340236.26918438179775",
+          "total_expense": "289827.83280026696261",
+          "investment_return": "8788.7854402736052097",
+          "net_cash_flow": "50408.43638411483514",
+          "portfolio_value": "477710.81421836964081",
+          "net_worth": "477710.81421836964081",
+          "is_sustainable": true
+        },
+        {
+          "age": 78,
+          "total_income": "344040.99456806943371",
+          "total_expense": "298522.66778427497149",
+          "investment_return": "10031.927098585762457",
+          "net_cash_flow": "45518.32678379446222",
+          "portfolio_value": "533261.06810074986548",
+          "net_worth": "533261.06810074986548",
+          "is_sustainable": true
+        },
+        {
+          "age": 79,
+          "total_income": "347921.81445943082238",
+          "total_expense": "307478.34781780322063",
+          "investment_return": "10655.498181013909922",
+          "net_cash_flow": "40443.46664162760175",
+          "portfolio_value": "584360.03292339137716",
+          "net_worth": "584360.03292339137716",
+          "is_sustainable": true
+        },
+        {
+          "age": 80,
+          "total_income": "351880.25074861943882",
+          "total_expense": "316702.69825233731725",
+          "investment_return": "11717.726657775334382",
+          "net_cash_flow": "35177.55249628212157",
+          "portfolio_value": "631255.31207744883311",
+          "net_worth": "631255.31207744883311",
+          "is_sustainable": true
+        },
+        {
+          "age": 81,
+          "total_income": "355917.8557635918276",
+          "total_expense": "326203.77919990743677",
+          "investment_return": "12691.421907966510429",
+          "net_cash_flow": "29714.07656368439083",
+          "portfolio_value": "673660.81054909973437",
+          "net_worth": "673660.81054909973437",
+          "is_sustainable": true
+        },
+        {
+          "age": 82,
+          "total_income": "360036.21287886366416",
+          "total_expense": "335989.89257590465987",
+          "investment_return": "13570.579233993511626",
+          "net_cash_flow": "24046.32030295900429",
+          "portfolio_value": "711277.71008605225029",
+          "net_worth": "711277.71008605225029",
+          "is_sustainable": true
+        },
+        {
+          "age": 83,
+          "total_income": "364236.93713644093743",
+          "total_expense": "346069.58935318179967",
+          "investment_return": "14348.924877203800053",
+          "net_cash_flow": "18167.34778325913776",
+          "portfolio_value": "743793.9827465151881",
+          "net_worth": "743793.9827465151881",
+          "is_sustainable": true
+        },
+        {
+          "age": 84,
+          "total_income": "368521.67587916975618",
+          "total_expense": "356451.67703377725366",
+          "investment_return": "15019.906490272739929",
+          "net_cash_flow": "12069.99884539250252",
+          "portfolio_value": "770883.88808218043054",
+          "net_worth": "770883.88808218043054",
+          "is_sustainable": true
+        },
+        {
+          "age": 85,
+          "total_income": "372892.1093967531513",
+          "total_expense": "367145.22734479057127",
+          "investment_return": "15576.68302161749334",
+          "net_cash_flow": "5746.88205196258003",
+          "portfolio_value": "792207.45315576050391",
+          "net_worth": "792207.45315576050391",
+          "is_sustainable": true
+        }
+      ]
+    },
+    "monte_carlo_success_rate": "0",
+    "recommendations": [
+      {
+        "type": "delayed_retirement",
+        "params": {
+          "age": 55,
+          "years": 5
+        },
+        "is_achievable": true
+      },
+      {
+        "type": "increase_income",
+        "params": {
+          "fire_age": 50,
+          "percentage": 29.6875,
+          "amount": 29687.5
+        },
+        "is_achievable": true
+      },
+      {
+        "type": "reduce_expenses",
+        "params": {
+          "fire_age": 50,
+          "percentage": 6.875,
+          "amount": 10312.5
+        },
+        "is_achievable": true
+      }
+    ],
+    "calculation_timestamp": "2025-08-17T08:54:54.472Z"
+  },
+  "analysis_report": {
+    "user_profile": {
+      "current_age": 40,
+      "fire_age": 50,
+      "life_expectancy": 85,
+      "current_net_worth": "$3000000",
+      "inflation_rate": "3%",
+      "safety_buffer_months": "12"
+    },
+    "fire_calculation": {
+      "is_achievable": false,
+      "achievable_text": "❌ NO",
+      "net_worth_at_fire": "$2788957.1867339217047",
+      "min_net_worth_post_fire": "$-422161.65583527896183",
+      "final_net_worth": "$792207.45315576050391",
+      "safety_buffer_ratio": "-1.19"
+    },
+    "traditional_fire_metrics": {
+      "four_percent_rule_number": "$3137720.25",
+      "four_percent_rule_achieved": true,
+      "four_percent_rule_text": "✅ YES"
+    },
+    "monte_carlo_analysis": {
+      "success_rate": "0.00%",
+      "risk_assessment": "🔴 HIGH RISK"
+    },
+    "recommendations": [
+      {
+        "number": 1,
+        "type": "delayed_retirement",
+        "title": "Delayed Retirement to Age 55",
+        "description": "Delay retirement by 5 year(s) to age 55.",
+        "is_achievable": true,
+        "status": "✅",
+        "params": {
+          "age": 55,
+          "years": 5
+        }
+      },
+      {
+        "number": 2,
+        "type": "increase_income",
+        "title": "Increase Income by 29.7%",
+        "description": "Increase income by 29.7% ($29,687.5 annually).",
+        "is_achievable": true,
+        "status": "✅",
+        "params": {
+          "fire_age": 50,
+          "percentage": 29.6875,
+          "amount": 29687.5
+        }
+      },
+      {
+        "number": 3,
+        "type": "reduce_expenses",
+        "title": "Reduce Expenses by 6.9%",
+        "description": "Reduce expenses by 6.9% ($10,312.5 annually).",
+        "is_achievable": true,
+        "status": "✅",
+        "params": {
+          "fire_age": 50,
+          "percentage": 6.875,
+          "amount": 10312.5
+        }
+      }
+    ],
+    "key_insights": {
+      "years_until_fire": 10,
+      "years_in_retirement": 36
+    },
+    "generation_timestamp": "2025-08-17T08:54:54.472Z"
+  }
+}

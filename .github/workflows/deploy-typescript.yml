@@ -1,0 +1,82 @@
+name: Deploy TypeScript App to Cloudflare Pages
+
+on:
+  workflow_run:
+    workflows: ["TypeScript Checks"]
+    types:
+      - completed
+    branches: [main]
+  pull_request:
+    branches: [main]
+    paths: ['implementations/typescript/**']
+
+env:
+  NODE_VERSION: '20'
+  WORKING_DIRECTORY: implementations/typescript
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy to Cloudflare Pages
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'pull_request' }}
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 📋 Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ${{ env.WORKING_DIRECTORY }}/package-lock.json
+
+      - name: 📦 Install dependencies
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: |
+          echo "Installing dependencies..."
+          npm ci --no-audit --prefer-offline
+
+      - name: 🔍 Code quality checks
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: |
+          echo "Running linting..."
+          npm run lint
+        continue-on-error: true
+
+      - name: 🧪 Run tests
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: |
+          echo "Running tests..."
+          npm test -- --passWithNoTests --coverage=false
+        continue-on-error: true
+
+      - name: 🏗️ Build application
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: |
+          echo "Building application for production..."
+          # Use build:cf command which uses Vite directly and includes checks
+          npm run build:cf
+
+          echo "✅ Build completed successfully"
+          echo "📊 Build statistics:"
+          ls -la dist/
+          du -sh dist/
+
+      - name: 🚀 Deploy to Cloudflare Pages
+        id: cloudflare-deploy
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: fire-balance
+          directory: ${{ env.WORKING_DIRECTORY }}/dist
+          # gitHubToken: ${{ secrets.GITHUB_TOKEN }}  # Disabled to avoid deployment permission issues
+          wranglerVersion: '3'
+
+      - name: 📝 Output deployment info
+        run: |
+          echo "🎉 Deployment completed!"
+          echo "🔗 URL: ${{ steps.cloudflare-deploy.outputs.url }}"
+          echo "📊 Project: fire-balance-typescript"
+          echo "🌍 Environment: ${{ github.event_name == 'pull_request' && 'preview' || 'production' }}"

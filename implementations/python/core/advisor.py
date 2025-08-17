@@ -342,7 +342,23 @@ class FIREAdvisor:
 
         if optimal_reduction:
             # Calculate annual savings needed
-            original_expense = self.projection_df["total_expense"].iloc[0]
+            # Find first non-zero expense or use average if all are problematic
+            original_expense = 0
+
+            # Try to find first non-zero expense
+            for idx, expense in enumerate(self.projection_df["total_expense"]):
+                if expense > 0:
+                    original_expense = expense
+                    break
+
+            # If still zero, calculate average expense from all non-zero values
+            if original_expense == 0:
+                non_zero_expenses = self.projection_df["total_expense"][
+                    self.projection_df["total_expense"] > 0
+                ]
+                if len(non_zero_expenses) > 0:
+                    original_expense = non_zero_expenses.mean()
+
             annual_savings = original_expense * optimal_reduction
 
             # Get final calculation result
