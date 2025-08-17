@@ -2,7 +2,7 @@ name: TypeScript Checks
 
 on:
   push:
-    branches: [main, feat/typescript-implementation]
+    branches: [main]
     paths:
       - 'implementations/typescript/**'
       - '.github/workflows/typescript-checks.yml'

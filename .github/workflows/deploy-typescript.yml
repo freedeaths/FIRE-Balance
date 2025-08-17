@@ -2,7 +2,7 @@ name: Deploy TypeScript App to Cloudflare Pages
 
 on:
   push:
-    branches: [main, feat/typescript-implementation]
+    branches: [main]
     paths: ['implementations/typescript/**']
   pull_request:
     branches: [main]
@@ -70,36 +70,6 @@ jobs:
           directory: ${{ env.WORKING_DIRECTORY }}/dist
           # gitHubToken: ${{ secrets.GITHUB_TOKEN }}  # Disabled to avoid deployment permission issues
           wranglerVersion: '3'
-
-      - name: 💬 Add deployment comment to PR
-        if: github.event_name == 'pull_request'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const deploymentUrl = '${{ steps.cloudflare-deploy.outputs.url }}';
-            const body = `## 🚀 部署预览
-
-            **✅ 部署成功完成！**
-
-            📱 **预览链接：** ${deploymentUrl}
-            🏷️ **分支：** \`${{ github.head_ref }}\`
-            💾 **提交：** ${{ github.sha }}
-
-            ### PWA 功能测试
-            - [ ] 检查 PWA 安装按钮是否出现
-            - [ ] 测试离线功能
-            - [ ] 验证 Service Worker 正常工作
-            - [ ] 确认 manifest.json 正确加载
-
-            ---
-            *由 GitHub Actions 自动生成 • 构建时间: ${{ github.run_id }}*`;
-
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: body
-            });
 
       - name: 📝 Output deployment info
         run: |
