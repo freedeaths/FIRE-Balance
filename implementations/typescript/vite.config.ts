@@ -34,7 +34,7 @@ export default defineConfig({
         theme_color: '#f97316', // Primary orange color
         background_color: '#1a1a1a', // 深色背景，让图标更突出
         display: 'standalone',
-        orientation: 'portrait',
+        orientation: 'any',
         scope: '/',
         start_url: '/',
         icons: [
