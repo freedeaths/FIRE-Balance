@@ -907,12 +907,11 @@ export function Stage2FinancialTable({
               <Text size='sm' fw={600}>
                 {t('table.instructions.title', { title })}
               </Text>
-              <Text size='xs'>{t('table.instructions.data_structure')}</Text>
               <Text size='xs'>{t('table.instructions.editable_columns')}</Text>
-              <Text size='xs'>{t('table.instructions.autofill')}</Text>
               <Text size='xs'>{t('table.instructions.edit')}</Text>
               <Text size='xs'>{t('table.instructions.override_feature')}</Text>
               <Text size='xs'>{t('table.instructions.undo_override')}</Text>
+              <Text size='xs'>{t('table.instructions.typical_usage')}</Text>
             </Stack>
           </Alert>
         )}

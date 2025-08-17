@@ -1,7 +1,7 @@
 {
-  "app_title": "🔥 FIRE(Financial Independence, Retire Early)資産プランナー",
-  "app_title_short": "🔥 FIRE資産プランナー",
-  "app_subtitle": "三段階FIRE計画システム",
+  "app_title": "FIRE資産プランナー",
+  "app_title_short": "FIRE資産プランナー",
+  "app_subtitle": "三段階FIRE(Financial Independence, Retire Early)計画システム",
   "pwa": {
     "install_app": "アプリをインストール"
   },
@@ -38,7 +38,7 @@
   "inflation_rate": "インフレ率 (%)",
   "safety_buffer_months": "安全バッファー（月）",
   "safety_buffer_months_help": "緊急資金として保持する月間支出数",
-  "investment_portfolio_settings": "📊 投資ポートフォリオ設定",
+  "investment_portfolio_settings": "投資ポートフォリオ設定",
   "portfolio_configure_description": "投資配分とリスク選好を設定してください：",
   "portfolio_allocation_notice": "💡 ポートフォリオ配分は合計100%である必要があります。変更後、設定は自動検証されます。",
   "asset_class": "資産クラス",
@@ -96,11 +96,11 @@
   "expense_item": "支出項目",
   "recalculate": "🔄 再計算",
   "recalculate_help": "データ表を再計算し、すべての変更を適用する",
-  "financial_planning_table": "📊 資産計画表",
+  "financial_planning_table": "資産計画表",
   "table_edit_notice": "💡 表の値を直接編集するか、右下角からExcelスタイルでドラッグ（リピートモードのみ）して、単一または複数の収入・支出を自動入力で調整できます。変更は自動保存されます。適切な位置に手動で移動する必要があります。",
   "changes_saved": "✅ 変更が保存され、計画に適用されました！",
   "apply_changes_error": "変更の適用エラー：{error}",
-  "financial_projections_chart": "📈 資産予測チャート",
+  "financial_projections_chart": "資産予測チャート",
   "chart_based_on_modified_data": "修正されたデータに基づく",
   "income": "収入",
   "expense": "支出",
@@ -183,7 +183,6 @@
   "num_simulations_help": "シミュレーション実行回数（デフォルト：1000、最小：100、最大：10000）",
   "num_simulations_error_min": "シミュレーション回数は100回以上である必要があります",
   "num_simulations_error_max": "シミュレーション回数は10000回を超えることはできません",
-  "investment_portfolio_display": "📊 投資ポートフォリオ設定",
   "current_configuration": "**現在の設定：**",
   "expected_returns": "**期待リターン：**",
   "stocks": "株式",
@@ -211,7 +210,7 @@
   "basic_suggestion_2": "貯蓄率を上げるか、退職年齢を遅らせることを検討する",
   "basic_suggestion_3": "現在の支出と収入計画を見直す",
   "congratulations_complete_analysis": "🎉 包括的なFIRE計画分析の完了おめでとうございます！目標達成を確実にするために計画を定期的に更新してください。",
-  "complete_calculation_data": "🔍 完全計算データ",
+  "complete_calculation_data": "完全計算データ",
   "complete_calculation_data_description": "年別の詳細な財務予測とリスクステータス指標を表示",
   "show_detailed_data": "詳細データを表示",
   "hide_detailed_data": "詳細データを非表示",
@@ -251,6 +250,8 @@
   "net_worth_trajectory_chart_title": "純資産軌跡 - ライフステージ分析",
   "financial_projections_chart_title": "資産予測チャート - 凡例をクリックして表示項目を選択",
   "recommendation_number": "💡 **推奨事項{number}**：{content}",
+  "early_retirement_title": "早期退職{age}歳",
+  "early_retirement_description": "現在の財務計画に基づいて、{age}歳で{years}年早く退職することができます。",
   "delayed_retirement_title": "退職を{age}歳まで延期",
   "delayed_retirement_description": "現在の財務計画でFIREを達成するには、退職を{years}年延期して{age}歳まで働く必要があります。",
   "delayed_retirement_not_feasible_title": "退職延期は不可能",
@@ -290,7 +291,7 @@
   "fire_analysis_report": "🔥 FIRE Balance 分析レポート",
   "comprehensive_financial_analysis": "包括的な経済的独立分析",
   "generated_at": "生成日時",
-  "user_profile": "👤 ユーザープロファイル",
+  "user_profile": "ユーザープロファイル",
   "annual_cash_flow_analysis": "📊 年次キャッシュフロー分析",
   "cannot_generate_chart": "チャートを生成できません - 利用可能なデータがありません",
   "annual_cash_flow_chart": "年次キャッシュフローチャート",
@@ -307,6 +308,7 @@
   "generating_monte_carlo_for_report": "レポート用のモンテカルロ分析を生成中...",
   "years": "歳",
   "months": "ヶ月",
+  "fire_progress": "FIRE進捗",
   "previous": "前へ",
   "next": "次へ",
   "stage": "ステージ",
@@ -406,16 +408,11 @@
     },
     "instructions": {
       "title": "{title} - 使用方法：",
-      "data_structure": "• **データ構造**：各行は1年、各列は収支項目",
-      "editable_columns": "• **編集可能列**：すべての収支項目列（💰収入項目、💸支出項目）",
-      "autofill": "• **自動入力**：セル選択後フィルハンドル（小さな青い四角）をドラッグ",
-      "autofill_patterns": "  • 1セル：コピー | 2セル：等差 | 3セル：等差/等比検出 | 3セル以上：最後の2つで等差",
-      "edit": "• **編集**：セルをダブルクリックして数値を直接編集",
-      "override_feature": "• **Override機能**：変更されたセルはオレンジ枠で表示され、Override記録として自動保存",
-      "undo_override": "• **Override取消**：右クリックメニュー「Override取消」またはBackspace/Deleteキーで元の計算値に復元",
-      "readonly_mode": "• **読取専用モード**：すべてのデータは表示のみ、編集不可",
-      "operations": "• **操作**：データコピー対応、右クリックメニューはコピーオプションのみ表示",
-      "override_indicator": "• **Override表示**：オレンジ枠のセルは手動変更された数値を示す"
+      "editable_columns": "• 編集可能列：すべての収支項目列（💰収入項目、💸支出項目）",
+      "edit": "• 編集：セルをダブルクリックして数値を直接編集；デスクトップでは自動入力がExcelと同様に動作しますが、モバイルではドラッグ入力をサポートしていないようです",
+      "override_feature": "• 修正機能：修正されたセルはオレンジ色の枠で表示され、修正記録として自動保存されます",
+      "undo_override": "• 修正の取消：右クリックメニューまたはモバイル長押しで「Override取消」を選択し、元の計算値に復元できます",
+      "typical_usage": "• 典型的な使用法：住宅購入で、前のステップでN年間のローン支出を追加した後、ここに戻って初年度を頭金額に変更する"
     }
   },
   "stage3": {
@@ -481,7 +478,8 @@
         "cash_flow": "純キャッシュフロー",
         "portfolio_value": "ポートフォリオ価値",
         "net_worth": "純資産",
-        "sustainable": "持続可能"
+        "sustainable": "持続可能",
+        "financial_status": "財務状況"
       }
     },
     "completion": {
