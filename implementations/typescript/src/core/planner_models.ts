@@ -61,7 +61,7 @@ export function createOverride(
     value:
       typeof data.value === 'number'
         ? new Decimal(data.value)
-        : data.value ?? new Decimal(0),
+        : (data.value ?? new Decimal(0)),
   };
 
   // Validate age range
