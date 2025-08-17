@@ -55,13 +55,6 @@ export default defineConfig({
             type: 'image/png',
             purpose: 'any maskable',
           },
-          // Android 启动屏幕用的大尺寸正方形图标
-          {
-            src: 'pwa-512x512.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'any',
-          },
         ],
         categories: ['finance', 'productivity', 'lifestyle'],
       },
