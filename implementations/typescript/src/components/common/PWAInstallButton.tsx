@@ -28,12 +28,22 @@ export const PWAInstallButton: React.FC = () => {
   );
 
   useEffect(() => {
+    console.log('🔍 PWA Install Button: Initializing...');
+
     // Check if app is already installed
     const checkIfInstalled = () => {
       const isStandalone = window.matchMedia(
         '(display-mode: standalone)'
       ).matches;
       const isIOSStandalone = (window.navigator as any).standalone === true;
+
+      console.log('🔍 PWA Install Check:', {
+        isStandalone,
+        isIOSStandalone,
+        userAgent: navigator.userAgent,
+        isSecureContext: window.isSecureContext,
+        location: window.location.href,
+      });
 
       if (isStandalone) {
         console.log(
@@ -50,25 +60,36 @@ export const PWAInstallButton: React.FC = () => {
         setIsInstalled(true);
         return;
       }
+
+      console.log('✅ App not installed - waiting for beforeinstallprompt...');
     };
 
     checkIfInstalled();
 
     // Listen for the beforeinstallprompt event
     const handleBeforeInstallPrompt = (e: Event) => {
+      console.log('🎯 beforeinstallprompt event fired!', e);
       e.preventDefault();
       setDeferredPrompt(e);
     };
 
     // Listen for app installed event
     const handleAppInstalled = () => {
-      console.log('App installed');
+      console.log('✅ App installed successfully');
       setIsInstalled(true);
       setDeferredPrompt(null);
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     window.addEventListener('appinstalled', handleAppInstalled);
+
+    // Debug timeout to check if event was missed
+    setTimeout(() => {
+      if (!deferredPrompt && !isInstalled) {
+        console.log('⏰ 5 seconds passed, no beforeinstallprompt event yet');
+        console.log('🔍 Current state:', { deferredPrompt, isInstalled });
+      }
+    }, 5000);
 
     return () => {
       window.removeEventListener(
@@ -77,7 +98,7 @@ export const PWAInstallButton: React.FC = () => {
       );
       window.removeEventListener('appinstalled', handleAppInstalled);
     };
-  }, []);
+  }, [deferredPrompt, isInstalled]);
 
   const handleInstallClick = async () => {
     console.log('Install button clicked', { deferredPrompt });
