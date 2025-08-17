@@ -22,7 +22,7 @@ export default defineConfig({
     VitePWA({
       registerType: 'prompt',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
-      injectRegister: 'inline', // 内联注册，避免网络请求权限
+      injectRegister: 'auto', // 自动注册，适配更多环境
       manifestFilename: 'manifest.json', // 使用传统的 .json 扩展名
       devOptions: {
         enabled: false, // 开发模式禁用 SW
@@ -66,13 +66,25 @@ export default defineConfig({
         categories: ['finance', 'productivity', 'lifestyle'],
       },
       workbox: {
-        // 最温和的Service Worker配置
-        skipWaiting: false,
-        clientsClaim: false,
-        cleanupOutdatedCaches: false,
-        disableDevLogs: true,
-        // 禁用运行时缓存，减少权限请求
-        runtimeCaching: [],
+        // 更积极的Service Worker配置，提高PWA安装成功率
+        skipWaiting: true,
+        clientsClaim: true,
+        cleanupOutdatedCaches: true,
+        disableDevLogs: false,
+        // 简单的运行时缓存配置
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'google-fonts-cache',
+              expiration: {
+                maxEntries: 10,
+                maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
+              },
+            },
+          },
+        ],
       },
     }),
   ],
