@@ -6,16 +6,16 @@
  * including black swan events and sensitivity analysis.
  */
 
-import Decimal from "decimal.js";
+import Decimal from 'decimal.js';
 import type {
   BlackSwanEvent,
   SimulationSettings,
   UserProfile,
-} from "./data_models";
-import { createSimulationSettings, getCurrentAge } from "./data_models";
-import type { AnnualFinancialProjection, EngineInput } from "./engine";
-import { FIREEngine, createEngineInput } from "./engine";
-import { createBlackSwanEvents } from "./black_swan_events";
+} from './data_models';
+import { createSimulationSettings, getCurrentAge } from './data_models';
+import type { AnnualFinancialProjection, EngineInput } from './engine';
+import { FIREEngine, createEngineInput } from './engine';
+import { createBlackSwanEvents } from './black_swan_events';
 
 // =============================================================================
 // Monte Carlo Result Data Structure
@@ -78,7 +78,7 @@ export class MonteCarloSimulator {
   constructor(
     engine: FIREEngine,
     settings?: SimulationSettings,
-    seed?: number | null,
+    seed?: number | null
   ) {
     this.engine = engine;
     this.settings =
@@ -132,7 +132,7 @@ export class MonteCarloSimulator {
    * Run complete Monte Carlo simulation
    */
   async run_simulation(
-    progress_callback?: (current: number, total: number) => void,
+    progress_callback?: (current: number, total: number) => void
   ): Promise<MonteCarloResult> {
     // Monte Carlo 模拟开始
 
@@ -153,7 +153,7 @@ export class MonteCarloSimulator {
       // Report progress if callback provided
       const progressInterval = Math.max(
         1,
-        Math.floor(this.settings.num_simulations / 100),
+        Math.floor(this.settings.num_simulations / 100)
       );
       if (progress_callback && run_id % progressInterval === 0) {
         progress_callback(run_id, this.settings.num_simulations);
@@ -164,7 +164,7 @@ export class MonteCarloSimulator {
           run_id % (progressInterval * 10) === 0 &&
           run_id > 0
         ) {
-          await new Promise((resolve) => setTimeout(resolve, 10));
+          await new Promise(resolve => setTimeout(resolve, 10));
         }
       }
 
@@ -185,10 +185,10 @@ export class MonteCarloSimulator {
       let minimum_net_worth = result.final_net_worth; // fallback
       if (result.yearly_results.length > 0) {
         minimum_net_worth = result.yearly_results
-          .map((state) => state.net_worth)
+          .map(state => state.net_worth)
           .reduce(
             (min, current) => (current.lt(min) ? current : min),
-            result.yearly_results[0].net_worth,
+            result.yearly_results[0].net_worth
           );
       }
       minimum_net_worths.push(minimum_net_worth);
@@ -211,7 +211,7 @@ export class MonteCarloSimulator {
     if (progress_callback) {
       progress_callback(
         this.settings.num_simulations,
-        this.settings.num_simulations,
+        this.settings.num_simulations
       );
     }
 
@@ -234,7 +234,7 @@ export class MonteCarloSimulator {
 
     return {
       success_rate: new Decimal(successful_runs).div(
-        this.settings.num_simulations,
+        this.settings.num_simulations
       ),
       total_simulations: this.settings.num_simulations,
       successful_simulations: successful_runs,
@@ -250,19 +250,19 @@ export class MonteCarloSimulator {
       median_minimum_net_worth: this._median(minimum_net_worths_array),
       percentile_5_minimum_net_worth: this._percentile(
         minimum_net_worths_array,
-        5,
+        5
       ),
       percentile_25_minimum_net_worth: this._percentile(
         minimum_net_worths_array,
-        25,
+        25
       ),
       percentile_75_minimum_net_worth: this._percentile(
         minimum_net_worths_array,
-        75,
+        75
       ),
       percentile_95_minimum_net_worth: this._percentile(
         minimum_net_worths_array,
-        95,
+        95
       ),
       worst_case_minimum_net_worth: this._min(minimum_net_worths_array),
       best_case_minimum_net_worth: this._max(minimum_net_worths_array),
@@ -278,7 +278,7 @@ export class MonteCarloSimulator {
    * Generate a random scenario by applying variations to base data
    */
   private _generate_random_scenario(): [AnnualFinancialProjection[], string[]] {
-    const scenario_df = this.base_df.map((row) => ({ ...row }));
+    const scenario_df = this.base_df.map(row => ({ ...row }));
 
     // Apply basic income/expense variations
     const income_multiplier = this._generate_income_variation();
@@ -317,13 +317,13 @@ export class MonteCarloSimulator {
         // Base economic uncertainty with configurable volatility
         const base_variation = this._normal_random_decimal(
           new Decimal(1.0),
-          this.settings.income_base_volatility,
+          this.settings.income_base_volatility
         );
 
         // Apply minimum factor safety net
         variations[i] = Decimal.max(
           this.settings.income_minimum_factor,
-          base_variation,
+          base_variation
         );
       } else {
         // Post-FIRE: income is stable (pensions, fixed returns)
@@ -346,13 +346,13 @@ export class MonteCarloSimulator {
       // Base expense volatility using normal distribution (consistent with income)
       const base_variation = this._normal_random_decimal(
         new Decimal(1.0),
-        this.settings.expense_base_volatility,
+        this.settings.expense_base_volatility
       );
 
       // Apply minimum factor safety net (consistent with income)
       variations[i] = Decimal.max(
         this.settings.expense_minimum_factor,
-        base_variation,
+        base_variation
       );
     }
 
@@ -363,9 +363,9 @@ export class MonteCarloSimulator {
    * Apply black swan events to the scenario
    */
   private _apply_black_swan_events(
-    df: AnnualFinancialProjection[],
+    df: AnnualFinancialProjection[]
   ): [AnnualFinancialProjection[], string[]] {
-    const modified_df = df.map((row) => ({ ...row }));
+    const modified_df = df.map(row => ({ ...row }));
     const triggered_event_ids: string[] = [];
     const active_events: Record<string, [BlackSwanEvent, number]> = {};
 
@@ -379,7 +379,7 @@ export class MonteCarloSimulator {
 
       // Filter out events that are already active (avoid duplicate events)
       const actually_triggered_events = new_events.filter(
-        (event) => !(event.event_id in active_events),
+        event => !(event.event_id in active_events)
       );
 
       for (const event of actually_triggered_events) {
@@ -395,13 +395,13 @@ export class MonteCarloSimulator {
           modified_df,
           year_idx,
           event,
-          new Decimal(1.0),
+          new Decimal(1.0)
         );
       }
 
       // Apply ongoing events with diminishing impact (events from previous years)
       const newly_active_event_ids = new Set(
-        actually_triggered_events.map((e) => e.event_id),
+        actually_triggered_events.map(e => e.event_id)
       );
       for (const [
         event_id,
@@ -418,7 +418,7 @@ export class MonteCarloSimulator {
           modified_df,
           year_idx,
           original_event,
-          recovery_multiplier,
+          recovery_multiplier
         );
 
         // Update remaining years
@@ -439,7 +439,7 @@ export class MonteCarloSimulator {
     df: AnnualFinancialProjection[],
     year_idx: number,
     event: BlackSwanEvent,
-    recovery_multiplier: Decimal,
+    recovery_multiplier: Decimal
   ): void {
     if (year_idx < 0 || year_idx >= df.length) {
       return;
@@ -448,22 +448,22 @@ export class MonteCarloSimulator {
     const row = df[year_idx];
 
     // Apply income impact if event has income_impact property
-    if ("income_impact" in event && (event as any).income_impact !== 0) {
+    if ('income_impact' in event && (event as any).income_impact !== 0) {
       const impact_factor = new Decimal(1).add(
-        new Decimal((event as any).income_impact).mul(recovery_multiplier),
+        new Decimal((event as any).income_impact).mul(recovery_multiplier)
       );
       row.total_income = row.total_income.mul(
-        Decimal.max(new Decimal(0), impact_factor),
+        Decimal.max(new Decimal(0), impact_factor)
       );
     }
 
     // Apply expense impact if event has expense_impact property
-    if ("expense_impact" in event && (event as any).expense_impact !== 0) {
+    if ('expense_impact' in event && (event as any).expense_impact !== 0) {
       const impact_factor = new Decimal(1).add(
-        new Decimal((event as any).expense_impact).mul(recovery_multiplier),
+        new Decimal((event as any).expense_impact).mul(recovery_multiplier)
       );
       row.total_expense = row.total_expense.mul(
-        Decimal.max(new Decimal(0), impact_factor),
+        Decimal.max(new Decimal(0), impact_factor)
       );
     }
   }
@@ -492,7 +492,7 @@ export class MonteCarloSimulator {
    */
   async analyze_sensitivity(
     parameter: string,
-    variations: number[],
+    variations: number[]
   ): Promise<number[]> {
     const results: number[] = [];
 
@@ -500,7 +500,7 @@ export class MonteCarloSimulator {
       // Create modified settings based on parameter
       let modified_settings: SimulationSettings;
 
-      if (parameter === "income_volatility") {
+      if (parameter === 'income_volatility') {
         modified_settings = createSimulationSettings({
           num_simulations: Math.floor(this.settings.num_simulations / 4), // Faster for sensitivity analysis
           confidence_level: this.settings.confidence_level,
@@ -510,7 +510,7 @@ export class MonteCarloSimulator {
           expense_base_volatility: this.settings.expense_base_volatility,
           expense_minimum_factor: this.settings.expense_minimum_factor,
         });
-      } else if (parameter === "expense_volatility") {
+      } else if (parameter === 'expense_volatility') {
         modified_settings = createSimulationSettings({
           num_simulations: Math.floor(this.settings.num_simulations / 4),
           confidence_level: this.settings.confidence_level,
@@ -520,7 +520,7 @@ export class MonteCarloSimulator {
           expense_base_volatility: new Decimal(variation),
           expense_minimum_factor: this.settings.expense_minimum_factor,
         });
-      } else if (parameter === "black_swan_probability") {
+      } else if (parameter === 'black_swan_probability') {
         modified_settings = createSimulationSettings({
           num_simulations: Math.floor(this.settings.num_simulations / 4),
           confidence_level: this.settings.confidence_level,
@@ -533,7 +533,7 @@ export class MonteCarloSimulator {
       } else {
         throw new Error(
           `Unknown parameter: ${parameter}. ` +
-            `Supported: 'income_volatility', 'expense_volatility', 'black_swan_probability'`,
+            `Supported: 'income_volatility', 'expense_volatility', 'black_swan_probability'`
         );
       }
 
@@ -541,7 +541,7 @@ export class MonteCarloSimulator {
       const temp_simulator = new MonteCarloSimulator(
         this.engine,
         modified_settings,
-        this.seed,
+        this.seed
       );
       const result = await temp_simulator.run_simulation();
       results.push(result.success_rate.toNumber());
@@ -560,7 +560,7 @@ export class MonteCarloSimulator {
       minimum_net_worth: Decimal;
       fire_success: boolean;
       black_swan_events: string[];
-    }[],
+    }[]
   ): Record<string, any> {
     const impact_analysis: Record<string, any> = {};
 
@@ -573,10 +573,10 @@ export class MonteCarloSimulator {
 
     if (worst_10_percent.length > 0) {
       const avg_worst_net_worth = this._mean(
-        worst_10_percent.map((r) => r.final_net_worth),
+        worst_10_percent.map(r => r.final_net_worth)
       );
       const success_rate_worst =
-        worst_10_percent.filter((r) => r.fire_success).length /
+        worst_10_percent.filter(r => r.fire_success).length /
         worst_10_percent.length;
 
       impact_analysis.worst_10_percent_avg_net_worth =
@@ -584,12 +584,12 @@ export class MonteCarloSimulator {
       impact_analysis.worst_10_percent_success_rate = success_rate_worst;
       impact_analysis.black_swan_impact_severity = Math.max(
         0,
-        1.0 - success_rate_worst,
+        1.0 - success_rate_worst
       );
     }
 
     // Analyze event frequency
-    const all_events = simulation_data.flatMap((sim) => sim.black_swan_events);
+    const all_events = simulation_data.flatMap(sim => sim.black_swan_events);
 
     if (all_events.length > 0) {
       const event_counts: Record<string, number> = {};
@@ -621,17 +621,19 @@ export class MonteCarloSimulator {
       minimum_net_worth: Decimal;
       fire_success: boolean;
       black_swan_events: string[];
-    }[],
+    }[]
   ): string[] {
     const scenarios: string[] = [];
 
     // Analyze failure rate
-    const failed_runs = simulation_data.filter((r) => !r.fire_success);
+    const failed_runs = simulation_data.filter(r => !r.fire_success);
     // If failure rate > 10%
     if (failed_runs.length > simulation_data.length * 0.1) {
       const failure_rate = failed_runs.length / simulation_data.length;
       scenarios.push(
-        `Approximately ${Math.round(failure_rate * 100)}% of simulations show FIRE plan failure`,
+        `Approximately ${Math.round(
+          failure_rate * 100
+        )}% of simulations show FIRE plan failure`
       );
 
       // Analyze worst failures
@@ -641,22 +643,27 @@ export class MonteCarloSimulator {
         .slice(0, Math.max(1, Math.floor(failed_runs.length / 10)));
       if (worst_failures.length > 0) {
         const avg_worst = this._mean(
-          worst_failures.map((r) => r.final_net_worth),
+          worst_failures.map(r => r.final_net_worth)
         );
         scenarios.push(
-          `Worst case average final net worth: $${avg_worst.round().toNumber().toLocaleString()}`,
+          `Worst case average final net worth: $${avg_worst
+            .round()
+            .toNumber()
+            .toLocaleString()}`
         );
       }
     }
 
     // Analyze negative net worth scenarios
-    const negative_net_worth = simulation_data.filter((r) =>
-      r.final_net_worth.lt(new Decimal(0)),
+    const negative_net_worth = simulation_data.filter(r =>
+      r.final_net_worth.lt(new Decimal(0))
     );
     if (negative_net_worth.length > 0) {
       const negative_rate = negative_net_worth.length / simulation_data.length;
       scenarios.push(
-        `${(negative_rate * 100).toFixed(1)}% of scenarios end with negative net worth`,
+        `${(negative_rate * 100).toFixed(
+          1
+        )}% of scenarios end with negative net worth`
       );
     }
 
@@ -673,14 +680,14 @@ export class MonteCarloSimulator {
       minimum_net_worth: Decimal;
       fire_success: boolean;
       black_swan_events: string[];
-    }[],
+    }[]
   ): Decimal {
     const success_rate =
-      simulation_data.filter((r) => r.fire_success).length /
+      simulation_data.filter(r => r.fire_success).length /
       simulation_data.length;
 
     // Consider success rate and result stability
-    const final_net_worths = simulation_data.map((r) => r.final_net_worth);
+    const final_net_worths = simulation_data.map(r => r.final_net_worth);
     const mean_net_worth = this._mean(final_net_worths);
 
     let cv: Decimal;
@@ -699,7 +706,7 @@ export class MonteCarloSimulator {
 
     return Decimal.min(
       new Decimal(100),
-      Decimal.max(new Decimal(0), resilience),
+      Decimal.max(new Decimal(0), resilience)
     );
   }
 
@@ -713,22 +720,20 @@ export class MonteCarloSimulator {
       minimum_net_worth: Decimal;
       fire_success: boolean;
       black_swan_events: string[];
-    }[],
+    }[]
   ): Decimal {
     // Estimate user's annual expenses from engine data
     let annual_expenses: Decimal;
 
     if (this.base_df.length > 0) {
-      annual_expenses = this._mean(
-        this.base_df.map((row) => row.total_expense),
-      );
+      annual_expenses = this._mean(this.base_df.map(row => row.total_expense));
     } else {
       annual_expenses = new Decimal(50000.0); // Default fallback
     }
 
     // Adjust based on success rate
     const success_rate =
-      simulation_data.filter((r) => r.fire_success).length /
+      simulation_data.filter(r => r.fire_success).length /
       simulation_data.length;
 
     let emergency_months: number;
@@ -816,7 +821,7 @@ export class MonteCarloSimulator {
     if (values.length === 0) return new Decimal(0);
     return values.reduce(
       (min, current) => (current.lt(min) ? current : min),
-      values[0],
+      values[0]
     );
   }
 
@@ -824,7 +829,7 @@ export class MonteCarloSimulator {
     if (values.length === 0) return new Decimal(0);
     return values.reduce(
       (max, current) => (current.gt(max) ? current : max),
-      values[0],
+      values[0]
     );
   }
 }
@@ -837,7 +842,7 @@ export class MonteCarloSimulator {
  * Create MonteCarloResult from basic parameters
  */
 export function createMonteCarloResult(
-  data: Partial<MonteCarloResult>,
+  data: Partial<MonteCarloResult>
 ): MonteCarloResult {
   return {
     success_rate: data.success_rate || new Decimal(0),

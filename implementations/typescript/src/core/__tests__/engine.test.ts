@@ -3,43 +3,43 @@
  * Ensures identical behavior between TypeScript and Python implementations
  */
 
-import Decimal from "decimal.js";
+import Decimal from 'decimal.js';
 
-import type { UserProfile, YearlyState } from "../data_models";
+import type { UserProfile, YearlyState } from '../data_models';
 import {
   createUserProfile,
   createPortfolioConfiguration,
   getCurrentAge,
-} from "../data_models";
+} from '../data_models';
 
-import type { EngineInput, AnnualFinancialProjection } from "../engine";
-import { FIREEngine, createEngineInput, createProjectionRow } from "../engine";
+import type { EngineInput, AnnualFinancialProjection } from '../engine';
+import { FIREEngine, createEngineInput, createProjectionRow } from '../engine';
 
-describe("FIREEngine", () => {
+describe('FIREEngine', () => {
   // Create sample user profile fixture
   const createSampleProfile = (): UserProfile => {
     const portfolio = createPortfolioConfiguration({
       asset_classes: [
         {
-          name: "Cash",
+          name: 'Cash',
           allocation_percentage: new Decimal(10.0),
           expected_return: new Decimal(1.0),
           volatility: new Decimal(1.0),
-          liquidity_level: "high",
+          liquidity_level: 'high',
         },
         {
-          name: "Stocks",
+          name: 'Stocks',
           allocation_percentage: new Decimal(60.0),
           expected_return: new Decimal(7.0),
           volatility: new Decimal(15.0),
-          liquidity_level: "medium",
+          liquidity_level: 'medium',
         },
         {
-          name: "Bonds",
+          name: 'Bonds',
           allocation_percentage: new Decimal(30.0),
           expected_return: new Decimal(3.0),
           volatility: new Decimal(5.0),
-          liquidity_level: "low",
+          liquidity_level: 'low',
         },
       ],
       enable_rebalancing: true,
@@ -94,7 +94,7 @@ describe("FIREEngine", () => {
     fireEngine = new FIREEngine(sampleInput);
   });
 
-  test("engine initialization", () => {
+  test('engine initialization', () => {
     expect(fireEngine.input).toBeDefined();
     expect(fireEngine.profile).toBeDefined();
     expect(fireEngine.projection_df).toBeDefined();
@@ -103,41 +103,41 @@ describe("FIREEngine", () => {
     expect(fireEngine.portfolio_simulator.calculator).toBeDefined();
   });
 
-  test("initial portfolio creation", () => {
+  test('initial portfolio creation', () => {
     const portfolioSimulator = fireEngine.portfolio_simulator;
     const initialPortfolio = portfolioSimulator.getCurrentPortfolio();
 
     // Should have some assets based on user profile
     expect(Object.keys(initialPortfolio.asset_values).length).toBeGreaterThan(
-      0,
+      0
     );
 
     // Total value should match current net worth
     const totalValue = Object.values(initialPortfolio.asset_values).reduce(
       (sum, val) => sum.add(val),
-      new Decimal(0),
+      new Decimal(0)
     );
     expect(totalValue.toNumber()).toBeCloseTo(
       fireEngine.profile.current_net_worth.toNumber(),
-      6,
+      6
     );
 
     // Test reset functionality
     const originalValue = totalValue;
     portfolioSimulator.resetToInitial();
     const resetValue = Object.values(
-      portfolioSimulator.getCurrentPortfolio().asset_values,
+      portfolioSimulator.getCurrentPortfolio().asset_values
     ).reduce((sum, val) => sum.add(val), new Decimal(0));
     expect(resetValue.toNumber()).toBeCloseTo(originalValue.toNumber(), 6);
   });
 
-  test("fire calculation basic", () => {
+  test('fire calculation basic', () => {
     const result = fireEngine.calculate();
 
     // Should return valid result
     expect(result).toBeDefined();
-    expect(typeof result.is_fire_achievable).toBe("boolean");
-    expect(typeof result.fire_net_worth).toBe("object"); // Decimal object
+    expect(typeof result.is_fire_achievable).toBe('boolean');
+    expect(typeof result.fire_net_worth).toBe('object'); // Decimal object
     expect(result.yearly_results.length).toBe(5); // 5 years of data
 
     // Each yearly result should have required fields
@@ -146,14 +146,14 @@ describe("FIREEngine", () => {
       expect(yearlyResult.year).toBeGreaterThanOrEqual(2024);
       expect(yearlyResult.total_income.toNumber()).toBeGreaterThan(0);
       expect(yearlyResult.total_expense.toNumber()).toBeGreaterThan(0);
-      expect(typeof yearlyResult.net_cash_flow).toBe("object"); // Decimal object
+      expect(typeof yearlyResult.net_cash_flow).toBe('object'); // Decimal object
       // Check investment return is numeric
-      expect(typeof yearlyResult.investment_return).toBe("object"); // Decimal object
+      expect(typeof yearlyResult.investment_return).toBe('object'); // Decimal object
       expect(yearlyResult.portfolio_value.toNumber()).toBeGreaterThanOrEqual(0);
     }
   });
 
-  test("yearly states calculation", () => {
+  test('yearly states calculation', () => {
     const yearlyStates = fireEngine.get_yearly_states();
 
     expect(yearlyStates.length).toBe(5); // 5 years of data
@@ -163,20 +163,20 @@ describe("FIREEngine", () => {
       expect(state.year).toBeGreaterThanOrEqual(2024);
 
       // Financial metrics should be calculated
-      expect(typeof state.net_worth).toBe("object"); // Decimal object
-      expect(typeof state.is_sustainable).toBe("boolean");
+      expect(typeof state.net_worth).toBe('object'); // Decimal object
+      expect(typeof state.is_sustainable).toBe('boolean');
 
       // Traditional FIRE metrics (for reference)
       expect(state.fire_number.toNumber()).toBeGreaterThan(0); // 25x expenses
-      expect(typeof state.fire_progress).toBe("object"); // Decimal object
+      expect(typeof state.fire_progress).toBe('object'); // Decimal object
 
       // Portfolio metrics
       expect(state.portfolio_value.toNumber()).toBeGreaterThanOrEqual(0);
-      expect(typeof state.investment_return).toBe("object"); // Decimal object
+      expect(typeof state.investment_return).toBe('object'); // Decimal object
     }
   });
 
-  test("fire number calculation", () => {
+  test('fire number calculation', () => {
     const yearlyStates = fireEngine.get_yearly_states();
 
     for (const state of yearlyStates) {
@@ -185,7 +185,7 @@ describe("FIREEngine", () => {
     }
   });
 
-  test("fire progress calculation", () => {
+  test('fire progress calculation', () => {
     const yearlyStates = fireEngine.get_yearly_states();
 
     for (const state of yearlyStates) {
@@ -199,28 +199,28 @@ describe("FIREEngine", () => {
     }
   });
 
-  test("portfolio integration", () => {
+  test('portfolio integration', () => {
     const result = fireEngine.calculate();
 
     // Portfolio should grow over time with positive cash flow
-    const netWorths = result.yearly_results.map((yr) => yr.portfolio_value);
+    const netWorths = result.yearly_results.map(yr => yr.portfolio_value);
 
     // With positive cash flow and returns, net worth should generally increase
     const finalNetWorth = netWorths[netWorths.length - 1];
     const initialNetWorth = fireEngine.profile.current_net_worth;
 
     expect(finalNetWorth.toNumber()).toBeGreaterThan(
-      initialNetWorth.toNumber(),
+      initialNetWorth.toNumber()
     ); // Should grow with positive cash flows
   });
 
-  test("sustainability logic", () => {
+  test('sustainability logic', () => {
     const yearlyStates = fireEngine.get_yearly_states();
 
     // Check that each state has sustainability metrics
     for (const state of yearlyStates) {
-      expect(typeof state.net_worth).toBe("object"); // Decimal object
-      expect(typeof state.is_sustainable).toBe("boolean");
+      expect(typeof state.net_worth).toBe('object'); // Decimal object
+      expect(typeof state.is_sustainable).toBe('boolean');
 
       // Safety buffer should be calculated dynamically
       const expectedBuffer =
@@ -232,11 +232,11 @@ describe("FIREEngine", () => {
 
       // Traditional FIRE metrics should still exist for reference
       expect(state.fire_number.toNumber()).toBeGreaterThan(0);
-      expect(typeof state.fire_progress).toBe("object"); // Decimal object
+      expect(typeof state.fire_progress).toBe('object'); // Decimal object
     }
   });
 
-  test("safety buffer configuration", () => {
+  test('safety buffer configuration', () => {
     // Test with 6 months buffer
     const profile6m = createUserProfile({
       birth_year: 1990,
@@ -249,7 +249,7 @@ describe("FIREEngine", () => {
     });
 
     const engine6m = new FIREEngine(
-      createEngineInput(profile6m, createSampleProjection()),
+      createEngineInput(profile6m, createSampleProjection())
     );
     const states6m = engine6m.get_yearly_states();
 
@@ -265,7 +265,7 @@ describe("FIREEngine", () => {
     });
 
     const engine24m = new FIREEngine(
-      createEngineInput(profile24m, createSampleProjection()),
+      createEngineInput(profile24m, createSampleProjection())
     );
     const states24m = engine24m.get_yearly_states();
 
@@ -292,8 +292,8 @@ describe("FIREEngine", () => {
   });
 });
 
-describe("EngineInput", () => {
-  test("engine input creation", () => {
+describe('EngineInput', () => {
+  test('engine input creation', () => {
     const profile = createUserProfile({
       birth_year: 1990,
       expected_fire_age: 50,
@@ -316,16 +316,16 @@ describe("EngineInput", () => {
     expect(engineInput.annual_financial_projection[0].age).toBe(34);
     expect(engineInput.annual_financial_projection[0].year).toBe(2024);
     expect(
-      engineInput.annual_financial_projection[0].total_income.toNumber(),
+      engineInput.annual_financial_projection[0].total_income.toNumber()
     ).toBe(60000.0);
     expect(
-      engineInput.annual_financial_projection[0].total_expense.toNumber(),
+      engineInput.annual_financial_projection[0].total_expense.toNumber()
     ).toBe(40000.0);
   });
 });
 
-describe("YearlyState", () => {
-  test("yearly state creation", () => {
+describe('YearlyState', () => {
+  test('yearly state creation', () => {
     const state: YearlyState = {
       age: 35,
       year: 2025,
@@ -354,7 +354,7 @@ describe("YearlyState", () => {
     expect(state.fire_progress.toNumber()).toBeCloseTo(0.133, 3);
   });
 
-  test("net worth negative values", () => {
+  test('net worth negative values', () => {
     // Test state with negative net worth (debt situation)
     const state: YearlyState = {
       age: 70,
@@ -378,7 +378,7 @@ describe("YearlyState", () => {
     expect(state.net_cash_flow.toNumber()).toBeLessThan(0);
   });
 
-  test("net worth vs portfolio value", () => {
+  test('net worth vs portfolio value', () => {
     // Case 1: Portfolio has value, net worth should equal portfolio value
     const statePositive: YearlyState = {
       age: 40,
@@ -395,7 +395,7 @@ describe("YearlyState", () => {
     };
 
     expect(statePositive.net_worth.toNumber()).toBe(
-      statePositive.portfolio_value.toNumber(),
+      statePositive.portfolio_value.toNumber()
     );
     expect(statePositive.net_worth.toNumber()).toBeGreaterThan(0);
     expect(statePositive.is_sustainable).toBe(true);

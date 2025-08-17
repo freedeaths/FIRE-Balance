@@ -3,24 +3,24 @@
  * Ensures identical behavior between TypeScript and Python implementations
  */
 
-import Decimal from "decimal.js";
+import Decimal from 'decimal.js';
 
-import type { UserProfile, SimulationSettings } from "../data_models";
+import type { UserProfile, SimulationSettings } from '../data_models';
 import {
   createUserProfile,
   createSimulationSettings,
   getCurrentAge,
-} from "../data_models";
+} from '../data_models';
 
-import type { AnnualFinancialProjection, EngineInput } from "../engine";
-import { FIREEngine, createEngineInput, createProjectionRow } from "../engine";
+import type { AnnualFinancialProjection, EngineInput } from '../engine';
+import { FIREEngine, createEngineInput, createProjectionRow } from '../engine';
 
-import type { MonteCarloResult } from "../monte_carlo";
-import { MonteCarloSimulator, createMonteCarloResult } from "../monte_carlo";
+import type { MonteCarloResult } from '../monte_carlo';
+import { MonteCarloSimulator, createMonteCarloResult } from '../monte_carlo';
 
-import { FinancialCrisisEvent } from "../black_swan_events";
+import { FinancialCrisisEvent } from '../black_swan_events';
 
-describe("MonteCarloSimulatorSetup", () => {
+describe('MonteCarloSimulatorSetup', () => {
   let profile: UserProfile;
   let projection_df: AnnualFinancialProjection[];
   let engine_input: EngineInput;
@@ -42,7 +42,7 @@ describe("MonteCarloSimulatorSetup", () => {
     for (let year_idx = 0; year_idx < 5; year_idx++) {
       const age = getCurrentAge(profile.birth_year) + year_idx;
       projection_data.push(
-        createProjectionRow(age, 2025 + year_idx, 100000, 50000),
+        createProjectionRow(age, 2025 + year_idx, 100000, 50000)
       );
     }
 
@@ -51,7 +51,7 @@ describe("MonteCarloSimulatorSetup", () => {
     engine = new FIREEngine(engine_input);
   });
 
-  test("simulator initialization", () => {
+  test('simulator initialization', () => {
     const simulator = new MonteCarloSimulator(engine);
 
     // Should have default settings
@@ -64,10 +64,10 @@ describe("MonteCarloSimulatorSetup", () => {
 
     // Should have personalized events
     expect(simulator.all_events.length).toBe(15);
-    expect(simulator.all_events.every((e) => e.event_id)).toBe(true);
+    expect(simulator.all_events.every(e => e.event_id)).toBe(true);
   });
 
-  test("simulator with custom settings", () => {
+  test('simulator with custom settings', () => {
     const custom_settings = createSimulationSettings({
       num_simulations: 100,
       confidence_level: new Decimal(0.95),
@@ -87,7 +87,7 @@ describe("MonteCarloSimulatorSetup", () => {
   });
 });
 
-describe("BasicVariations", () => {
+describe('BasicVariations', () => {
   let profile: UserProfile;
   let projection_df: AnnualFinancialProjection[];
   let engine_input: EngineInput;
@@ -110,7 +110,7 @@ describe("BasicVariations", () => {
     for (let year_idx = 0; year_idx < 10; year_idx++) {
       const age = getCurrentAge(profile.birth_year) + year_idx;
       projection_data.push(
-        createProjectionRow(age, 2025 + year_idx, 100000, 50000),
+        createProjectionRow(age, 2025 + year_idx, 100000, 50000)
       );
     }
 
@@ -131,7 +131,7 @@ describe("BasicVariations", () => {
     simulator = new MonteCarloSimulator(engine, settings);
   });
 
-  test("income variation generation", () => {
+  test('income variation generation', () => {
     const variations = (simulator as any)._generate_income_variation();
 
     // Should have variations for each year
@@ -142,7 +142,7 @@ describe("BasicVariations", () => {
 
     // Should respect minimum factor
     expect(
-      variations.every((v: Decimal) => v.gte(settings.income_minimum_factor)),
+      variations.every((v: Decimal) => v.gte(settings.income_minimum_factor))
     ).toBe(true);
 
     // Working years should vary, post-FIRE should be stable
@@ -151,12 +151,12 @@ describe("BasicVariations", () => {
     // Working years should have some variation (not all exactly 1.0)
     expect(
       working_years.every((v: Decimal) =>
-        v.sub(new Decimal(1.0)).abs().lt(new Decimal(0.001)),
-      ),
+        v.sub(new Decimal(1.0)).abs().lt(new Decimal(0.001))
+      )
     ).toBe(false);
   });
 
-  test("expense variation generation", () => {
+  test('expense variation generation', () => {
     const variations = (simulator as any)._generate_expense_variation();
 
     // Should have variations for each year
@@ -167,18 +167,18 @@ describe("BasicVariations", () => {
 
     // Should respect minimum factor
     expect(
-      variations.every((v: Decimal) => v.gte(settings.expense_minimum_factor)),
+      variations.every((v: Decimal) => v.gte(settings.expense_minimum_factor))
     ).toBe(true);
 
     // Should have some variation (not all exactly 1.0)
     expect(
       variations.every((v: Decimal) =>
-        v.sub(new Decimal(1.0)).abs().lt(new Decimal(0.001)),
-      ),
+        v.sub(new Decimal(1.0)).abs().lt(new Decimal(0.001))
+      )
     ).toBe(false);
   });
 
-  test("random scenario without black swan", () => {
+  test('random scenario without black swan', () => {
     const original_df = [...simulator.base_df];
     const [scenario_df, events] = (
       simulator as any
@@ -195,15 +195,15 @@ describe("BasicVariations", () => {
 
     // Values should be different from original (due to variations)
     const income_different = !scenario_df.every((row, i) =>
-      row.total_income.eq(original_df[i].total_income),
+      row.total_income.eq(original_df[i].total_income)
     );
     const expense_different = !scenario_df.every((row, i) =>
-      row.total_expense.eq(original_df[i].total_expense),
+      row.total_expense.eq(original_df[i].total_expense)
     );
     expect(income_different || expense_different).toBe(true);
   });
 
-  test("random scenario always returns events", () => {
+  test('random scenario always returns events', () => {
     const [scenario_df, events] = (
       simulator as any
     )._generate_random_scenario();
@@ -217,7 +217,7 @@ describe("BasicVariations", () => {
   });
 });
 
-describe("BlackSwanEventApplication", () => {
+describe('BlackSwanEventApplication', () => {
   let profile: UserProfile;
   let projection_df: AnnualFinancialProjection[];
   let engine_input: EngineInput;
@@ -240,7 +240,7 @@ describe("BlackSwanEventApplication", () => {
     for (let year_idx = 0; year_idx < 5; year_idx++) {
       const age = getCurrentAge(profile.birth_year) + year_idx;
       projection_data.push(
-        createProjectionRow(age, 2025 + year_idx, 100000, 50000),
+        createProjectionRow(age, 2025 + year_idx, 100000, 50000)
       );
     }
 
@@ -261,7 +261,7 @@ describe("BlackSwanEventApplication", () => {
     simulator = new MonteCarloSimulator(engine, settings);
   });
 
-  test("black swan event simulation", () => {
+  test('black swan event simulation', () => {
     // Mock Math.random to ensure predictable testing
     const originalRandom = Math.random;
     Math.random = jest.fn(() => 0.01); // Very low value, should trigger high probability events
@@ -282,7 +282,7 @@ describe("BlackSwanEventApplication", () => {
     }
   });
 
-  test("duplicate event filtering", () => {
+  test('duplicate event filtering', () => {
     const test_df = [...simulator.base_df];
 
     // Mock event simulation to return same event twice
@@ -303,13 +303,13 @@ describe("BlackSwanEventApplication", () => {
 
       // Should only trigger once
       expect(triggered_events.length).toBe(1);
-      expect(triggered_events[0]).toBe("financial_crisis");
+      expect(triggered_events[0]).toBe('financial_crisis');
     } finally {
       (simulator as any)._simulate_black_swan_events = original_simulate;
     }
   });
 
-  test("event recovery logic", () => {
+  test('event recovery logic', () => {
     const test_df = [...simulator.base_df];
 
     // Mock event simulation to return crisis in first year only
@@ -348,7 +348,7 @@ describe("BlackSwanEventApplication", () => {
   });
 });
 
-describe("MonteCarloAnalysis", () => {
+describe('MonteCarloAnalysis', () => {
   let simulation_data: {
     run_id: number;
     final_net_worth: Decimal;
@@ -366,14 +366,14 @@ describe("MonteCarloAnalysis", () => {
         final_net_worth: new Decimal(500000),
         minimum_net_worth: new Decimal(400000),
         fire_success: true,
-        black_swan_events: ["financial_crisis"],
+        black_swan_events: ['financial_crisis'],
       },
       {
         run_id: 1,
         final_net_worth: new Decimal(-100000),
         minimum_net_worth: new Decimal(-150000),
         fire_success: false,
-        black_swan_events: ["unemployment", "major_illness"],
+        black_swan_events: ['unemployment', 'major_illness'],
       },
       {
         run_id: 2,
@@ -387,14 +387,14 @@ describe("MonteCarloAnalysis", () => {
         final_net_worth: new Decimal(200000),
         minimum_net_worth: new Decimal(100000),
         fire_success: true,
-        black_swan_events: ["market_crash"],
+        black_swan_events: ['market_crash'],
       },
       {
         run_id: 4,
         final_net_worth: new Decimal(-50000),
         minimum_net_worth: new Decimal(-80000),
         fire_success: false,
-        black_swan_events: ["global_war", "hyperinflation"],
+        black_swan_events: ['global_war', 'hyperinflation'],
       },
     ];
 
@@ -414,9 +414,9 @@ describe("MonteCarloAnalysis", () => {
     simulator = new MonteCarloSimulator(engine);
   });
 
-  test("black swan impact analysis", () => {
+  test('black swan impact analysis', () => {
     const analysis = (simulator as any)._analyze_black_swan_impact(
-      simulation_data,
+      simulation_data
     );
 
     // Should always have worst case analysis (at least 1 sample)
@@ -436,25 +436,25 @@ describe("MonteCarloAnalysis", () => {
     expect(analysis.avg_events_per_simulation).toBe(1.2); // 6 events / 5 runs
   });
 
-  test("worst scenarios identification", () => {
+  test('worst scenarios identification', () => {
     const scenarios = (simulator as any)._identify_worst_scenarios(
-      simulation_data,
+      simulation_data
     );
 
     // Should identify failure rate (2/5 = 40% > 10%)
-    const failure_scenario = scenarios.find((s: string) => s.includes("40%"));
+    const failure_scenario = scenarios.find((s: string) => s.includes('40%'));
     expect(failure_scenario).toBeDefined();
 
     // Should identify negative net worth scenarios (2/5 = 40%)
     const negative_scenario = scenarios.find((s: string) =>
-      s.includes("negative net worth"),
+      s.includes('negative net worth')
     );
     expect(negative_scenario).toBeDefined();
   });
 
-  test("resilience score calculation", () => {
+  test('resilience score calculation', () => {
     const score = (simulator as any)._calculate_resilience_score(
-      simulation_data,
+      simulation_data
     );
 
     // Should be between 0 and 100
@@ -465,7 +465,7 @@ describe("MonteCarloAnalysis", () => {
     expect(score.toNumber()).toBeLessThan(70); // Success rate is only 60%
   });
 
-  test("emergency fund recommendation", () => {
+  test('emergency fund recommendation', () => {
     const fund = (simulator as any)._recommend_emergency_fund(simulation_data);
 
     // Should return a positive value
@@ -478,7 +478,7 @@ describe("MonteCarloAnalysis", () => {
   });
 });
 
-describe("SensitivityAnalysis", () => {
+describe('SensitivityAnalysis', () => {
   let simulator: MonteCarloSimulator;
 
   beforeEach(() => {
@@ -510,11 +510,11 @@ describe("SensitivityAnalysis", () => {
     simulator = new MonteCarloSimulator(engine, settings);
   });
 
-  test("income volatility sensitivity", async () => {
+  test('income volatility sensitivity', async () => {
     const variations = [0.05, 0.1, 0.15, 0.2];
     const results = await simulator.analyze_sensitivity(
-      "income_volatility",
-      variations,
+      'income_volatility',
+      variations
     );
 
     // Should return results for each variation
@@ -527,11 +527,11 @@ describe("SensitivityAnalysis", () => {
     }
   });
 
-  test("expense volatility sensitivity", async () => {
+  test('expense volatility sensitivity', async () => {
     const variations = [0.02, 0.05, 0.08];
     const results = await simulator.analyze_sensitivity(
-      "expense_volatility",
-      variations,
+      'expense_volatility',
+      variations
     );
 
     expect(results.length).toBe(3);
@@ -541,11 +541,11 @@ describe("SensitivityAnalysis", () => {
     }
   });
 
-  test("black swan probability sensitivity", async () => {
+  test('black swan probability sensitivity', async () => {
     const variations = [0.0, 1.0]; // Off vs On
     const results = await simulator.analyze_sensitivity(
-      "black_swan_probability",
-      variations,
+      'black_swan_probability',
+      variations
     );
 
     expect(results.length).toBe(2);
@@ -557,14 +557,14 @@ describe("SensitivityAnalysis", () => {
     }
   });
 
-  test("invalid parameter raises error", async () => {
+  test('invalid parameter raises error', async () => {
     await expect(
-      simulator.analyze_sensitivity("invalid_parameter", [0.1, 0.2]),
+      simulator.analyze_sensitivity('invalid_parameter', [0.1, 0.2])
     ).rejects.toThrow();
   });
 });
 
-describe("SeedReproducibility", () => {
+describe('SeedReproducibility', () => {
   let engine: FIREEngine;
   let settings: SimulationSettings;
 
@@ -596,7 +596,7 @@ describe("SeedReproducibility", () => {
     });
   });
 
-  test("seed reproducibility", async () => {
+  test('seed reproducibility', async () => {
     const seed = 12345;
 
     // Run simulation twice with same seed
@@ -609,14 +609,14 @@ describe("SeedReproducibility", () => {
     // Results should be identical
     expect(result1.success_rate.eq(result2.success_rate)).toBe(true);
     expect(result1.mean_final_net_worth.eq(result2.mean_final_net_worth)).toBe(
-      true,
+      true
     );
     expect(
-      result1.median_final_net_worth.eq(result2.median_final_net_worth),
+      result1.median_final_net_worth.eq(result2.median_final_net_worth)
     ).toBe(true);
   });
 
-  test("different seeds produce different results", async () => {
+  test('different seeds produce different results', async () => {
     // Run simulation with different seeds
     const simulator1 = new MonteCarloSimulator(engine, settings, 111);
     const result1 = await simulator1.run_simulation();
@@ -632,7 +632,7 @@ describe("SeedReproducibility", () => {
     expect(different_results).toBe(true);
   });
 
-  test("no seed produces random results", async () => {
+  test('no seed produces random results', async () => {
     // Run simulation twice without seed
     const simulator1 = new MonteCarloSimulator(engine, settings);
     const result1 = await simulator1.run_simulation();
@@ -648,19 +648,19 @@ describe("SeedReproducibility", () => {
     expect(different_results).toBe(true);
   });
 
-  test("sensitivity analysis seed consistency", async () => {
+  test('sensitivity analysis seed consistency', async () => {
     const seed = 54321;
     const simulator = new MonteCarloSimulator(engine, settings, seed);
 
     // Run sensitivity analysis twice
     const variations = [0.1, 0.2];
     const results1 = await simulator.analyze_sensitivity(
-      "income_volatility",
-      variations,
+      'income_volatility',
+      variations
     );
     const results2 = await simulator.analyze_sensitivity(
-      "income_volatility",
-      variations,
+      'income_volatility',
+      variations
     );
 
     // Results should be identical when using same seed
@@ -668,7 +668,7 @@ describe("SeedReproducibility", () => {
   });
 });
 
-describe("MonteCarloIntegration", () => {
+describe('MonteCarloIntegration', () => {
   let engine: FIREEngine;
 
   beforeEach(() => {
@@ -685,7 +685,7 @@ describe("MonteCarloIntegration", () => {
     for (let year_idx = 0; year_idx < 10; year_idx++) {
       const age = getCurrentAge(profile.birth_year) + year_idx;
       projection_data.push(
-        createProjectionRow(age, 2025 + year_idx, 100000, 50000),
+        createProjectionRow(age, 2025 + year_idx, 100000, 50000)
       );
     }
 
@@ -694,7 +694,7 @@ describe("MonteCarloIntegration", () => {
     engine = new FIREEngine(engine_input);
   });
 
-  test("complete simulation run", async () => {
+  test('complete simulation run', async () => {
     const settings = createSimulationSettings({
       num_simulations: 50, // Small number for fast testing
       confidence_level: new Decimal(0.95),
@@ -712,7 +712,7 @@ describe("MonteCarloIntegration", () => {
     expect(result).toBeDefined();
     expect(result.total_simulations).toBe(50);
     expect(
-      result.successful_simulations + (50 - result.successful_simulations),
+      result.successful_simulations + (50 - result.successful_simulations)
     ).toBe(50);
 
     // Check statistical measures
@@ -728,14 +728,14 @@ describe("MonteCarloIntegration", () => {
 
     // Check percentiles make sense
     expect(
-      result.percentile_5_net_worth.lte(result.median_final_net_worth),
+      result.percentile_5_net_worth.lte(result.median_final_net_worth)
     ).toBe(true);
     expect(
-      result.median_final_net_worth.lte(result.percentile_95_net_worth),
+      result.median_final_net_worth.lte(result.percentile_95_net_worth)
     ).toBe(true);
   });
 
-  test("simulation without black swan events", async () => {
+  test('simulation without black swan events', async () => {
     const settings = createSimulationSettings({
       num_simulations: 20,
       confidence_level: new Decimal(0.95),

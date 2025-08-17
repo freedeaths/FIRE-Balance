@@ -18,7 +18,7 @@ import type {
   AssetClass,
   IncomeExpenseItem,
   ValidationError,
-} from "../types";
+} from '../types';
 
 // =============================================================================
 // Utility Functions
@@ -41,7 +41,7 @@ export const calculateCurrentAge = (birthYear: number): number => {
  * Converts to lowercase and collapses multiple spaces to single space
  */
 export const normalizeAssetName = (name: string): string => {
-  return name.trim().toLowerCase().replace(/\\s+/g, " ");
+  return name.trim().toLowerCase().replace(/\\s+/g, ' ');
 };
 
 // =============================================================================
@@ -58,36 +58,36 @@ export const validateAssetClass = (asset: AssetClass): ValidationError[] => {
   // Name validation
   if (!asset.name || asset.name.trim().length === 0) {
     errors.push({
-      field: "name",
-      message: "Asset name is required",
-      code: "REQUIRED",
+      field: 'name',
+      message: 'Asset name is required',
+      code: 'REQUIRED',
     });
   }
 
   // Allocation percentage validation
   if (asset.allocation_percentage < 0 || asset.allocation_percentage > 100) {
     errors.push({
-      field: "allocation_percentage",
-      message: "Allocation percentage must be between 0% and 100%",
-      code: "OUT_OF_RANGE",
+      field: 'allocation_percentage',
+      message: 'Allocation percentage must be between 0% and 100%',
+      code: 'OUT_OF_RANGE',
     });
   }
 
   // Expected return validation (reasonable bounds)
   if (asset.expected_return < -50 || asset.expected_return > 100) {
     errors.push({
-      field: "expected_return",
-      message: "Expected return must be between -50% and 100%",
-      code: "OUT_OF_RANGE",
+      field: 'expected_return',
+      message: 'Expected return must be between -50% and 100%',
+      code: 'OUT_OF_RANGE',
     });
   }
 
   // Volatility validation
   if (asset.volatility < 0 || asset.volatility > 200) {
     errors.push({
-      field: "volatility",
-      message: "Volatility must be between 0% and 200%",
-      code: "OUT_OF_RANGE",
+      field: 'volatility',
+      message: 'Volatility must be between 0% and 200%',
+      code: 'OUT_OF_RANGE',
     });
   }
 
@@ -99,7 +99,7 @@ export const validateAssetClass = (asset: AssetClass): ValidationError[] => {
  * Mirrors Python's AssetClass.normalize_name validator
  */
 export const createAssetClass = (data: Partial<AssetClass>): AssetClass => {
-  const originalName = data.name?.trim() || "";
+  const originalName = data.name?.trim() || '';
   const normalizedName = normalizeAssetName(originalName);
   const displayName = data.display_name || originalName;
 
@@ -109,7 +109,7 @@ export const createAssetClass = (data: Partial<AssetClass>): AssetClass => {
     allocation_percentage: data.allocation_percentage || 0,
     expected_return: data.expected_return || 0,
     volatility: data.volatility || 0,
-    liquidity_level: data.liquidity_level || "medium",
+    liquidity_level: data.liquidity_level || 'medium',
   } as AssetClass;
 };
 
@@ -122,14 +122,14 @@ export const createAssetClass = (data: Partial<AssetClass>): AssetClass => {
  * Mirrors Python's PortfolioConfiguration validation logic
  */
 export const validatePortfolio = (
-  portfolio: PortfolioConfiguration,
+  portfolio: PortfolioConfiguration
 ): ValidationError[] => {
   const errors: ValidationError[] = [];
 
   // Validate individual assets
   portfolio.asset_classes.forEach((asset, index) => {
     const assetErrors = validateAssetClass(asset);
-    assetErrors.forEach((error) => {
+    assetErrors.forEach(error => {
       errors.push({
         ...error,
         field: `asset_classes.${index}.${error.field}`,
@@ -140,35 +140,39 @@ export const validatePortfolio = (
   // Validate allocation sum (mirrors Python's strict validation)
   const totalAllocation = portfolio.asset_classes.reduce(
     (sum, asset) => sum + asset.allocation_percentage,
-    0,
+    0
   );
 
   const tolerance = Number.EPSILON; // Machine precision tolerance
   if (Math.abs(totalAllocation - 100.0) > tolerance) {
     errors.push({
-      field: "asset_classes",
-      message: `Asset allocation percentages must sum to exactly 100%, got ${totalAllocation.toFixed(6)}% (difference: ${(totalAllocation - 100.0).toFixed(6)}%)`,
-      code: "INVALID_SUM",
+      field: 'asset_classes',
+      message: `Asset allocation percentages must sum to exactly 100%, got ${totalAllocation.toFixed(
+        6
+      )}% (difference: ${(totalAllocation - 100.0).toFixed(6)}%)`,
+      code: 'INVALID_SUM',
     });
   }
 
   // Validate unique asset names (case-insensitive)
-  const normalizedNames = portfolio.asset_classes.map((asset) => asset.name);
+  const normalizedNames = portfolio.asset_classes.map(asset => asset.name);
   const uniqueNames = new Set(normalizedNames);
 
   if (normalizedNames.length !== uniqueNames.size) {
     const duplicates = normalizedNames.filter(
-      (name, index) => normalizedNames.indexOf(name) !== index,
+      (name, index) => normalizedNames.indexOf(name) !== index
     );
     const uniqueDuplicates = [...new Set(duplicates)];
     const displayNames = portfolio.asset_classes
-      .filter((asset) => uniqueDuplicates.includes(asset.name))
-      .map((asset) => asset.display_name);
+      .filter(asset => uniqueDuplicates.includes(asset.name))
+      .map(asset => asset.display_name);
 
     errors.push({
-      field: "asset_classes",
-      message: `Asset names must be unique within portfolio (case-insensitive). Duplicate names found: ${displayNames.join(", ")}`,
-      code: "DUPLICATE_NAMES",
+      field: 'asset_classes',
+      message: `Asset names must be unique within portfolio (case-insensitive). Duplicate names found: ${displayNames.join(
+        ', '
+      )}`,
+      code: 'DUPLICATE_NAMES',
     });
   }
 
@@ -189,9 +193,9 @@ export const validateBirthYear = (birthYear: number): ValidationError[] => {
 
   if (birthYear < 1950 || birthYear > currentYear) {
     errors.push({
-      field: "birth_year",
+      field: 'birth_year',
       message: `Birth year must be between 1950 and ${currentYear}, got ${birthYear}`,
-      code: "OUT_OF_RANGE",
+      code: 'OUT_OF_RANGE',
     });
   }
 
@@ -203,7 +207,7 @@ export const validateBirthYear = (birthYear: number): ValidationError[] => {
  * Mirrors Python's UserProfile.validate_age_progression
  */
 export const validateAgeProgression = (
-  profile: UserProfile,
+  profile: UserProfile
 ): ValidationError[] => {
   const errors: ValidationError[] = [];
 
@@ -221,9 +225,9 @@ export const validateAgeProgression = (
     )
   ) {
     errors.push({
-      field: "age_progression",
+      field: 'age_progression',
       message: `Ages must follow progression: current_age(${currentAge}) <= expected_fire_age(${fireAge}) <= legal_retirement_age(${retirementAge}) <= life_expectancy(${lifeExpectancy})`,
-      code: "INVALID_PROGRESSION",
+      code: 'INVALID_PROGRESSION',
     });
   }
 
@@ -235,7 +239,7 @@ export const validateAgeProgression = (
  * Combines all individual validation functions
  */
 export const validateUserProfile = (
-  profile: UserProfile,
+  profile: UserProfile
 ): ValidationError[] => {
   const errors: ValidationError[] = [];
 
@@ -253,18 +257,18 @@ export const validateUserProfile = (
   // Safety buffer validation
   if (profile.safety_buffer_months < 0 || profile.safety_buffer_months > 120) {
     errors.push({
-      field: "safety_buffer_months",
-      message: "Safety buffer must be between 0 and 120 months",
-      code: "OUT_OF_RANGE",
+      field: 'safety_buffer_months',
+      message: 'Safety buffer must be between 0 and 120 months',
+      code: 'OUT_OF_RANGE',
     });
   }
 
   // Inflation rate validation
   if (profile.inflation_rate < -10 || profile.inflation_rate > 50) {
     errors.push({
-      field: "inflation_rate",
-      message: "Inflation rate must be between -10% and 50%",
-      code: "OUT_OF_RANGE",
+      field: 'inflation_rate',
+      message: 'Inflation rate must be between -10% and 50%',
+      code: 'OUT_OF_RANGE',
     });
   }
 
@@ -281,7 +285,7 @@ export const validateUserProfile = (
  */
 export const validateIncomeExpenseItem = (
   item: IncomeExpenseItem,
-  userProfile: UserProfile,
+  userProfile: UserProfile
 ): ValidationError[] => {
   const errors: ValidationError[] = [];
   const currentAge = calculateCurrentAge(userProfile.birth_year);
@@ -289,35 +293,45 @@ export const validateIncomeExpenseItem = (
   // Name validation
   if (!item.name || item.name.trim().length === 0) {
     errors.push({
-      field: "name",
-      message: "Item name is required",
-      code: "REQUIRED",
+      field: 'name',
+      message: 'Item name is required',
+      code: 'REQUIRED',
     });
   }
 
   // Amount validation
   if (item.after_tax_amount_per_period < 0) {
     errors.push({
-      field: "after_tax_amount_per_period",
-      message: "Amount must be non-negative",
-      code: "NEGATIVE_VALUE",
+      field: 'after_tax_amount_per_period',
+      message: 'Amount must be non-negative',
+      code: 'NEGATIVE_VALUE',
     });
   }
 
   // Start age validation
   if (item.start_age < currentAge) {
     errors.push({
-      field: "start_age",
-      message: `${item.is_income ? "Income" : "Expense"} item '${item.name}': Start age (${item.start_age}) cannot be less than current age (${currentAge})`,
-      code: "START_AGE_TOO_SMALL",
+      field: 'start_age',
+      message: `${item.is_income ? 'Income' : 'Expense'} item '${
+        item.name
+      }': Start age (${
+        item.start_age
+      }) cannot be less than current age (${currentAge})`,
+      code: 'START_AGE_TOO_SMALL',
     });
   }
 
   if (item.start_age > userProfile.life_expectancy) {
     errors.push({
-      field: "start_age",
-      message: `${item.is_income ? "Income" : "Expense"} item '${item.name}': Start age (${item.start_age}) cannot be greater than life expectancy (${userProfile.life_expectancy})`,
-      code: "START_AGE_TOO_LARGE",
+      field: 'start_age',
+      message: `${item.is_income ? 'Income' : 'Expense'} item '${
+        item.name
+      }': Start age (${
+        item.start_age
+      }) cannot be greater than life expectancy (${
+        userProfile.life_expectancy
+      })`,
+      code: 'START_AGE_TOO_LARGE',
     });
   }
 
@@ -325,17 +339,21 @@ export const validateIncomeExpenseItem = (
   if (item.end_age !== undefined && item.end_age !== null) {
     if (item.end_age > userProfile.life_expectancy) {
       errors.push({
-        field: "end_age",
-        message: `${item.is_income ? "Income" : "Expense"} item '${item.name}': End age (${item.end_age}) cannot be greater than life expectancy (${userProfile.life_expectancy})`,
-        code: "END_AGE_TOO_LARGE",
+        field: 'end_age',
+        message: `${item.is_income ? 'Income' : 'Expense'} item '${
+          item.name
+        }': End age (${item.end_age}) cannot be greater than life expectancy (${
+          userProfile.life_expectancy
+        })`,
+        code: 'END_AGE_TOO_LARGE',
       });
     }
 
     if (item.end_age <= item.start_age) {
       errors.push({
-        field: "end_age",
-        message: "End age must be greater than start age",
-        code: "INVALID_AGE_RANGE",
+        field: 'end_age',
+        message: 'End age must be greater than start age',
+        code: 'INVALID_AGE_RANGE',
       });
     }
   }
@@ -343,18 +361,18 @@ export const validateIncomeExpenseItem = (
   // Interval periods validation
   if (item.interval_periods <= 0) {
     errors.push({
-      field: "interval_periods",
-      message: "Interval periods must be greater than 0",
-      code: "NON_POSITIVE",
+      field: 'interval_periods',
+      message: 'Interval periods must be greater than 0',
+      code: 'NON_POSITIVE',
     });
   }
 
   // Growth rate validation (reasonable bounds)
   if (item.annual_growth_rate < -50 || item.annual_growth_rate > 100) {
     errors.push({
-      field: "annual_growth_rate",
-      message: "Annual growth rate must be between -50% and 100%",
-      code: "OUT_OF_RANGE",
+      field: 'annual_growth_rate',
+      message: 'Annual growth rate must be between -50% and 100%',
+      code: 'OUT_OF_RANGE',
     });
   }
 
@@ -377,9 +395,9 @@ export const hasValidationErrors = (errors: ValidationError[]): boolean => {
  */
 export const getErrorsByField = (
   errors: ValidationError[],
-  field: string,
+  field: string
 ): ValidationError[] => {
-  return errors.filter((error) => error.field === field);
+  return errors.filter(error => error.field === field);
 };
 
 /**
@@ -387,7 +405,7 @@ export const getErrorsByField = (
  */
 export const getFieldErrorMessage = (
   errors: ValidationError[],
-  field: string,
+  field: string
 ): string | null => {
   const fieldErrors = getErrorsByField(errors, field);
   return fieldErrors.length > 0 ? fieldErrors[0].message : null;
@@ -397,7 +415,7 @@ export const getFieldErrorMessage = (
  * Format validation errors for display
  */
 export const formatValidationErrors = (errors: ValidationError[]): string => {
-  if (errors.length === 0) return "";
+  if (errors.length === 0) return '';
 
-  return errors.map((error) => `${error.field}: ${error.message}`).join("\\n");
+  return errors.map(error => `${error.field}: ${error.message}`).join('\\n');
 };

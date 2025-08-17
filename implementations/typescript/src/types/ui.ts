@@ -6,7 +6,7 @@
  */
 
 // Simplified frequency type for UI
-export type UIItemFrequency = "annual" | "monthly" | "one_time";
+export type UIItemFrequency = 'annual' | 'monthly' | 'one_time';
 
 // UI-friendly income/expense item for forms
 export interface UIIncomeExpenseItem {
@@ -20,30 +20,30 @@ export interface UIIncomeExpenseItem {
   tags?: string[];
 }
 
-import type { IncomeExpenseItem, ItemFrequency, TimeUnit } from "./index";
+import type { IncomeExpenseItem, ItemFrequency, TimeUnit } from './index';
 
 // Conversion utilities
 export function convertUIToCore(
   item: UIIncomeExpenseItem,
-  isIncome: boolean,
+  isIncome: boolean
 ): IncomeExpenseItem {
   // Map UI frequency to core format
   let time_unit: TimeUnit;
   let frequency: ItemFrequency;
   let interval_periods: number;
 
-  if (item.frequency === "annual") {
-    time_unit = "annually";
-    frequency = "recurring";
+  if (item.frequency === 'annual') {
+    time_unit = 'annually';
+    frequency = 'recurring';
     interval_periods = 1;
-  } else if (item.frequency === "monthly") {
-    time_unit = "monthly";
-    frequency = "recurring";
+  } else if (item.frequency === 'monthly') {
+    time_unit = 'monthly';
+    frequency = 'recurring';
     interval_periods = 1;
   } else {
     // one_time
-    time_unit = "annually";
-    frequency = "one-time";
+    time_unit = 'annually';
+    frequency = 'one-time';
     interval_periods = 1;
   }
 
@@ -67,12 +67,12 @@ export function convertCoreToUI(item: IncomeExpenseItem): UIIncomeExpenseItem {
   // Map core format to UI frequency
   let frequency: UIItemFrequency;
 
-  if (item.frequency === "one-time") {
-    frequency = "one_time";
-  } else if (item.time_unit === "annually") {
-    frequency = "annual";
+  if (item.frequency === 'one-time') {
+    frequency = 'one_time';
+  } else if (item.time_unit === 'annually') {
+    frequency = 'annual';
   } else {
-    frequency = "monthly"; // default to monthly for other time units
+    frequency = 'monthly'; // default to monthly for other time units
   }
 
   return {

@@ -9,20 +9,20 @@
  * - Expense reduction strategies
  */
 
-import { Decimal } from "decimal.js";
+import { Decimal } from 'decimal.js';
 import type {
   UserProfile,
   SimulationSettings,
   IncomeExpenseItem,
-} from "./data_models";
-import { createSimulationSettings, getCurrentAge } from "./data_models";
+} from './data_models';
+import { createSimulationSettings, getCurrentAge } from './data_models';
 import type {
   EngineInput,
   AnnualFinancialProjection,
   DetailedProjection,
-} from "./engine";
-import { FIREEngine, createEngineInput } from "./engine";
-import { MonteCarloSimulator } from "./monte_carlo";
+} from './engine';
+import { FIREEngine, createEngineInput } from './engine';
+import { MonteCarloSimulator } from './monte_carlo';
 
 // =============================================================================
 // Data Models
@@ -146,14 +146,14 @@ export class FIREAdvisor {
         this._truncate_work_income_to_age(test_age);
       const modified_annual_projection =
         this._create_annual_summary_from_detailed_df(
-          modified_detailed_projection,
+          modified_detailed_projection
         );
 
       // Test this age
       const modified_input = createEngineInput(
         modified_profile,
         modified_annual_projection,
-        this.income_items,
+        this.income_items
       );
 
       const engine = new FIREEngine(modified_input);
@@ -176,16 +176,16 @@ export class FIREAdvisor {
 
       // Create projection with truncated income for optimal age
       const optimal_detailed_projection = this._truncate_work_income_to_age(
-        earliest_achievable_age,
+        earliest_achievable_age
       );
       const optimal_annual_projection =
         this._create_annual_summary_from_detailed_df(
-          optimal_detailed_projection,
+          optimal_detailed_projection
         );
       const optimal_input = createEngineInput(
         optimal_profile,
         optimal_annual_projection,
-        this.income_items,
+        this.income_items
       );
 
       const engine = new FIREEngine(optimal_input);
@@ -203,14 +203,14 @@ export class FIREAdvisor {
           income_minimum_factor: new Decimal(0.1),
           expense_base_volatility: new Decimal(0.05),
           expense_minimum_factor: new Decimal(0.5),
-        }),
+        })
       );
       const mc_result = await mc_simulator.run_simulation();
 
       const years_saved = current_expected_age - earliest_achievable_age;
 
       return {
-        type: "early_retirement",
+        type: 'early_retirement',
         params: {
           age: earliest_achievable_age,
           years: years_saved,
@@ -249,14 +249,14 @@ export class FIREAdvisor {
       // Convert to annual summary for engine
       const modified_annual_projection =
         this._create_annual_summary_from_detailed_df(
-          modified_detailed_projection,
+          modified_detailed_projection
         );
 
       // Test this age
       const modified_input = createEngineInput(
         modified_profile,
         modified_annual_projection,
-        this.income_items,
+        this.income_items
       );
 
       const engine = new FIREEngine(modified_input);
@@ -274,7 +274,7 @@ export class FIREAdvisor {
       const years_delayed = required_age - current_expected_age;
 
       return {
-        type: "delayed_retirement",
+        type: 'delayed_retirement',
         params: {
           age: required_age,
           years: years_delayed,
@@ -289,7 +289,7 @@ export class FIREAdvisor {
     const years_delayed = legal_retirement_age - current_expected_age;
 
     return {
-      type: "delayed_retirement_not_feasible",
+      type: 'delayed_retirement_not_feasible',
       params: {
         age: legal_retirement_age,
       },
@@ -321,7 +321,7 @@ export class FIREAdvisor {
       const modified_input = createEngineInput(
         this.profile,
         modified_projection,
-        this.income_items,
+        this.income_items
       );
 
       const engine = new FIREEngine(modified_input);
@@ -344,11 +344,11 @@ export class FIREAdvisor {
       const original_income =
         this.projection_df[0]?.total_income || new Decimal(0);
       const additional_income = original_income.mul(
-        required_multiplier.sub(new Decimal(1.0)),
+        required_multiplier.sub(new Decimal(1.0))
       );
 
       return {
-        type: "increase_income",
+        type: 'increase_income',
         params: {
           fire_age: this.profile.expected_fire_age,
           percentage: required_multiplier.sub(1).mul(100).toNumber(),
@@ -385,7 +385,7 @@ export class FIREAdvisor {
       const modified_input = createEngineInput(
         this.profile,
         modified_projection,
-        this.income_items,
+        this.income_items
       );
 
       const engine = new FIREEngine(modified_input);
@@ -415,13 +415,13 @@ export class FIREAdvisor {
       // If still zero, calculate average expense from all non-zero rows
       if (original_expense.eq(0)) {
         const nonZeroExpenses = this.projection_df
-          .map((row) => row.total_expense)
-          .filter((exp) => exp && exp.gt(0));
+          .map(row => row.total_expense)
+          .filter(exp => exp && exp.gt(0));
 
         if (nonZeroExpenses.length > 0) {
           const sum = nonZeroExpenses.reduce(
             (acc, exp) => acc.add(exp),
-            new Decimal(0),
+            new Decimal(0)
           );
           original_expense = sum.div(nonZeroExpenses.length);
         }
@@ -430,7 +430,7 @@ export class FIREAdvisor {
       const annual_savings = original_expense.mul(optimal_reduction);
 
       return {
-        type: "reduce_expenses",
+        type: 'reduce_expenses',
         params: {
           fire_age: this.profile.expected_fire_age,
           percentage: optimal_reduction.mul(100).toNumber(),
@@ -454,14 +454,14 @@ export class FIREAdvisor {
    * Direct TypeScript port of Python's _extend_work_income_to_age logic
    */
   private _extend_work_income_to_age(
-    target_fire_age: number,
+    target_fire_age: number
   ): AnnualFinancialProjection[] {
     if (!this.income_items || this.income_items.length === 0) {
-      throw new Error("Income items required for income extension");
+      throw new Error('Income items required for income extension');
     }
 
     // Create deep copy to avoid modifying original data
-    const extended_projection = this.detailed_projection_df.map((row) => ({
+    const extended_projection = this.detailed_projection_df.map(row => ({
       ...row,
     }));
     const current_fire_age = this.profile.expected_fire_age;
@@ -473,7 +473,7 @@ export class FIREAdvisor {
 
     // Find income items that end at current FIRE age (work income)
     const work_income_items = this.income_items.filter(
-      (item) => item.end_age && item.end_age === current_fire_age,
+      item => item.end_age && item.end_age === current_fire_age
     );
 
     if (work_income_items.length === 0) {
@@ -486,15 +486,13 @@ export class FIREAdvisor {
       // Calculate the growth pattern for extending this income
       for (let age = item.end_age + 1; age <= target_fire_age; age++) {
         // Find the row for this age
-        const row_index = extended_projection.findIndex(
-          (row) => row.age === age,
-        );
+        const row_index = extended_projection.findIndex(row => row.age === age);
 
         if (row_index !== -1) {
           // Calculate extended income value with proper growth
           const years_since_start = new Decimal(age - item.start_age);
           const growth_rate_decimal = new Decimal(item.annual_growth_rate).div(
-            100,
+            100
           );
           const growth_factor = new Decimal(1)
             .add(growth_rate_decimal)
@@ -515,10 +513,10 @@ export class FIREAdvisor {
    * Truncate work income to an earlier FIRE age
    */
   private _truncate_work_income_to_age(
-    target_fire_age: number,
+    target_fire_age: number
   ): AnnualFinancialProjection[] {
     // Create deep copy to avoid modifying original data
-    const modified_projection = this.detailed_projection_df.map((row) => ({
+    const modified_projection = this.detailed_projection_df.map(row => ({
       ...row,
     }));
     const current_age = getCurrentAge(this.profile.birth_year);
@@ -539,9 +537,9 @@ export class FIREAdvisor {
    * Apply income multiplier to all income sources
    */
   private _apply_income_multiplier(
-    multiplier: Decimal,
+    multiplier: Decimal
   ): AnnualFinancialProjection[] {
-    return this.projection_df.map((row) => ({
+    return this.projection_df.map(row => ({
       ...row,
       total_income: row.total_income.mul(multiplier),
       net_cash_flow: row.total_income.mul(multiplier).sub(row.total_expense),
@@ -552,9 +550,9 @@ export class FIREAdvisor {
    * Apply expense multiplier to all expenses
    */
   private _apply_expense_multiplier(
-    multiplier: Decimal,
+    multiplier: Decimal
   ): AnnualFinancialProjection[] {
-    return this.projection_df.map((row) => ({
+    return this.projection_df.map(row => ({
       ...row,
       total_expense: row.total_expense.mul(multiplier),
       net_cash_flow: row.total_income.sub(row.total_expense.mul(multiplier)),
@@ -566,11 +564,11 @@ export class FIREAdvisor {
    * Handles the case where detailed projection might be the same as annual
    */
   private _create_annual_summary_from_detailed_df(
-    detailed_df: AnnualFinancialProjection[],
+    detailed_df: AnnualFinancialProjection[]
   ): AnnualFinancialProjection[] {
     // For TypeScript implementation, we assume detailed_df is already in the right format
     // In Python this involves complex pandas grouping, but our data is already annual
-    return detailed_df.map((row) => ({
+    return detailed_df.map(row => ({
       ...row,
       net_cash_flow: row.total_income.sub(row.total_expense),
     }));
@@ -585,10 +583,10 @@ export class FIREAdvisor {
  * Create a SimpleRecommendation
  */
 export function createSimpleRecommendation(
-  data: Partial<SimpleRecommendation>,
+  data: Partial<SimpleRecommendation>
 ): SimpleRecommendation {
   return {
-    type: data.type || "",
+    type: data.type || '',
     params: data.params || {},
     is_achievable: data.is_achievable ?? true,
     monte_carlo_success_rate: data.monte_carlo_success_rate,
@@ -600,7 +598,7 @@ export function createSimpleRecommendation(
  */
 export function createAdvisor(
   engine_input: EngineInput,
-  language?: string,
+  language?: string
 ): FIREAdvisor {
   return new FIREAdvisor(engine_input, language);
 }

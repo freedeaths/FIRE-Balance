@@ -14,7 +14,7 @@ import type {
   SimulationSettings,
   LanguageCode,
   AnnualProjectionRow,
-} from "../types";
+} from '../types';
 
 // =============================================================================
 // App Store Types
@@ -30,7 +30,7 @@ export interface AppState {
   error: string | null;
 
   // Theme and preferences
-  theme: "light" | "dark" | "system";
+  theme: 'light' | 'dark' | 'system';
 
   // App metadata
   version: string;
@@ -48,7 +48,7 @@ export interface AppActions {
   clearError: () => void;
 
   // Theme management
-  setTheme: (theme: "light" | "dark" | "system") => void;
+  setTheme: (theme: 'light' | 'dark' | 'system') => void;
 
   // Utilities
   reset: () => void;
@@ -149,7 +149,7 @@ export interface UIState {
   formValidation: Record<string, Record<string, string>>;
 
   // Responsive design state
-  screenSize: "mobile" | "tablet" | "laptop" | "desktop";
+  screenSize: 'mobile' | 'tablet' | 'laptop' | 'desktop';
   isMobile: boolean;
 
   // Component-specific UI state
@@ -179,7 +179,7 @@ export interface UIActions {
   clearFormValidation: (formId: string, field?: string) => void;
 
   // Responsive design management
-  setScreenSize: (size: "mobile" | "tablet" | "laptop" | "desktop") => void;
+  setScreenSize: (size: 'mobile' | 'tablet' | 'laptop' | 'desktop') => void;
   updateResponsiveState: () => void;
 
   // Component state management
@@ -190,12 +190,12 @@ export interface UIActions {
 
   // Notifications
   addNotification: (
-    notification: Omit<Notification, "id" | "timestamp">,
+    notification: Omit<Notification, 'id' | 'timestamp'>
   ) => void;
   removeNotification: (id: string) => void;
   clearNotifications: () => void;
 
-  addToast: (toast: Omit<Toast, "id" | "timestamp">) => void;
+  addToast: (toast: Omit<Toast, 'id' | 'timestamp'>) => void;
   removeToast: (id: string) => void;
   clearToasts: () => void;
 
@@ -211,7 +211,7 @@ export type UIStore = UIState & UIActions;
 
 export interface Notification {
   id: string;
-  type: "info" | "success" | "warning" | "error";
+  type: 'info' | 'success' | 'warning' | 'error';
   title: string;
   message?: string;
   timestamp: number;
@@ -221,7 +221,7 @@ export interface Notification {
 
 export interface Toast {
   id: string;
-  type: "info" | "success" | "warning" | "error";
+  type: 'info' | 'success' | 'warning' | 'error';
   message: string;
   timestamp: number;
   duration?: number;
@@ -236,7 +236,7 @@ export interface StoreConfig {
   persist?: {
     enabled: boolean;
     key: string;
-    storage?: "localStorage" | "sessionStorage";
+    storage?: 'localStorage' | 'sessionStorage';
     exclude?: string[];
   };
 

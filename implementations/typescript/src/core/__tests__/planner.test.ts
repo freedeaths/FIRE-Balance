@@ -3,35 +3,35 @@
  * Ensures identical planner behavior between TypeScript and Python implementations
  */
 
-import Decimal from "decimal.js";
+import Decimal from 'decimal.js';
 
 import {
   FIREPlanner,
   createPlanner,
   createPlannerFromConfig,
   createPlannerFromJSON,
-} from "../planner";
+} from '../planner';
 
 import type {
   UserProfile,
   IncomeExpenseItem,
   FIRECalculationResult,
-} from "../data_models";
+} from '../data_models';
 import {
   createUserProfile,
   createIncomeExpenseItem,
   createPortfolioConfiguration,
-} from "../data_models";
+} from '../data_models';
 
 import type {
   PlannerConfigV1,
   Override,
   AnnualProjectionRow,
-} from "../planner_models";
+} from '../planner_models';
 
-import { createPlannerConfigV1, PlannerStage } from "../planner_models";
+import { createPlannerConfigV1, PlannerStage } from '../planner_models';
 
-describe("FIREPlanner", () => {
+describe('FIREPlanner', () => {
   let sampleUserProfile: UserProfile;
   let sampleIncomeItem: IncomeExpenseItem;
   let sampleExpenseItem: IncomeExpenseItem;
@@ -40,28 +40,28 @@ describe("FIREPlanner", () => {
     const portfolio = createPortfolioConfiguration({
       asset_classes: [
         {
-          name: "stocks",
-          display_name: "Stocks",
+          name: 'stocks',
+          display_name: 'Stocks',
           allocation_percentage: new Decimal(70.0),
           expected_return: new Decimal(7.0),
           volatility: new Decimal(15.0),
-          liquidity_level: "medium",
+          liquidity_level: 'medium',
         },
         {
-          name: "bonds",
-          display_name: "Bonds",
+          name: 'bonds',
+          display_name: 'Bonds',
           allocation_percentage: new Decimal(20.0),
           expected_return: new Decimal(3.0),
           volatility: new Decimal(5.0),
-          liquidity_level: "low",
+          liquidity_level: 'low',
         },
         {
-          name: "cash",
-          display_name: "Cash",
+          name: 'cash',
+          display_name: 'Cash',
           allocation_percentage: new Decimal(10.0),
           expected_return: new Decimal(1.0),
           volatility: new Decimal(1.0),
-          liquidity_level: "high",
+          liquidity_level: 'high',
         },
       ],
       enable_rebalancing: true,
@@ -79,39 +79,39 @@ describe("FIREPlanner", () => {
     });
 
     sampleIncomeItem = createIncomeExpenseItem({
-      id: "work-income",
-      name: "Work Income",
+      id: 'work-income',
+      name: 'Work Income',
       after_tax_amount_per_period: new Decimal(80000),
-      time_unit: "annually",
-      frequency: "recurring",
+      time_unit: 'annually',
+      frequency: 'recurring',
       interval_periods: 1,
       start_age: 34,
       end_age: 50,
       annual_growth_rate: new Decimal(2.0),
       is_income: true,
-      category: "Employment",
+      category: 'Employment',
     });
 
     sampleExpenseItem = createIncomeExpenseItem({
-      id: "living-expenses",
-      name: "Living Expenses",
+      id: 'living-expenses',
+      name: 'Living Expenses',
       after_tax_amount_per_period: new Decimal(50000),
-      time_unit: "annually",
-      frequency: "recurring",
+      time_unit: 'annually',
+      frequency: 'recurring',
       interval_periods: 1,
       start_age: 34,
       end_age: 85,
       annual_growth_rate: new Decimal(0.0),
       is_income: false,
-      category: "Living",
+      category: 'Living',
     });
   });
 
-  describe("Initialization", () => {
-    test("create planner with default language", () => {
+  describe('Initialization', () => {
+    test('create planner with default language', () => {
       const planner = new FIREPlanner();
 
-      expect(planner.data.language).toBe("en");
+      expect(planner.data.language).toBe('en');
       expect(planner.data.current_stage).toBe(PlannerStage.STAGE1_INPUT);
       expect(planner.data.income_items).toEqual([]);
       expect(planner.data.expense_items).toEqual([]);
@@ -119,22 +119,22 @@ describe("FIREPlanner", () => {
       expect(planner.data.session_id).toMatch(/^[0-9a-f-]{36}$/); // UUID format
     });
 
-    test("create planner with custom language", () => {
-      const planner = new FIREPlanner("zh");
+    test('create planner with custom language', () => {
+      const planner = new FIREPlanner('zh');
 
-      expect(planner.data.language).toBe("zh");
+      expect(planner.data.language).toBe('zh');
     });
 
-    test("create planner using factory function", () => {
-      const planner = createPlanner("ja");
+    test('create planner using factory function', () => {
+      const planner = createPlanner('ja');
 
       expect(planner).toBeInstanceOf(FIREPlanner);
-      expect(planner.data.language).toBe("ja");
+      expect(planner.data.language).toBe('ja');
     });
   });
 
-  describe("Stage 1: Input Collection", () => {
-    test("set user profile", () => {
+  describe('Stage 1: Input Collection', () => {
+    test('set user profile', () => {
       const planner = new FIREPlanner();
       planner.setUserProfile(sampleUserProfile);
 
@@ -142,18 +142,18 @@ describe("FIREPlanner", () => {
       expect(planner.data.updated_at).toBeInstanceOf(Date);
     });
 
-    test("add income item", () => {
+    test('add income item', () => {
       const planner = new FIREPlanner();
       planner.setUserProfile(sampleUserProfile);
 
       const itemId = planner.addIncomeItem(sampleIncomeItem);
 
-      expect(itemId).toBe("work-income");
+      expect(itemId).toBe('work-income');
       expect(planner.data.income_items).toHaveLength(1);
       expect(planner.data.income_items[0]).toBe(sampleIncomeItem);
     });
 
-    test("add income item without ID", () => {
+    test('add income item without ID', () => {
       const planner = new FIREPlanner();
       planner.setUserProfile(sampleUserProfile);
 
@@ -167,51 +167,51 @@ describe("FIREPlanner", () => {
       expect(planner.data.income_items[0].id).toBe(itemId);
     });
 
-    test("add expense item", () => {
+    test('add expense item', () => {
       const planner = new FIREPlanner();
       planner.setUserProfile(sampleUserProfile);
 
       const itemId = planner.addExpenseItem(sampleExpenseItem);
 
-      expect(itemId).toBe("living-expenses");
+      expect(itemId).toBe('living-expenses');
       expect(planner.data.expense_items).toHaveLength(1);
       expect(planner.data.expense_items[0]).toBe(sampleExpenseItem);
     });
 
-    test("remove income item", () => {
+    test('remove income item', () => {
       const planner = new FIREPlanner();
       planner.setUserProfile(sampleUserProfile);
       planner.addIncomeItem(sampleIncomeItem);
 
-      const removed = planner.removeIncomeItem("work-income");
+      const removed = planner.removeIncomeItem('work-income');
 
       expect(removed).toBe(true);
       expect(planner.data.income_items).toHaveLength(0);
     });
 
-    test("remove non-existent income item", () => {
+    test('remove non-existent income item', () => {
       const planner = new FIREPlanner();
       planner.setUserProfile(sampleUserProfile);
 
-      const removed = planner.removeIncomeItem("non-existent");
+      const removed = planner.removeIncomeItem('non-existent');
 
       expect(removed).toBe(false);
     });
 
-    test("remove expense item", () => {
+    test('remove expense item', () => {
       const planner = new FIREPlanner();
       planner.setUserProfile(sampleUserProfile);
       planner.addExpenseItem(sampleExpenseItem);
 
-      const removed = planner.removeExpenseItem("living-expenses");
+      const removed = planner.removeExpenseItem('living-expenses');
 
       expect(removed).toBe(true);
       expect(planner.data.expense_items).toHaveLength(0);
     });
   });
 
-  describe("Stage 2: Table Generation and Adjustment", () => {
-    test("generate projection table", () => {
+  describe('Stage 2: Table Generation and Adjustment', () => {
+    test('generate projection table', () => {
       const planner = new FIREPlanner();
       planner.setUserProfile(sampleUserProfile);
       planner.addIncomeItem(sampleIncomeItem);
@@ -221,24 +221,24 @@ describe("FIREPlanner", () => {
 
       expect(projectionData).toBeDefined();
       expect(projectionData.length).toBeGreaterThan(0);
-      expect(projectionData[0]).toHaveProperty("age");
-      expect(projectionData[0]).toHaveProperty("year");
-      expect(projectionData[0]).toHaveProperty("total_income");
-      expect(projectionData[0]).toHaveProperty("total_expense");
+      expect(projectionData[0]).toHaveProperty('age');
+      expect(projectionData[0]).toHaveProperty('year');
+      expect(projectionData[0]).toHaveProperty('total_income');
+      expect(projectionData[0]).toHaveProperty('total_expense');
       expect(planner.data.projection_df).toBe(projectionData);
     });
 
-    test("generate projection table with missing data", () => {
+    test('generate projection table with missing data', () => {
       const planner = new FIREPlanner();
       planner.setUserProfile(sampleUserProfile);
       // Missing income or expense items
 
       expect(() => planner.generateProjectionTable()).toThrow(
-        "Missing required data: user_profile, income_items, or expense_items",
+        'Missing required data: user_profile, income_items, or expense_items'
       );
     });
 
-    test("get projection dataframe", () => {
+    test('get projection dataframe', () => {
       const planner = new FIREPlanner();
       planner.setUserProfile(sampleUserProfile);
       planner.addIncomeItem(sampleIncomeItem);
@@ -251,7 +251,7 @@ describe("FIREPlanner", () => {
       expect(dataframe!.length).toBeGreaterThan(0);
     });
 
-    test("get projection dataframe without generation", () => {
+    test('get projection dataframe without generation', () => {
       const planner = new FIREPlanner();
 
       const dataframe = planner.getProjectionDataFrame();
@@ -259,51 +259,51 @@ describe("FIREPlanner", () => {
       expect(dataframe).toBeUndefined();
     });
 
-    test("add and remove overrides", () => {
+    test('add and remove overrides', () => {
       const planner = new FIREPlanner();
       planner.setUserProfile(sampleUserProfile);
       planner.addIncomeItem(sampleIncomeItem);
       planner.addExpenseItem(sampleExpenseItem);
 
       // Add override
-      planner.addOverride(35, "work-income", 90000);
+      planner.addOverride(35, 'work-income', 90000);
 
       expect(planner.data.overrides).toHaveLength(1);
       expect(planner.data.overrides[0]).toEqual({
         age: 35,
-        item_id: "work-income",
+        item_id: 'work-income',
         value: new Decimal(90000),
       });
 
       // Remove override
-      const removed = planner.removeOverride(35, "work-income");
+      const removed = planner.removeOverride(35, 'work-income');
 
       expect(removed).toBe(true);
       expect(planner.data.overrides).toHaveLength(0);
     });
 
-    test("clear all overrides", () => {
+    test('clear all overrides', () => {
       const planner = new FIREPlanner();
       planner.setUserProfile(sampleUserProfile);
       planner.addIncomeItem(sampleIncomeItem);
       planner.addExpenseItem(sampleExpenseItem);
 
-      planner.addOverride(35, "work-income", 90000);
-      planner.addOverride(36, "living-expenses", 55000);
+      planner.addOverride(35, 'work-income', 90000);
+      planner.addOverride(36, 'living-expenses', 55000);
 
       planner.clearAllOverrides();
 
       expect(planner.data.overrides).toHaveLength(0);
     });
 
-    test("apply overrides to table", () => {
+    test('apply overrides to table', () => {
       const planner = new FIREPlanner();
       planner.setUserProfile(sampleUserProfile);
       planner.addIncomeItem(sampleIncomeItem);
       planner.addExpenseItem(sampleExpenseItem);
 
       const baseData = planner.generateProjectionTable();
-      planner.addOverride(35, "work-income", 90000);
+      planner.addOverride(35, 'work-income', 90000);
 
       const modifiedData = planner.applyOverridesToTable(baseData);
 
@@ -312,8 +312,8 @@ describe("FIREPlanner", () => {
     });
   });
 
-  describe("Stage 3: Calculations and Analysis", () => {
-    test("simulation settings", () => {
+  describe('Stage 3: Calculations and Analysis', () => {
+    test('simulation settings', () => {
       const planner = new FIREPlanner();
 
       const defaultSettings = planner.getSimulationSettings();
@@ -326,7 +326,7 @@ describe("FIREPlanner", () => {
       expect(updatedSettings.num_simulations).toBe(2000);
     });
 
-    test("run calculations", async () => {
+    test('run calculations', async () => {
       const planner = new FIREPlanner();
       planner.setUserProfile(sampleUserProfile);
       planner.addIncomeItem(sampleIncomeItem);
@@ -344,15 +344,15 @@ describe("FIREPlanner", () => {
       expect(planner.data.results).toBe(results);
     });
 
-    test("run calculations without projection data", async () => {
+    test('run calculations without projection data', async () => {
       const planner = new FIREPlanner();
 
       await expect(planner.runCalculations()).rejects.toThrow(
-        "No projection data available for calculation",
+        'No projection data available for calculation'
       );
     });
 
-    test("calculate fire results with custom projection", async () => {
+    test('calculate fire results with custom projection', async () => {
       const planner = new FIREPlanner();
       planner.setUserProfile(sampleUserProfile);
       planner.addIncomeItem(sampleIncomeItem);
@@ -381,26 +381,26 @@ describe("FIREPlanner", () => {
     });
   });
 
-  describe("Import/Export", () => {
-    test("export to config", () => {
+  describe('Import/Export', () => {
+    test('export to config', () => {
       const planner = new FIREPlanner();
       planner.setUserProfile(sampleUserProfile);
       planner.addIncomeItem(sampleIncomeItem);
       planner.addExpenseItem(sampleExpenseItem);
 
-      const config = planner.exportToConfig("Test export");
+      const config = planner.exportToConfig('Test export');
 
-      expect(config.version).toBe("1.0");
-      expect(config.metadata.description).toBe("Test export");
+      expect(config.version).toBe('1.0');
+      expect(config.metadata.description).toBe('Test export');
       expect(config.profile.birth_year).toBe(1990);
       expect(config.income_items).toHaveLength(1);
       expect(config.expense_items).toHaveLength(1);
     });
 
-    test("load from config", () => {
+    test('load from config', () => {
       const config: PlannerConfigV1 = {
-        version: "1.0",
-        metadata: { language: "zh", description: "Test config" },
+        version: '1.0',
+        metadata: { language: 'zh', description: 'Test config' },
         profile: {
           birth_year: 1985,
           expected_fire_age: 55,
@@ -412,32 +412,32 @@ describe("FIREPlanner", () => {
         },
         income_items: [
           {
-            id: "salary",
-            name: "Salary",
+            id: 'salary',
+            name: 'Salary',
             after_tax_amount_per_period: new Decimal(120000),
-            time_unit: "annually",
-            frequency: "recurring",
+            time_unit: 'annually',
+            frequency: 'recurring',
             interval_periods: 1,
             start_age: 39,
             end_age: 55,
             annual_growth_rate: new Decimal(3.0),
             is_income: true,
-            category: "Employment",
+            category: 'Employment',
           },
         ],
         expense_items: [
           {
-            id: "expenses",
-            name: "Living Expenses",
+            id: 'expenses',
+            name: 'Living Expenses',
             after_tax_amount_per_period: new Decimal(70000),
-            time_unit: "annually",
-            frequency: "recurring",
+            time_unit: 'annually',
+            frequency: 'recurring',
             interval_periods: 1,
             start_age: 39,
             end_age: 90,
             annual_growth_rate: new Decimal(0.0),
             is_income: false,
-            category: "Living",
+            category: 'Living',
           },
         ],
         overrides: [],
@@ -447,20 +447,20 @@ describe("FIREPlanner", () => {
       const planner = new FIREPlanner();
       planner.loadFromConfig(config);
 
-      expect(planner.data.language).toBe("zh");
+      expect(planner.data.language).toBe('zh');
       expect(planner.data.user_profile?.birth_year).toBe(1985);
       expect(planner.data.income_items).toHaveLength(1);
       expect(planner.data.expense_items).toHaveLength(1);
       expect(planner.data.simulation_settings.num_simulations).toBe(2000);
     });
 
-    test("save to and load from JSON", () => {
+    test('save to and load from JSON', () => {
       const planner = new FIREPlanner();
       planner.setUserProfile(sampleUserProfile);
       planner.addIncomeItem(sampleIncomeItem);
       planner.addExpenseItem(sampleExpenseItem);
 
-      const jsonString = planner.saveToJSON("Test JSON export");
+      const jsonString = planner.saveToJSON('Test JSON export');
       expect(jsonString).toContain('"version": "1.0"');
       expect(jsonString).toContain('"birth_year": 1990');
 
@@ -472,32 +472,32 @@ describe("FIREPlanner", () => {
       expect(newPlanner.data.expense_items).toHaveLength(1);
     });
 
-    test("load invalid JSON", () => {
+    test('load invalid JSON', () => {
       const planner = new FIREPlanner();
 
-      expect(() => planner.loadFromJSON("invalid json")).toThrow(
-        "Failed to parse JSON configuration",
+      expect(() => planner.loadFromJSON('invalid json')).toThrow(
+        'Failed to parse JSON configuration'
       );
     });
   });
 
-  describe("Factory Functions", () => {
-    test("create planner from config", () => {
+  describe('Factory Functions', () => {
+    test('create planner from config', () => {
       const config = createPlannerConfigV1({
-        metadata: { language: "ja" },
+        metadata: { language: 'ja' },
         profile: { birth_year: 1988 },
       });
 
       const planner = createPlannerFromConfig(config);
 
       expect(planner).toBeInstanceOf(FIREPlanner);
-      expect(planner.data.language).toBe("ja");
+      expect(planner.data.language).toBe('ja');
     });
 
-    test("create planner from JSON", () => {
+    test('create planner from JSON', () => {
       const config = {
-        version: "1.0",
-        metadata: { language: "zh" },
+        version: '1.0',
+        metadata: { language: 'zh' },
         profile: { birth_year: 1992 },
         income_items: [],
         expense_items: [],
@@ -508,12 +508,12 @@ describe("FIREPlanner", () => {
       const planner = createPlannerFromJSON(JSON.stringify(config));
 
       expect(planner).toBeInstanceOf(FIREPlanner);
-      expect(planner.data.language).toBe("zh");
+      expect(planner.data.language).toBe('zh');
     });
   });
 
-  describe("Edge Cases", () => {
-    test("item removal clears projection", () => {
+  describe('Edge Cases', () => {
+    test('item removal clears projection', () => {
       const planner = new FIREPlanner();
       planner.setUserProfile(sampleUserProfile);
       planner.addIncomeItem(sampleIncomeItem);
@@ -524,20 +524,20 @@ describe("FIREPlanner", () => {
 
       // Remove income item should clear projection if regeneration fails
       planner.data.user_profile = undefined; // Force regeneration to fail
-      planner.removeIncomeItem("work-income");
+      planner.removeIncomeItem('work-income');
 
       // Should have cleared projection due to error
       expect(planner.data.projection_df).toBeUndefined();
     });
 
-    test("override cleanup on profile change", () => {
+    test('override cleanup on profile change', () => {
       const planner = new FIREPlanner();
       planner.setUserProfile(sampleUserProfile);
       planner.addIncomeItem(sampleIncomeItem);
       planner.addExpenseItem(sampleExpenseItem);
 
       // Add override
-      planner.addOverride(35, "work-income", 90000);
+      planner.addOverride(35, 'work-income', 90000);
 
       // Change profile with different age range
       const newProfile = { ...sampleUserProfile, life_expectancy: 30 }; // Invalid range
@@ -547,7 +547,7 @@ describe("FIREPlanner", () => {
       expect(planner.data.overrides).toHaveLength(0);
     });
 
-    test("progression callback in calculations", async () => {
+    test('progression callback in calculations', async () => {
       const planner = new FIREPlanner();
       planner.setUserProfile(sampleUserProfile);
       planner.addIncomeItem(sampleIncomeItem);

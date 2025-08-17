@@ -5,16 +5,16 @@
  * notifications, and other interface concerns separate from business logic.
  */
 
-import { create } from "zustand";
-import { devtools } from "zustand/middleware";
-import { v4 as uuidv4 } from "uuid";
+import { create } from 'zustand';
+import { devtools } from 'zustand/middleware';
+import { v4 as uuidv4 } from 'uuid';
 import type {
   UIStore,
   UIState,
   StoreConfig,
   Notification,
   Toast,
-} from "./types";
+} from './types';
 
 // =============================================================================
 // Initial State
@@ -34,12 +34,12 @@ const initialUIState: UIState = {
   formValidation: {},
 
   // Responsive design state
-  screenSize: "desktop",
+  screenSize: 'desktop',
   isMobile: false,
 
   // Component-specific UI state
   expandedCards: [],
-  activeTab: "overview",
+  activeTab: 'overview',
 
   // Notifications and feedback
   notifications: [],
@@ -51,16 +51,16 @@ const initialUIState: UIState = {
 // =============================================================================
 
 const getScreenSize = (
-  width: number,
-): "mobile" | "tablet" | "laptop" | "desktop" => {
-  if (width < 768) return "mobile";
-  if (width < 1024) return "tablet";
-  if (width < 1200) return "laptop";
-  return "desktop";
+  width: number
+): 'mobile' | 'tablet' | 'laptop' | 'desktop' => {
+  if (width < 768) return 'mobile';
+  if (width < 1024) return 'tablet';
+  if (width < 1200) return 'laptop';
+  return 'desktop';
 };
 
-const detectScreenSize = (): "mobile" | "tablet" | "laptop" | "desktop" => {
-  if (typeof window === "undefined") return "desktop";
+const detectScreenSize = (): 'mobile' | 'tablet' | 'laptop' | 'desktop' => {
+  if (typeof window === 'undefined') return 'desktop';
   return getScreenSize(window.innerWidth);
 };
 
@@ -74,23 +74,23 @@ export const createUIStore = (config?: StoreConfig) =>
       (set, get) => ({
         ...initialUIState,
         screenSize: detectScreenSize(),
-        isMobile: detectScreenSize() === "mobile",
+        isMobile: detectScreenSize() === 'mobile',
 
         // =============================================================================
         // Layout Management
         // =============================================================================
 
         setSidebarOpen: (open: boolean) => {
-          set({ sidebarOpen: open }, false, "setSidebarOpen");
+          set({ sidebarOpen: open }, false, 'setSidebarOpen');
         },
 
         toggleSidebar: () => {
           const state = get();
-          set({ sidebarOpen: !state.sidebarOpen }, false, "toggleSidebar");
+          set({ sidebarOpen: !state.sidebarOpen }, false, 'toggleSidebar');
         },
 
         setHeaderHeight: (height: number) => {
-          set({ headerHeight: height }, false, "setHeaderHeight");
+          set({ headerHeight: height }, false, 'setHeaderHeight');
         },
 
         // =============================================================================
@@ -99,18 +99,18 @@ export const createUIStore = (config?: StoreConfig) =>
 
         openModal: (modalId: string) => {
           set(
-            (state) => ({
+            state => ({
               modals: { ...state.modals, [modalId]: true },
               activeModal: modalId,
             }),
             false,
-            "openModal",
+            'openModal'
           );
         },
 
         closeModal: (modalId: string) => {
           set(
-            (state) => {
+            state => {
               const newModals = { ...state.modals };
               delete newModals[modalId];
 
@@ -121,7 +121,7 @@ export const createUIStore = (config?: StoreConfig) =>
               };
             },
             false,
-            "closeModal",
+            'closeModal'
           );
         },
 
@@ -132,7 +132,7 @@ export const createUIStore = (config?: StoreConfig) =>
               activeModal: null,
             },
             false,
-            "closeAllModals",
+            'closeAllModals'
           );
         },
 
@@ -142,29 +142,29 @@ export const createUIStore = (config?: StoreConfig) =>
 
         setTableFilter: (tableId: string, filter: any) => {
           set(
-            (state) => ({
+            state => ({
               tableFilters: { ...state.tableFilters, [tableId]: filter },
             }),
             false,
-            "setTableFilter",
+            'setTableFilter'
           );
         },
 
         clearTableFilter: (tableId: string) => {
           set(
-            (state) => {
+            state => {
               const newFilters = { ...state.tableFilters };
               delete newFilters[tableId];
               return { tableFilters: newFilters };
             },
             false,
-            "clearTableFilter",
+            'clearTableFilter'
           );
         },
 
         setFormValidation: (formId: string, field: string, error: string) => {
           set(
-            (state) => ({
+            state => ({
               formValidation: {
                 ...state.formValidation,
                 [formId]: {
@@ -174,13 +174,13 @@ export const createUIStore = (config?: StoreConfig) =>
               },
             }),
             false,
-            "setFormValidation",
+            'setFormValidation'
           );
         },
 
         clearFormValidation: (formId: string, field?: string) => {
           set(
-            (state) => {
+            state => {
               if (field) {
                 // Clear specific field
                 const formValidation = { ...state.formValidation };
@@ -198,7 +198,7 @@ export const createUIStore = (config?: StoreConfig) =>
               }
             },
             false,
-            "clearFormValidation",
+            'clearFormValidation'
           );
         },
 
@@ -206,19 +206,19 @@ export const createUIStore = (config?: StoreConfig) =>
         // Responsive Design Management
         // =============================================================================
 
-        setScreenSize: (size: "mobile" | "tablet" | "laptop" | "desktop") => {
+        setScreenSize: (size: 'mobile' | 'tablet' | 'laptop' | 'desktop') => {
           set(
             {
               screenSize: size,
-              isMobile: size === "mobile",
+              isMobile: size === 'mobile',
             },
             false,
-            "setScreenSize",
+            'setScreenSize'
           );
         },
 
         updateResponsiveState: () => {
-          if (typeof window !== "undefined") {
+          if (typeof window !== 'undefined') {
             const size = getScreenSize(window.innerWidth);
             const state = get();
             if (state.screenSize !== size) {
@@ -233,23 +233,23 @@ export const createUIStore = (config?: StoreConfig) =>
 
         expandCard: (cardId: string) => {
           set(
-            (state) => ({
+            state => ({
               expandedCards: state.expandedCards.includes(cardId)
                 ? state.expandedCards
                 : [...state.expandedCards, cardId],
             }),
             false,
-            "expandCard",
+            'expandCard'
           );
         },
 
         collapseCard: (cardId: string) => {
           set(
-            (state) => ({
-              expandedCards: state.expandedCards.filter((id) => id !== cardId),
+            state => ({
+              expandedCards: state.expandedCards.filter(id => id !== cardId),
             }),
             false,
-            "collapseCard",
+            'collapseCard'
           );
         },
 
@@ -263,7 +263,7 @@ export const createUIStore = (config?: StoreConfig) =>
         },
 
         setActiveTab: (tabId: string) => {
-          set({ activeTab: tabId }, false, "setActiveTab");
+          set({ activeTab: tabId }, false, 'setActiveTab');
         },
 
         // =============================================================================
@@ -271,7 +271,7 @@ export const createUIStore = (config?: StoreConfig) =>
         // =============================================================================
 
         addNotification: (
-          notification: Omit<Notification, "id" | "timestamp">,
+          notification: Omit<Notification, 'id' | 'timestamp'>
         ) => {
           const newNotification: Notification = {
             ...notification,
@@ -282,11 +282,11 @@ export const createUIStore = (config?: StoreConfig) =>
           };
 
           set(
-            (state) => ({
+            state => ({
               notifications: [...state.notifications, newNotification],
             }),
             false,
-            "addNotification",
+            'addNotification'
           );
 
           // Auto-remove notification if enabled
@@ -299,19 +299,19 @@ export const createUIStore = (config?: StoreConfig) =>
 
         removeNotification: (id: string) => {
           set(
-            (state) => ({
-              notifications: state.notifications.filter((n) => n.id !== id),
+            state => ({
+              notifications: state.notifications.filter(n => n.id !== id),
             }),
             false,
-            "removeNotification",
+            'removeNotification'
           );
         },
 
         clearNotifications: () => {
-          set({ notifications: [] }, false, "clearNotifications");
+          set({ notifications: [] }, false, 'clearNotifications');
         },
 
-        addToast: (toast: Omit<Toast, "id" | "timestamp">) => {
+        addToast: (toast: Omit<Toast, 'id' | 'timestamp'>) => {
           const newToast: Toast = {
             ...toast,
             id: uuidv4(),
@@ -320,11 +320,11 @@ export const createUIStore = (config?: StoreConfig) =>
           };
 
           set(
-            (state) => ({
+            state => ({
               toasts: [...state.toasts, newToast],
             }),
             false,
-            "addToast",
+            'addToast'
           );
 
           // Auto-remove toast
@@ -335,16 +335,16 @@ export const createUIStore = (config?: StoreConfig) =>
 
         removeToast: (id: string) => {
           set(
-            (state) => ({
-              toasts: state.toasts.filter((t) => t.id !== id),
+            state => ({
+              toasts: state.toasts.filter(t => t.id !== id),
             }),
             false,
-            "removeToast",
+            'removeToast'
           );
         },
 
         clearToasts: () => {
-          set({ toasts: [] }, false, "clearToasts");
+          set({ toasts: [] }, false, 'clearToasts');
         },
 
         // =============================================================================
@@ -356,20 +356,20 @@ export const createUIStore = (config?: StoreConfig) =>
             {
               ...initialUIState,
               screenSize: detectScreenSize(),
-              isMobile: detectScreenSize() === "mobile",
+              isMobile: detectScreenSize() === 'mobile',
             },
             false,
-            "reset",
+            'reset'
           );
         },
       }),
 
       // DevTools configuration
       {
-        name: "FIRE-UI-Store",
-        enabled: config?.devtools ?? process.env.NODE_ENV === "development",
-      },
-    ),
+        name: 'FIRE-UI-Store',
+        enabled: config?.devtools ?? process.env.NODE_ENV === 'development',
+      }
+    )
   );
 
 // =============================================================================
@@ -377,7 +377,7 @@ export const createUIStore = (config?: StoreConfig) =>
 // =============================================================================
 
 // Export the store type for external usage
-export type { UIStore } from "./types";
+export type { UIStore } from './types';
 
 export const useUIStore = createUIStore({
   devtools: true,
@@ -388,36 +388,34 @@ export const useUIStore = createUIStore({
 // =============================================================================
 
 // Layout selectors
-export const useSidebarOpen = () => useUIStore((state) => state.sidebarOpen);
-export const useHeaderHeight = () => useUIStore((state) => state.headerHeight);
+export const useSidebarOpen = () => useUIStore(state => state.sidebarOpen);
+export const useHeaderHeight = () => useUIStore(state => state.headerHeight);
 
 // Modal selectors
-export const useModals = () => useUIStore((state) => state.modals);
-export const useActiveModal = () => useUIStore((state) => state.activeModal);
+export const useModals = () => useUIStore(state => state.modals);
+export const useActiveModal = () => useUIStore(state => state.activeModal);
 export const useIsModalOpen = (modalId: string) =>
-  useUIStore((state) => !!state.modals[modalId]);
+  useUIStore(state => !!state.modals[modalId]);
 
 // Responsive design selectors
-export const useScreenSize = () => useUIStore((state) => state.screenSize);
-export const useIsMobile = () => useUIStore((state) => state.isMobile);
+export const useScreenSize = () => useUIStore(state => state.screenSize);
+export const useIsMobile = () => useUIStore(state => state.isMobile);
 
 // Component state selectors
-export const useExpandedCards = () =>
-  useUIStore((state) => state.expandedCards);
-export const useActiveTab = () => useUIStore((state) => state.activeTab);
+export const useExpandedCards = () => useUIStore(state => state.expandedCards);
+export const useActiveTab = () => useUIStore(state => state.activeTab);
 export const useIsCardExpanded = (cardId: string) =>
-  useUIStore((state) => state.expandedCards.includes(cardId));
+  useUIStore(state => state.expandedCards.includes(cardId));
 
 // Notifications selectors
-export const useNotifications = () =>
-  useUIStore((state) => state.notifications);
-export const useToasts = () => useUIStore((state) => state.toasts);
+export const useNotifications = () => useUIStore(state => state.notifications);
+export const useToasts = () => useUIStore(state => state.toasts);
 
 // Form validation selectors
 export const useFormValidation = (formId: string) =>
-  useUIStore((state) => state.formValidation[formId] || {});
+  useUIStore(state => state.formValidation[formId] || {});
 export const useFieldError = (formId: string, fieldName: string) =>
-  useUIStore((state) => state.formValidation[formId]?.[fieldName]);
+  useUIStore(state => state.formValidation[formId]?.[fieldName]);
 
 // =============================================================================
 // Store Actions (for direct usage without hooks)
@@ -437,9 +435,9 @@ export const closeAllModals = () => useUIStore.getState().closeAllModals();
 
 // Notification actions
 export const addNotification = (
-  notification: Omit<Notification, "id" | "timestamp">,
+  notification: Omit<Notification, 'id' | 'timestamp'>
 ) => useUIStore.getState().addNotification(notification);
-export const addToast = (toast: Omit<Toast, "id" | "timestamp">) =>
+export const addToast = (toast: Omit<Toast, 'id' | 'timestamp'>) =>
   useUIStore.getState().addToast(toast);
 
 // Component actions
@@ -457,12 +455,12 @@ export const updateResponsiveState = () =>
 // =============================================================================
 
 // Auto-setup responsive state updates
-if (typeof window !== "undefined") {
+if (typeof window !== 'undefined') {
   const handleResize = () => {
     updateResponsiveState();
   };
 
-  window.addEventListener("resize", handleResize);
+  window.addEventListener('resize', handleResize);
 
   // Initial check
   updateResponsiveState();

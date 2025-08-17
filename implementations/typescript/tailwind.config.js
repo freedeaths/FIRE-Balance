@@ -1,19 +1,16 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  content: [
-    "./index.html",
-    "./src/**/*.{js,ts,jsx,tsx}",
-  ],
+  content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
       // Custom breakpoints for responsive design
       screens: {
-        'xs': '480px',    // Extra small devices (large phones)
-        'sm': '640px',    // Small devices (tablets)
-        'md': '768px',    // Medium devices (small laptops)
-        'lg': '1024px',   // Large devices (laptops/desktops)
-        'xl': '1280px',   // Extra large devices (large desktops)
-        '2xl': '1536px',  // 2X large devices (larger desktops)
+        xs: '480px', // Extra small devices (large phones)
+        sm: '640px', // Small devices (tablets)
+        md: '768px', // Medium devices (small laptops)
+        lg: '1024px', // Large devices (laptops/desktops)
+        xl: '1280px', // Extra large devices (large desktops)
+        '2xl': '1536px', // 2X large devices (larger desktops)
       },
 
       // Custom colors for the FIRE Balance theme
@@ -77,15 +74,15 @@ export default {
 
       // Custom spacing for consistent layout
       spacing: {
-        '18': '4.5rem',
-        '88': '22rem',
-        '128': '32rem',
+        18: '4.5rem',
+        88: '22rem',
+        128: '32rem',
       },
 
       // Custom font families
       fontFamily: {
-        'sans': ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
-        'mono': ['JetBrains Mono', 'Consolas', 'Monaco', 'monospace'],
+        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        mono: ['JetBrains Mono', 'Consolas', 'Monaco', 'monospace'],
       },
 
       // Custom animations for smooth transitions

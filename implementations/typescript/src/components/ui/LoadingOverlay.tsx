@@ -5,7 +5,7 @@
  * Overlays on top of main content, centered on screen
  */
 
-import React from "react";
+import React from 'react';
 import {
   Overlay,
   Center,
@@ -15,9 +15,9 @@ import {
   Text,
   Progress,
   Modal,
-} from "@mantine/core";
-import { IconLoader } from "@tabler/icons-react";
-import { getI18n } from "../../core/i18n";
+} from '@mantine/core';
+import { IconLoader } from '@tabler/icons-react';
+import { getI18n } from '../../core/i18n';
 
 interface LoadingOverlayProps {
   /** Whether to show the overlay */
@@ -41,16 +41,16 @@ export function LoadingOverlay({
     i18n.t(key, variables);
 
   const getProgressText = (progress: number): string => {
-    if (progress < 30) return `🔄 ${t("calculating_fire_feasibility")}`;
-    if (progress < 70) return `📊 ${t("run_monte_carlo_simulation")}`;
-    if (progress < 100) return `🎯 ${t("stage3.recommendations.title")}`;
-    return `✅ ${t("stage3.completion.title")}`;
+    if (progress < 30) return `🔄 ${t('calculating_fire_feasibility')}`;
+    if (progress < 70) return `📊 ${t('run_monte_carlo_simulation')}`;
+    if (progress < 100) return `🎯 ${t('stage3.recommendations.title')}`;
+    return `✅ ${t('stage3.completion.title')}`;
   };
 
   const getProgressColor = (progress: number): string => {
-    if (progress < 30) return "blue";
-    if (progress < 70) return "orange";
-    return "green";
+    if (progress < 30) return 'blue';
+    if (progress < 70) return 'orange';
+    return 'green';
   };
 
   return (
@@ -61,45 +61,45 @@ export function LoadingOverlay({
       closeOnClickOutside={false}
       closeOnEscape={false}
       centered
-      size="md"
-      padding="xl"
+      size='md'
+      padding='xl'
       overlayProps={{
         backgroundOpacity: 0.7,
         blur: 3,
       }}
     >
-      <Stack gap="lg" align="center">
+      <Stack gap='lg' align='center'>
         {/* Spinning icon */}
-        <div className="loading-spinner">
-          <IconLoader size={64} color="var(--mantine-primary-color-6)" />
+        <div className='loading-spinner'>
+          <IconLoader size={64} color='var(--mantine-primary-color-6)' />
         </div>
 
         {/* Title */}
-        <Title order={3} ta="center">
-          {title || t("calculating_fire_feasibility")}
+        <Title order={3} ta='center'>
+          {title || t('calculating_fire_feasibility')}
         </Title>
 
         {/* Progress description */}
-        <Text size="lg" c="dimmed" ta="center">
+        <Text size='lg' c='dimmed' ta='center'>
           {description || getProgressText(progress)} {progress}%
         </Text>
 
         {/* Progress bar */}
         <Progress
           value={progress}
-          w="100%"
-          size="xl"
+          w='100%'
+          size='xl'
           animated
           color={getProgressColor(progress)}
           style={{
-            height: "16px",
-            minWidth: "300px",
+            height: '16px',
+            minWidth: '300px',
           }}
         />
 
         {/* Help text */}
-        <Text size="sm" c="dimmed" ta="center">
-          {t("running_simulations")}
+        <Text size='sm' c='dimmed' ta='center'>
+          {t('running_simulations')}
         </Text>
       </Stack>
     </Modal>

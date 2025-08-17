@@ -6,9 +6,9 @@
  * that can be applied to financial projections for risk analysis.
  */
 
-import Decimal from "decimal.js";
-import type { BlackSwanEvent, UserProfile } from "./data_models";
-import { getCurrentAge } from "./data_models";
+import Decimal from 'decimal.js';
+import type { BlackSwanEvent, UserProfile } from './data_models';
+import { getCurrentAge } from './data_models';
 
 // =============================================================================
 // Concrete Black Swan Event Implementations
@@ -19,7 +19,7 @@ import { getCurrentAge } from "./data_models";
  * Direct port of Python's FinancialCrisisEvent
  */
 export class FinancialCrisisEvent implements BlackSwanEvent {
-  event_id = "financial_crisis";
+  event_id = 'financial_crisis';
   annual_probability = new Decimal(0.016); // 1.6% annual probability
   duration_years = 2;
   recovery_factor = new Decimal(0.8);
@@ -39,7 +39,7 @@ export class FinancialCrisisEvent implements BlackSwanEvent {
  * Direct port of Python's EconomicRecessionEvent
  */
 export class EconomicRecessionEvent implements BlackSwanEvent {
-  event_id = "economic_recession";
+  event_id = 'economic_recession';
   annual_probability = new Decimal(0.024); // 2.4% annual probability
   duration_years = 1;
   recovery_factor = new Decimal(0.7);
@@ -58,7 +58,7 @@ export class EconomicRecessionEvent implements BlackSwanEvent {
  * Direct port of Python's MarketCrashEvent
  */
 export class MarketCrashEvent implements BlackSwanEvent {
-  event_id = "market_crash";
+  event_id = 'market_crash';
   annual_probability = new Decimal(0.012); // 1.2% annual probability
   duration_years = 1;
   recovery_factor = new Decimal(0.6);
@@ -77,7 +77,7 @@ export class MarketCrashEvent implements BlackSwanEvent {
  * Direct port of Python's HyperinflationEvent
  */
 export class HyperinflationEvent implements BlackSwanEvent {
-  event_id = "hyperinflation";
+  event_id = 'hyperinflation';
   annual_probability = new Decimal(0.004); // 0.4% annual probability
   duration_years = 3;
   recovery_factor = new Decimal(0.9);
@@ -96,7 +96,7 @@ export class HyperinflationEvent implements BlackSwanEvent {
  * Direct port of Python's UnemploymentEvent
  */
 export class UnemploymentEvent implements BlackSwanEvent {
-  event_id = "unemployment";
+  event_id = 'unemployment';
   annual_probability = new Decimal(0.02); // 2% annual probability
   duration_years = 1;
   recovery_factor = new Decimal(0.5);
@@ -115,7 +115,7 @@ export class UnemploymentEvent implements BlackSwanEvent {
  * Direct port of Python's IndustryCollapseEvent
  */
 export class IndustryCollapseEvent implements BlackSwanEvent {
-  event_id = "industry_collapse";
+  event_id = 'industry_collapse';
   annual_probability = new Decimal(0.008); // 0.8% annual probability
   duration_years = 3;
   recovery_factor = new Decimal(0.7);
@@ -134,7 +134,7 @@ export class IndustryCollapseEvent implements BlackSwanEvent {
  * Direct port of Python's UnexpectedPromotionEvent
  */
 export class UnexpectedPromotionEvent implements BlackSwanEvent {
-  event_id = "unexpected_promotion";
+  event_id = 'unexpected_promotion';
   annual_probability = new Decimal(0.016); // 1.6% annual probability
   duration_years = 5;
   recovery_factor = new Decimal(1.0); // Permanent benefit
@@ -153,7 +153,7 @@ export class UnexpectedPromotionEvent implements BlackSwanEvent {
  * Direct port of Python's MajorIllnessEvent
  */
 export class MajorIllnessEvent implements BlackSwanEvent {
-  event_id = "major_illness";
+  event_id = 'major_illness';
   annual_probability = new Decimal(0.012); // 1.2% annual probability
   duration_years = 2;
   recovery_factor = new Decimal(0.8);
@@ -172,7 +172,7 @@ export class MajorIllnessEvent implements BlackSwanEvent {
  * Direct port of Python's LongTermCareEvent
  */
 export class LongTermCareEvent implements BlackSwanEvent {
-  event_id = "long_term_care";
+  event_id = 'long_term_care';
   annual_probability = new Decimal(0.008); // 0.8% annual probability
   duration_years = 5;
   recovery_factor = new Decimal(0.9);
@@ -191,7 +191,7 @@ export class LongTermCareEvent implements BlackSwanEvent {
  * Direct port of Python's RegionalConflictEvent
  */
 export class RegionalConflictEvent implements BlackSwanEvent {
-  event_id = "regional_conflict";
+  event_id = 'regional_conflict';
   annual_probability = new Decimal(0.006); // 0.6% annual probability
   duration_years = 2;
   recovery_factor = new Decimal(0.8);
@@ -210,7 +210,7 @@ export class RegionalConflictEvent implements BlackSwanEvent {
  * Direct port of Python's GlobalWarEvent
  */
 export class GlobalWarEvent implements BlackSwanEvent {
-  event_id = "global_war";
+  event_id = 'global_war';
   annual_probability = new Decimal(0.002); // 0.2% annual probability
   duration_years = 4;
   recovery_factor = new Decimal(0.7);
@@ -229,7 +229,7 @@ export class GlobalWarEvent implements BlackSwanEvent {
  * Direct port of Python's EconomicSanctionsEvent
  */
 export class EconomicSanctionsEvent implements BlackSwanEvent {
-  event_id = "economic_sanctions";
+  event_id = 'economic_sanctions';
   annual_probability = new Decimal(0.004); // 0.4% annual probability
   duration_years = 3;
   recovery_factor = new Decimal(0.8);
@@ -248,7 +248,7 @@ export class EconomicSanctionsEvent implements BlackSwanEvent {
  * Direct port of Python's EnergyCrisisEvent
  */
 export class EnergyCrisisEvent implements BlackSwanEvent {
-  event_id = "energy_crisis";
+  event_id = 'energy_crisis';
   annual_probability = new Decimal(0.01); // 1% annual probability
   duration_years = 2;
   recovery_factor = new Decimal(0.9);
@@ -267,7 +267,7 @@ export class EnergyCrisisEvent implements BlackSwanEvent {
  * Direct port of Python's InheritanceEvent
  */
 export class InheritanceEvent implements BlackSwanEvent {
-  event_id = "inheritance";
+  event_id = 'inheritance';
   annual_probability = new Decimal(0.006); // 0.6% annual probability
   duration_years = 1;
   recovery_factor = new Decimal(1.0); // One-time benefit
@@ -286,7 +286,7 @@ export class InheritanceEvent implements BlackSwanEvent {
  * Direct port of Python's InvestmentWindfallEvent
  */
 export class InvestmentWindfallEvent implements BlackSwanEvent {
-  event_id = "investment_windfall";
+  event_id = 'investment_windfall';
   annual_probability = new Decimal(0.004); // 0.4% annual probability
   duration_years = 1;
   recovery_factor = new Decimal(1.0); // One-time benefit
@@ -309,7 +309,7 @@ export class InvestmentWindfallEvent implements BlackSwanEvent {
  * Direct port of Python's create_black_swan_events function
  */
 export function createBlackSwanEvents(
-  user_profile: UserProfile,
+  user_profile: UserProfile
 ): BlackSwanEvent[] {
   const current_age = getCurrentAge(user_profile.birth_year);
   const fire_age = user_profile.expected_fire_age;

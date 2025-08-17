@@ -17,11 +17,11 @@ import React, {
   useCallback,
   createContext,
   useContext,
-} from "react";
-import { useMediaQuery } from "@mantine/hooks";
-import { ActionIcon, Tooltip } from "@mantine/core";
-import { IconMaximize, IconMinimize } from "@tabler/icons-react";
-import { getI18n } from "../../core/i18n";
+} from 'react';
+import { useMediaQuery } from '@mantine/hooks';
+import { ActionIcon, Tooltip } from '@mantine/core';
+import { IconMaximize, IconMinimize } from '@tabler/icons-react';
+import { getI18n } from '../../core/i18n';
 
 // =============================================================================
 // Types & Context
@@ -56,7 +56,7 @@ interface ResponsiveFullscreenChartWrapperProps {
   /** 图表容器的基础高度（用于计算缩放） */
   baseHeight?: number;
   /** 图表类型，用于调整压缩策略 */
-  chartType?: "line" | "bar" | "area" | "composed";
+  chartType?: 'line' | 'bar' | 'area' | 'composed';
   /** 自定义CSS类名 */
   className?: string;
   /** 全屏时的容器样式 */
@@ -92,7 +92,7 @@ const enterFullscreen = (element: HTMLElement): Promise<void> => {
   } else if ((element as any).msRequestFullscreen) {
     return (element as any).msRequestFullscreen();
   }
-  return Promise.reject(new Error("Fullscreen API not supported"));
+  return Promise.reject(new Error('Fullscreen API not supported'));
 };
 
 /**
@@ -108,20 +108,20 @@ const exitFullscreen = (): Promise<void> => {
   } else if ((document as any).msExitFullscreen) {
     return (document as any).msExitFullscreen();
   }
-  return Promise.reject(new Error("Fullscreen API not supported"));
+  return Promise.reject(new Error('Fullscreen API not supported'));
 };
 
 /**
  * 锁定屏幕方向为横屏
  */
 const lockOrientation = async (
-  orientation: "landscape" | "portrait" = "landscape",
+  orientation: 'landscape' | 'portrait' = 'landscape'
 ): Promise<void> => {
-  if (screen.orientation && "lock" in screen.orientation) {
+  if (screen.orientation && 'lock' in screen.orientation) {
     try {
       await (screen.orientation as any).lock(orientation);
     } catch (error) {
-      console.warn("Screen orientation lock not supported or failed:", error);
+      console.warn('Screen orientation lock not supported or failed:', error);
     }
   }
 };
@@ -134,7 +134,7 @@ const unlockOrientation = (): void => {
     try {
       screen.orientation.unlock();
     } catch (error) {
-      console.warn("Screen orientation unlock failed:", error);
+      console.warn('Screen orientation unlock failed:', error);
     }
   }
 };
@@ -150,8 +150,8 @@ export function ResponsiveFullscreenChartWrapper({
   enableMobileScaling = true,
   minMobileScale = 0.4, // 默认允许更小的缩放
   baseHeight = 400,
-  chartType = "line", // 默认为线图
-  className = "",
+  chartType = 'line', // 默认为线图
+  className = '',
   fullscreenContainerStyle = {},
 }: ResponsiveFullscreenChartWrapperProps): React.JSX.Element {
   // Refs
@@ -164,17 +164,17 @@ export function ResponsiveFullscreenChartWrapper({
   const [isFullscreenSupported, setIsFullscreenSupported] = useState(false);
 
   // Hooks - 双重移动端检测，确保准确性
-  const mantineIsMobile = useMediaQuery("(max-width: 768px)", true, {
+  const mantineIsMobile = useMediaQuery('(max-width: 768px)', true, {
     getInitialValueInEffect: false,
   });
   const [nativeIsMobile, setNativeIsMobile] = useState(
-    () => window.innerWidth <= 768,
+    () => window.innerWidth <= 768
   );
   const isMobile = mantineIsMobile || nativeIsMobile;
 
   // 检测是否为移动端竖屏模式（需要简化显示）
   const [isPortrait, setIsPortrait] = useState(
-    () => window.innerHeight > window.innerWidth,
+    () => window.innerHeight > window.innerWidth
   );
   const isMobilePortrait = isMobile && isPortrait && !isFullscreen;
   const i18n = getI18n();
@@ -182,38 +182,38 @@ export function ResponsiveFullscreenChartWrapper({
     (key: string, variables?: Record<string, unknown>): string => {
       // 提供默认值以防翻译键不存在
       const defaultValues: Record<string, string> = {
-        enter_fullscreen: "Enter Fullscreen",
-        exit_fullscreen: "Exit Fullscreen",
-        tap_fullscreen_for_better_view: "Tap fullscreen for better view",
-        scaled_for_mobile: "Scaled for mobile",
+        enter_fullscreen: 'Enter Fullscreen',
+        exit_fullscreen: 'Exit Fullscreen',
+        tap_fullscreen_for_better_view: 'Tap fullscreen for better view',
+        scaled_for_mobile: 'Scaled for mobile',
       };
 
       const translation = i18n.t(key, variables);
       return translation === key ? defaultValues[key] || key : translation;
     },
-    [i18n],
+    [i18n]
   );
 
   // 根据图表类型调整压缩策略
   const getChartTypeScale = useCallback(
     (baseScale: number): number => {
       switch (chartType) {
-        case "bar":
+        case 'bar':
           // 柱状图需要更多高度，避免柱子重叠
           return Math.max(baseScale * 1.8, 0.7); // 最小保持70%高度
-        case "composed":
+        case 'composed':
           // 复合图(净值轨迹图)可以压缩更多
           return Math.max(baseScale, 0.3); // 允许压缩到30%
-        case "area":
+        case 'area':
           // 面积图(Monte Carlo分布图)保持更多高度，避免过扁
           return Math.max(baseScale * 1.5, 0.65); // 最小保持65%高度
-        case "line":
+        case 'line':
         default:
           // 线图可以压缩较多
           return Math.max(baseScale, 0.4); // 允许压缩到40%
       }
     },
-    [chartType],
+    [chartType]
   );
 
   // 计算移动端目标高度 - 让图表变"扁"但不压缩文字
@@ -272,11 +272,11 @@ export function ResponsiveFullscreenChartWrapper({
         await enterFullscreen(containerRef.current);
         // 进入全屏后尝试锁定横屏
         if (isMobile) {
-          await lockOrientation("landscape");
+          await lockOrientation('landscape');
         }
       }
     } catch (error) {
-      console.warn("Fullscreen toggle failed:", error);
+      console.warn('Fullscreen toggle failed:', error);
     }
   }, [isFullscreen, enableFullscreen, isMobile]);
 
@@ -289,9 +289,9 @@ export function ResponsiveFullscreenChartWrapper({
     calculateMobileScale();
 
     // 动态添加全屏样式
-    const styleId = "responsive-fullscreen-chart-styles";
+    const styleId = 'responsive-fullscreen-chart-styles';
     if (!document.getElementById(styleId)) {
-      const style = document.createElement("style");
+      const style = document.createElement('style');
       style.id = styleId;
       style.textContent = `
         .responsive-chart-container:fullscreen {
@@ -358,13 +358,13 @@ export function ResponsiveFullscreenChartWrapper({
 
     // 监听全屏状态变化
     const events = [
-      "fullscreenchange",
-      "webkitfullscreenchange",
-      "mozfullscreenchange",
-      "MSFullscreenChange",
+      'fullscreenchange',
+      'webkitfullscreenchange',
+      'mozfullscreenchange',
+      'MSFullscreenChange',
     ];
 
-    events.forEach((event) => {
+    events.forEach(event => {
       document.addEventListener(event, handleFullscreenChange);
     });
 
@@ -378,15 +378,15 @@ export function ResponsiveFullscreenChartWrapper({
       setTimeout(calculateMobileScale, 100);
     };
 
-    window.addEventListener("resize", handleResize);
-    window.addEventListener("orientationchange", handleResize);
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', handleResize);
 
     return () => {
-      events.forEach((event) => {
+      events.forEach(event => {
         document.removeEventListener(event, handleFullscreenChange);
       });
-      window.removeEventListener("resize", handleResize);
-      window.removeEventListener("orientationchange", handleResize);
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('orientationchange', handleResize);
     };
   }, [calculateMobileScale, handleFullscreenChange]);
 
@@ -403,24 +403,32 @@ export function ResponsiveFullscreenChartWrapper({
 
   // 样式计算
   const containerStyles: React.CSSProperties = {
-    position: "relative",
-    width: "100%",
-    overflow: "hidden",
+    position: 'relative',
+    width: '100%',
+    overflow: 'hidden',
     // 移动端使用实际图表高度，桌面端使用基础高度
-    height: `${!isFullscreen && isMobile && enableMobileScaling ? actualChartHeight : baseHeight}px`,
+    height: `${
+      !isFullscreen && isMobile && enableMobileScaling
+        ? actualChartHeight
+        : baseHeight
+    }px`,
   };
 
   const chartStyles: React.CSSProperties = {
-    transformOrigin: "top center",
-    transition: "transform 0.3s ease",
-    width: "100%",
-    height: `${!isFullscreen && isMobile && enableMobileScaling ? actualChartHeight : baseHeight}px`,
+    transformOrigin: 'top center',
+    transition: 'transform 0.3s ease',
+    width: '100%',
+    height: `${
+      !isFullscreen && isMobile && enableMobileScaling
+        ? actualChartHeight
+        : baseHeight
+    }px`,
     ...(isFullscreen &&
       isMobile && {
-        transform: "rotate(90deg)",
-        transformOrigin: "center center",
-        width: "100vh",
-        height: "100vw",
+        transform: 'rotate(90deg)',
+        transformOrigin: 'center center',
+        width: '100vh',
+        height: '100vw',
       }),
   };
 
@@ -428,10 +436,10 @@ export function ResponsiveFullscreenChartWrapper({
   const fullscreenStyles: React.CSSProperties = {
     ...fullscreenContainerStyle,
     ...(isFullscreen && {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      backgroundColor: "#ffffff",
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: '#ffffff',
     }),
   };
 
@@ -454,20 +462,20 @@ export function ResponsiveFullscreenChartWrapper({
         {/* 全屏按钮 */}
         {enableFullscreen && isFullscreenSupported && (
           <Tooltip
-            label={isFullscreen ? t("exit_fullscreen") : t("enter_fullscreen")}
-            position="top-end"
+            label={isFullscreen ? t('exit_fullscreen') : t('enter_fullscreen')}
+            position='top-end'
           >
             <ActionIcon
-              variant="subtle"
-              size="sm"
+              variant='subtle'
+              size='sm'
               onClick={toggleFullscreen}
               style={{
-                position: "absolute",
+                position: 'absolute',
                 top: 8,
                 right: 8,
                 zIndex: 1000,
-                backgroundColor: "rgba(255, 255, 255, 0.9)",
-                backdropFilter: "blur(4px)",
+                backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                backdropFilter: 'blur(4px)',
               }}
             >
               {isFullscreen ? (
@@ -480,8 +488,8 @@ export function ResponsiveFullscreenChartWrapper({
         )}
 
         {/* 图表内容 */}
-        <div ref={chartRef} className="chart-content" style={chartStyles}>
-          {typeof children === "function"
+        <div ref={chartRef} className='chart-content' style={chartStyles}>
+          {typeof children === 'function'
             ? children({ height: actualChartHeight })
             : children}
         </div>

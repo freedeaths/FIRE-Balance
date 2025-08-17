@@ -4,9 +4,9 @@
  * Shows when the app is offline and can still function as a PWA
  */
 
-import React, { useState, useEffect } from "react";
-import { Alert } from "@mantine/core";
-import { IconWifi, IconWifiOff } from "@tabler/icons-react";
+import React, { useState, useEffect } from 'react';
+import { Alert } from '@mantine/core';
+import { IconWifi, IconWifiOff } from '@tabler/icons-react';
 
 export const OfflineIndicator: React.FC = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -23,8 +23,8 @@ export const OfflineIndicator: React.FC = () => {
       setShowOfflineMessage(true);
     };
 
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
 
     // Show message if already offline
     if (!navigator.onLine) {
@@ -32,8 +32,8 @@ export const OfflineIndicator: React.FC = () => {
     }
 
     return () => {
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
     };
   }, []);
 
@@ -44,21 +44,21 @@ export const OfflineIndicator: React.FC = () => {
   return (
     <Alert
       icon={<IconWifiOff size={16} />}
-      color="yellow"
-      variant="light"
+      color='yellow'
+      variant='light'
       style={{
-        position: "fixed",
-        top: "10px",
-        right: "10px",
+        position: 'fixed',
+        top: '10px',
+        right: '10px',
         zIndex: 1000,
-        maxWidth: "300px",
+        maxWidth: '300px',
       }}
       withCloseButton
       onClose={() => setShowOfflineMessage(false)}
     >
       <div>
         <strong>Offline Mode</strong>
-        <div style={{ fontSize: "0.875rem", marginTop: "4px" }}>
+        <div style={{ fontSize: '0.875rem', marginTop: '4px' }}>
           You're offline, but the app continues to work!
         </div>
       </div>

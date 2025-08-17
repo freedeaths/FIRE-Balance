@@ -5,14 +5,14 @@
  * This is the top-level store that coordinates with other stores.
  */
 
-import { create } from "zustand";
-import { devtools, persist } from "zustand/middleware";
-import type { AppStore, AppState, StoreConfig } from "./types";
-import type { LanguageCode } from "../types";
+import { create } from 'zustand';
+import { devtools, persist } from 'zustand/middleware';
+import type { AppStore, AppState, StoreConfig } from './types';
+import type { LanguageCode } from '../types';
 import {
   detectUserLanguage,
   saveLanguagePreference,
-} from "../utils/languageDetection";
+} from '../utils/languageDetection';
 
 // =============================================================================
 // Initial State
@@ -28,10 +28,10 @@ const initialAppState: AppState = {
   error: null,
 
   // Theme and preferences
-  theme: "system",
+  theme: 'system',
 
   // App metadata
-  version: "0.2.0-dev",
+  version: '0.2.0-dev',
   buildTime: undefined,
 };
 
@@ -50,11 +50,11 @@ export const createAppStore = (config?: StoreConfig) => {
     setLanguage: (language: LanguageCode) => {
       // 保存语言偏好到本地存储
       saveLanguagePreference(language);
-      set({ currentLanguage: language }, false, "setLanguage");
+      set({ currentLanguage: language }, false, 'setLanguage');
     },
 
     setI18nLoaded: (loaded: boolean) => {
-      set({ isI18nLoaded: loaded }, false, "setI18nLoaded");
+      set({ isI18nLoaded: loaded }, false, 'setI18nLoaded');
     },
 
     // =============================================================================
@@ -62,23 +62,23 @@ export const createAppStore = (config?: StoreConfig) => {
     // =============================================================================
 
     setLoading: (loading: boolean) => {
-      set({ isLoading: loading }, false, "setLoading");
+      set({ isLoading: loading }, false, 'setLoading');
     },
 
     setError: (error: string | null) => {
-      set({ error }, false, "setError");
+      set({ error }, false, 'setError');
     },
 
     clearError: () => {
-      set({ error: null }, false, "clearError");
+      set({ error: null }, false, 'clearError');
     },
 
     // =============================================================================
     // Theme Management
     // =============================================================================
 
-    setTheme: (theme: "light" | "dark" | "system") => {
-      set({ theme }, false, "setTheme");
+    setTheme: (theme: 'light' | 'dark' | 'system') => {
+      set({ theme }, false, 'setTheme');
     },
 
     // =============================================================================
@@ -86,7 +86,7 @@ export const createAppStore = (config?: StoreConfig) => {
     // =============================================================================
 
     reset: () => {
-      set(initialAppState, false, "reset");
+      set(initialAppState, false, 'reset');
     },
   });
 
@@ -95,24 +95,24 @@ export const createAppStore = (config?: StoreConfig) => {
     return create<AppStore>()(
       devtools(
         persist(storeCreator, {
-          name: config.persist.key ?? "fire-app-state",
-          partialize: (state) => ({
+          name: config.persist.key ?? 'fire-app-state',
+          partialize: state => ({
             currentLanguage: state.currentLanguage,
             theme: state.theme,
           }),
         }),
         {
-          name: "FIRE-App-Store",
-          enabled: config?.devtools ?? process.env.NODE_ENV === "development",
-        },
-      ),
+          name: 'FIRE-App-Store',
+          enabled: config?.devtools ?? process.env.NODE_ENV === 'development',
+        }
+      )
     );
   } else {
     return create<AppStore>()(
       devtools(storeCreator, {
-        name: "FIRE-App-Store",
-        enabled: config?.devtools ?? process.env.NODE_ENV === "development",
-      }),
+        name: 'FIRE-App-Store',
+        enabled: config?.devtools ?? process.env.NODE_ENV === 'development',
+      })
     );
   }
 };
@@ -122,13 +122,13 @@ export const createAppStore = (config?: StoreConfig) => {
 // =============================================================================
 
 // Export the store type for external usage
-export type { AppStore } from "./types";
+export type { AppStore } from './types';
 
 export const useAppStore = createAppStore({
   persist: {
     enabled: true, // Enable persistence for language and theme settings
-    key: "fire-app-state",
-    storage: "localStorage",
+    key: 'fire-app-state',
+    storage: 'localStorage',
   },
   devtools: true,
 });
@@ -139,18 +139,18 @@ export const useAppStore = createAppStore({
 
 // Language selectors
 export const useCurrentLanguage = () =>
-  useAppStore((state) => state.currentLanguage);
-export const useIsI18nLoaded = () => useAppStore((state) => state.isI18nLoaded);
+  useAppStore(state => state.currentLanguage);
+export const useIsI18nLoaded = () => useAppStore(state => state.isI18nLoaded);
 
 // UI state selectors
-export const useIsLoading = () => useAppStore((state) => state.isLoading);
-export const useError = () => useAppStore((state) => state.error);
+export const useIsLoading = () => useAppStore(state => state.isLoading);
+export const useError = () => useAppStore(state => state.error);
 
 // Theme selectors
-export const useTheme = () => useAppStore((state) => state.theme);
+export const useTheme = () => useAppStore(state => state.theme);
 
 // App metadata selectors
-export const useAppVersion = () => useAppStore((state) => state.version);
+export const useAppVersion = () => useAppStore(state => state.version);
 
 // =============================================================================
 // Store Actions (for direct usage without hooks)
@@ -173,7 +173,7 @@ export const setError = (error: string | null) =>
 export const clearError = () => useAppStore.getState().clearError();
 
 // Theme actions
-export const setTheme = (theme: "light" | "dark" | "system") =>
+export const setTheme = (theme: 'light' | 'dark' | 'system') =>
   useAppStore.getState().setTheme(theme);
 
 // Utility actions

@@ -7,11 +7,11 @@
  * - 提供计算结果
  */
 
-import { useState, useEffect } from "react";
-import { usePlannerStore } from "../stores/plannerStore";
-import { FIRECalculationService } from "../services/fireCalculationService";
-import { PlannerStage } from "../types";
-import type { PlannerResults } from "../types";
+import { useState, useEffect } from 'react';
+import { usePlannerStore } from '../stores/plannerStore';
+import { FIRECalculationService } from '../services/fireCalculationService';
+import { PlannerStage } from '../types';
+import type { PlannerResults } from '../types';
 
 export interface FIRECalculationState {
   isCalculating: boolean;
@@ -21,7 +21,7 @@ export interface FIRECalculationState {
 }
 
 export function useFIRECalculation(
-  currentStage: PlannerStage,
+  currentStage: PlannerStage
 ): FIRECalculationState & {
   runCalculation: () => Promise<void>;
   hasResults: boolean;
@@ -34,7 +34,7 @@ export function useFIRECalculation(
       results: null,
     });
 
-  const plannerResults = usePlannerStore((state) => state.data.results);
+  const plannerResults = usePlannerStore(state => state.data.results);
 
   // 只要二进三就计算
   useEffect(() => {
@@ -45,7 +45,7 @@ export function useFIRECalculation(
 
       // 只要是从 Stage2 进入 Stage3 就计算
       if (prevStage === PlannerStage.STAGE2_ADJUSTMENT) {
-        setCalculationState((prev) => ({
+        setCalculationState(prev => ({
           ...prev,
           isCalculating: true,
           progress: 0,
@@ -65,7 +65,7 @@ export function useFIRECalculation(
       currentStage === PlannerStage.STAGE3_ANALYSIS &&
       plannerResults?.fire_calculation
     ) {
-      setCalculationState((prev) => ({
+      setCalculationState(prev => ({
         ...prev,
         results: plannerResults,
         error: null,
@@ -74,7 +74,7 @@ export function useFIRECalculation(
   }, [plannerResults, currentStage]);
 
   const runCalculation = async (): Promise<void> => {
-    setCalculationState((prev) => ({
+    setCalculationState(prev => ({
       ...prev,
       isCalculating: true,
       progress: 0,
@@ -83,17 +83,17 @@ export function useFIRECalculation(
 
     try {
       const results = await FIRECalculationService.runCalculationsForStage3(
-        (progress) => {
-          setCalculationState((prev) => ({
+        progress => {
+          setCalculationState(prev => ({
             ...prev,
             progress,
           }));
-        },
+        }
       );
 
       // 计算完成
 
-      setCalculationState((prev) => ({
+      setCalculationState(prev => ({
         ...prev,
         isCalculating: false,
         progress: 100,
@@ -101,13 +101,13 @@ export function useFIRECalculation(
         error: null,
       }));
     } catch (error) {
-      console.error("FIRE计算失败:", error);
-      setCalculationState((prev) => ({
+      console.error('FIRE计算失败:', error);
+      setCalculationState(prev => ({
         ...prev,
         isCalculating: false,
         progress: 0,
         results: null,
-        error: error instanceof Error ? error.message : "计算失败",
+        error: error instanceof Error ? error.message : '计算失败',
       }));
     }
   };

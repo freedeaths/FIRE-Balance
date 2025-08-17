@@ -10,14 +10,14 @@
  * Simple implementation for browser compatibility
  */
 export function generateUUID(): string {
-  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
     return crypto.randomUUID();
   }
 
   // Fallback implementation
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
     const r = (Math.random() * 16) | 0;
-    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
     return v.toString(16);
   });
 }
@@ -32,8 +32,8 @@ export function getCurrentTimestamp(): string {
 /**
  * Format currency amount for display
  */
-export function formatCurrency(amount: number, currency = ""): string {
-  const formatted = amount.toLocaleString("en-US", {
+export function formatCurrency(amount: number, currency = ''): string {
+  const formatted = amount.toLocaleString('en-US', {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   });
@@ -66,7 +66,7 @@ export function clamp(value: number, min: number, max: number): number {
  * Deep clone an object
  */
 export function deepClone<T>(obj: T): T {
-  if (obj === null || typeof obj !== "object") {
+  if (obj === null || typeof obj !== 'object') {
     return obj;
   }
 
@@ -75,10 +75,10 @@ export function deepClone<T>(obj: T): T {
   }
 
   if (obj instanceof Array) {
-    return obj.map((item) => deepClone(item)) as unknown as T;
+    return obj.map(item => deepClone(item)) as unknown as T;
   }
 
-  if (typeof obj === "object") {
+  if (typeof obj === 'object') {
     const copy = {} as T;
     for (const key in obj) {
       if (obj.hasOwnProperty(key)) {
@@ -96,7 +96,7 @@ export function deepClone<T>(obj: T): T {
  */
 export function debounce<T extends (...args: any[]) => any>(
   func: T,
-  wait: number,
+  wait: number
 ): (...args: Parameters<T>) => void {
   let timeout: NodeJS.Timeout;
 
@@ -116,7 +116,7 @@ export function debounce<T extends (...args: any[]) => any>(
  */
 export function throttle<T extends (...args: any[]) => any>(
   func: T,
-  limit: number,
+  limit: number
 ): (...args: Parameters<T>) => void {
   let inThrottle: boolean;
 
@@ -133,14 +133,14 @@ export function throttle<T extends (...args: any[]) => any>(
  * Check if a value is a valid number
  */
 export function isValidNumber(value: any): value is number {
-  return typeof value === "number" && !isNaN(value) && isFinite(value);
+  return typeof value === 'number' && !isNaN(value) && isFinite(value);
 }
 
 /**
  * Safe number parsing with fallback
  */
 export function parseNumber(value: string | number, fallback = 0): number {
-  if (typeof value === "number") {
+  if (typeof value === 'number') {
     return isValidNumber(value) ? value : fallback;
   }
 
@@ -154,7 +154,7 @@ export function parseNumber(value: string | number, fallback = 0): number {
 export function isEmpty(obj: any): boolean {
   if (obj == null) return true;
   if (Array.isArray(obj)) return obj.length === 0;
-  if (typeof obj === "object") return Object.keys(obj).length === 0;
+  if (typeof obj === 'object') return Object.keys(obj).length === 0;
   return false;
 }
 

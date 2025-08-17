@@ -6,15 +6,15 @@
  * business logic store that mirrors the FIREPlanner class functionality.
  */
 
-import { create } from "zustand";
-import { devtools, persist } from "zustand/middleware";
-import { v4 as uuidv4 } from "uuid";
-import type { PlannerStore, PlannerState, StoreConfig } from "./types";
+import { create } from 'zustand';
+import { devtools, persist } from 'zustand/middleware';
+import { v4 as uuidv4 } from 'uuid';
+import type { PlannerStore, PlannerState, StoreConfig } from './types';
 import {
   PlannerStage,
   DEFAULT_USER_PROFILE,
   DEFAULT_SIMULATION_SETTINGS,
-} from "../types";
+} from '../types';
 import type {
   PlannerData,
   UserProfile,
@@ -24,14 +24,14 @@ import type {
   SimulationSettings,
   LanguageCode,
   AnnualProjectionRow,
-} from "../types";
+} from '../types';
 
 // =============================================================================
 // Initial State
 // =============================================================================
 
 const createInitialPlannerData = (
-  language: LanguageCode = "en",
+  language: LanguageCode = 'en'
 ): PlannerData => ({
   current_stage: PlannerStage.STAGE1_INPUT,
   user_profile: undefined,
@@ -65,7 +65,7 @@ const initialPlannerState: PlannerState = {
   calculationProgress: 0,
 
   // Session management
-  sessionId: "",
+  sessionId: '',
   isDirty: false,
   lastSaved: undefined,
 };
@@ -85,19 +85,19 @@ export const createPlannerStore = (config?: StoreConfig) => {
 
     loadData: (newData: Partial<PlannerData>) => {
       set(
-        (state) => ({
+        state => ({
           data: { ...state.data, ...newData },
           currentStage: newData.current_stage ?? state.currentStage,
           isDirty: true,
         }),
         false,
-        "loadData",
+        'loadData'
       );
     },
 
     updateUserProfile: (profile: Partial<UserProfile>) => {
       set(
-        (state) => {
+        state => {
           const currentProfile = state.data.user_profile || {};
 
           const updatedProfile = { ...currentProfile, ...profile };
@@ -112,7 +112,7 @@ export const createPlannerStore = (config?: StoreConfig) => {
           };
         },
         false,
-        "updateUserProfile",
+        'updateUserProfile'
       );
     },
 
@@ -122,7 +122,7 @@ export const createPlannerStore = (config?: StoreConfig) => {
 
     addIncomeItem: (item: IncomeExpenseItem) => {
       set(
-        (state) => ({
+        state => ({
           data: {
             ...state.data,
             income_items: [...state.data.income_items, item],
@@ -131,41 +131,41 @@ export const createPlannerStore = (config?: StoreConfig) => {
           isDirty: true,
         }),
         false,
-        "addIncomeItem",
+        'addIncomeItem'
       );
     },
 
     updateIncomeItem: (id: string, updates: Partial<IncomeExpenseItem>) => {
       set(
-        (state) => ({
+        state => ({
           data: {
             ...state.data,
-            income_items: state.data.income_items.map((item) =>
-              item.id === id ? { ...item, ...updates } : item,
+            income_items: state.data.income_items.map(item =>
+              item.id === id ? { ...item, ...updates } : item
             ),
             updated_at: new Date().toISOString(),
           },
           isDirty: true,
         }),
         false,
-        "updateIncomeItem",
+        'updateIncomeItem'
       );
     },
 
     removeIncomeItem: (id: string) => {
       set(
-        (state) => ({
+        state => ({
           data: {
             ...state.data,
             income_items: state.data.income_items.filter(
-              (item) => item.id !== id,
+              item => item.id !== id
             ),
             updated_at: new Date().toISOString(),
           },
           isDirty: true,
         }),
         false,
-        "removeIncomeItem",
+        'removeIncomeItem'
       );
 
       // Cleanup orphaned overrides after removing item
@@ -174,7 +174,7 @@ export const createPlannerStore = (config?: StoreConfig) => {
 
     addExpenseItem: (item: IncomeExpenseItem) => {
       set(
-        (state) => ({
+        state => ({
           data: {
             ...state.data,
             expense_items: [...state.data.expense_items, item],
@@ -183,41 +183,41 @@ export const createPlannerStore = (config?: StoreConfig) => {
           isDirty: true,
         }),
         false,
-        "addExpenseItem",
+        'addExpenseItem'
       );
     },
 
     updateExpenseItem: (id: string, updates: Partial<IncomeExpenseItem>) => {
       set(
-        (state) => ({
+        state => ({
           data: {
             ...state.data,
-            expense_items: state.data.expense_items.map((item) =>
-              item.id === id ? { ...item, ...updates } : item,
+            expense_items: state.data.expense_items.map(item =>
+              item.id === id ? { ...item, ...updates } : item
             ),
             updated_at: new Date().toISOString(),
           },
           isDirty: true,
         }),
         false,
-        "updateExpenseItem",
+        'updateExpenseItem'
       );
     },
 
     removeExpenseItem: (id: string) => {
       set(
-        (state) => ({
+        state => ({
           data: {
             ...state.data,
             expense_items: state.data.expense_items.filter(
-              (item) => item.id !== id,
+              item => item.id !== id
             ),
             updated_at: new Date().toISOString(),
           },
           isDirty: true,
         }),
         false,
-        "removeExpenseItem",
+        'removeExpenseItem'
       );
 
       // Cleanup orphaned overrides after removing item
@@ -230,7 +230,7 @@ export const createPlannerStore = (config?: StoreConfig) => {
 
     addOverride: (override: Override) => {
       set(
-        (state) => ({
+        state => ({
           data: {
             ...state.data,
             overrides: [...state.data.overrides, override],
@@ -239,30 +239,30 @@ export const createPlannerStore = (config?: StoreConfig) => {
           isDirty: true,
         }),
         false,
-        "addOverride",
+        'addOverride'
       );
     },
 
     updateOverride: (index: number, updates: Partial<Override>) => {
       set(
-        (state) => ({
+        state => ({
           data: {
             ...state.data,
             overrides: state.data.overrides.map((override, i) =>
-              i === index ? { ...override, ...updates } : override,
+              i === index ? { ...override, ...updates } : override
             ),
             updated_at: new Date().toISOString(),
           },
           isDirty: true,
         }),
         false,
-        "updateOverride",
+        'updateOverride'
       );
     },
 
     removeOverride: (index: number) => {
       set(
-        (state) => ({
+        state => ({
           data: {
             ...state.data,
             overrides: state.data.overrides.filter((_, i) => i !== index),
@@ -271,13 +271,13 @@ export const createPlannerStore = (config?: StoreConfig) => {
           isDirty: true,
         }),
         false,
-        "removeOverride",
+        'removeOverride'
       );
     },
 
     clearOverrides: () => {
       set(
-        (state) => ({
+        state => ({
           data: {
             ...state.data,
             overrides: [],
@@ -286,7 +286,7 @@ export const createPlannerStore = (config?: StoreConfig) => {
           isDirty: true,
         }),
         false,
-        "clearOverrides",
+        'clearOverrides'
       );
     },
 
@@ -297,11 +297,11 @@ export const createPlannerStore = (config?: StoreConfig) => {
             ...state.data.income_items,
             ...state.data.expense_items,
           ];
-          const validItemIds = new Set(allItems.map((item) => item.id));
+          const validItemIds = new Set(allItems.map(item => item.id));
 
           // Only keep overrides for items that still exist
           const validOverrides = state.data.overrides.filter(
-            (override: Override) => validItemIds.has(override.item_id),
+            (override: Override) => validItemIds.has(override.item_id)
           );
 
           const removedCount =
@@ -321,7 +321,7 @@ export const createPlannerStore = (config?: StoreConfig) => {
           return state;
         },
         false,
-        "cleanupOrphanedOverrides",
+        'cleanupOrphanedOverrides'
       );
     },
 
@@ -331,7 +331,7 @@ export const createPlannerStore = (config?: StoreConfig) => {
 
     setStage: (stage: PlannerStage) => {
       set(
-        (state) => ({
+        state => ({
           currentStage: stage,
           data: {
             ...state.data,
@@ -340,7 +340,7 @@ export const createPlannerStore = (config?: StoreConfig) => {
           },
         }),
         false,
-        "setStage",
+        'setStage'
       );
     },
 
@@ -394,19 +394,19 @@ export const createPlannerStore = (config?: StoreConfig) => {
 
     setStageProgress: (stage: PlannerStage, completed: boolean) => {
       set(
-        (state) => ({
+        state => ({
           stageProgress: {
             ...state.stageProgress,
             [stage]: completed,
           },
         }),
         false,
-        "setStageProgress",
+        'setStageProgress'
       );
     },
 
     setTransitioning: (transitioning: boolean) => {
-      set({ isTransitioning: transitioning }, false, "setTransitioning");
+      set({ isTransitioning: transitioning }, false, 'setTransitioning');
     },
 
     // =============================================================================
@@ -415,7 +415,7 @@ export const createPlannerStore = (config?: StoreConfig) => {
 
     updateProjectionData: (data: AnnualProjectionRow[]) => {
       set(
-        (state) => ({
+        state => ({
           data: {
             ...state.data,
             projection_data: data,
@@ -424,7 +424,7 @@ export const createPlannerStore = (config?: StoreConfig) => {
           isDirty: true,
         }),
         false,
-        "updateProjectionData",
+        'updateProjectionData'
       );
     },
 
@@ -433,16 +433,16 @@ export const createPlannerStore = (config?: StoreConfig) => {
     // =============================================================================
 
     setCalculationProgress: (progress: number) => {
-      set({ calculationProgress: progress }, false, "setCalculationProgress");
+      set({ calculationProgress: progress }, false, 'setCalculationProgress');
     },
 
     setCalculating: (calculating: boolean) => {
-      set({ isCalculating: calculating }, false, "setCalculating");
+      set({ isCalculating: calculating }, false, 'setCalculating');
     },
 
     updateResults: (results: PlannerResults) => {
       set(
-        (state) => ({
+        state => ({
           data: {
             ...state.data,
             results,
@@ -451,7 +451,7 @@ export const createPlannerStore = (config?: StoreConfig) => {
           isDirty: true,
         }),
         false,
-        "updateResults",
+        'updateResults'
       );
     },
 
@@ -461,7 +461,7 @@ export const createPlannerStore = (config?: StoreConfig) => {
 
     updateSimulationSettings: (settings: Partial<SimulationSettings>) => {
       set(
-        (state) => ({
+        state => ({
           data: {
             ...state.data,
             simulation_settings: {
@@ -473,7 +473,7 @@ export const createPlannerStore = (config?: StoreConfig) => {
           isDirty: true,
         }),
         false,
-        "updateSimulationSettings",
+        'updateSimulationSettings'
       );
     },
 
@@ -482,11 +482,11 @@ export const createPlannerStore = (config?: StoreConfig) => {
     // =============================================================================
 
     markDirty: () => {
-      set({ isDirty: true }, false, "markDirty");
+      set({ isDirty: true }, false, 'markDirty');
     },
 
     markClean: () => {
-      set({ isDirty: false }, false, "markClean");
+      set({ isDirty: false }, false, 'markClean');
     },
 
     updateLastSaved: () => {
@@ -496,7 +496,7 @@ export const createPlannerStore = (config?: StoreConfig) => {
           isDirty: false,
         },
         false,
-        "updateLastSaved",
+        'updateLastSaved'
       );
     },
 
@@ -507,7 +507,7 @@ export const createPlannerStore = (config?: StoreConfig) => {
     exportConfig: (title?: string) => {
       const state = get();
       return {
-        version: "1.0",
+        version: '1.0',
         title: title || `FIRE Plan - ${new Date().toISOString()}`,
         created_at: new Date().toISOString(),
         user_profile: state.data.user_profile,
@@ -527,7 +527,7 @@ export const createPlannerStore = (config?: StoreConfig) => {
           !config.version ||
           (!config.user_profile && !config.profile)
         ) {
-          console.error("❌ Config validation failed!");
+          console.error('❌ Config validation failed!');
           return false;
         }
 
@@ -545,7 +545,7 @@ export const createPlannerStore = (config?: StoreConfig) => {
               overrides: config.overrides || [],
               simulation_settings:
                 config.simulation_settings || DEFAULT_SIMULATION_SETTINGS,
-              language: config.language || "en",
+              language: config.language || 'en',
               current_stage: currentStage,
               updated_at: new Date().toISOString(),
             },
@@ -554,12 +554,12 @@ export const createPlannerStore = (config?: StoreConfig) => {
             isDirty: true,
           },
           false,
-          "importConfig",
+          'importConfig'
         );
 
         return true;
       } catch (error) {
-        console.error("Failed to import config:", error);
+        console.error('Failed to import config:', error);
         return false;
       }
     },
@@ -573,7 +573,7 @@ export const createPlannerStore = (config?: StoreConfig) => {
           sessionId: newSessionId,
         },
         false,
-        "reset",
+        'reset'
       );
     },
   });
@@ -583,8 +583,8 @@ export const createPlannerStore = (config?: StoreConfig) => {
     return create<PlannerStore>()(
       devtools(
         persist(storeCreator, {
-          name: config.persist.key ?? "fire-planner-state",
-          partialize: (state) => ({
+          name: config.persist.key ?? 'fire-planner-state',
+          partialize: state => ({
             data: state.data,
             currentStage: state.currentStage,
             stageProgress: state.stageProgress,
@@ -592,17 +592,17 @@ export const createPlannerStore = (config?: StoreConfig) => {
           }),
         }),
         {
-          name: "FIRE-Planner-Store",
-          enabled: config?.devtools ?? process.env.NODE_ENV === "development",
-        },
-      ),
+          name: 'FIRE-Planner-Store',
+          enabled: config?.devtools ?? process.env.NODE_ENV === 'development',
+        }
+      )
     );
   } else {
     return create<PlannerStore>()(
       devtools(storeCreator, {
-        name: "FIRE-Planner-Store",
-        enabled: config?.devtools ?? process.env.NODE_ENV === "development",
-      }),
+        name: 'FIRE-Planner-Store',
+        enabled: config?.devtools ?? process.env.NODE_ENV === 'development',
+      })
     );
   }
 };
@@ -612,13 +612,13 @@ export const createPlannerStore = (config?: StoreConfig) => {
 // =============================================================================
 
 // Export the store type for external usage
-export type { PlannerStore } from "./types";
+export type { PlannerStore } from './types';
 
 export const usePlannerStore = createPlannerStore({
   persist: {
     enabled: true, // Enable persistence with localStorage
-    key: "fire-planner-state",
-    storage: "localStorage",
+    key: 'fire-planner-state',
+    storage: 'localStorage',
   },
   devtools: true,
 });
@@ -628,33 +628,33 @@ export const usePlannerStore = createPlannerStore({
 // =============================================================================
 
 // Data selectors
-export const usePlannerData = () => usePlannerStore((state) => state.data);
+export const usePlannerData = () => usePlannerStore(state => state.data);
 export const useUserProfile = () =>
-  usePlannerStore((state) => state.data.user_profile);
+  usePlannerStore(state => state.data.user_profile);
 export const useIncomeItems = () =>
-  usePlannerStore((state) => state.data.income_items);
+  usePlannerStore(state => state.data.income_items);
 export const useExpenseItems = () =>
-  usePlannerStore((state) => state.data.expense_items);
+  usePlannerStore(state => state.data.expense_items);
 export const useOverrides = () =>
-  usePlannerStore((state) => state.data.overrides);
-export const useResults = () => usePlannerStore((state) => state.data.results);
+  usePlannerStore(state => state.data.overrides);
+export const useResults = () => usePlannerStore(state => state.data.results);
 export const useSimulationSettings = () =>
-  usePlannerStore((state) => state.data.simulation_settings);
+  usePlannerStore(state => state.data.simulation_settings);
 
 // Stage selectors
 export const useCurrentStage = () =>
-  usePlannerStore((state) => state.currentStage);
+  usePlannerStore(state => state.currentStage);
 export const useIsTransitioning = () =>
-  usePlannerStore((state) => state.isTransitioning);
+  usePlannerStore(state => state.isTransitioning);
 export const useStageProgress = () =>
-  usePlannerStore((state) => state.stageProgress);
+  usePlannerStore(state => state.stageProgress);
 
 // Calculation selectors
 export const useIsCalculating = () =>
-  usePlannerStore((state) => state.isCalculating);
+  usePlannerStore(state => state.isCalculating);
 export const useCalculationProgress = () =>
-  usePlannerStore((state) => state.calculationProgress);
+  usePlannerStore(state => state.calculationProgress);
 
 // Session selectors
-export const useIsDirty = () => usePlannerStore((state) => state.isDirty);
-export const useLastSaved = () => usePlannerStore((state) => state.lastSaved);
+export const useIsDirty = () => usePlannerStore(state => state.isDirty);
+export const useLastSaved = () => usePlannerStore(state => state.lastSaved);

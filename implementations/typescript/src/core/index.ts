@@ -13,12 +13,12 @@
  */
 
 // Core calculation engine
-export { FIREEngine, createEngineInput, createProjectionRow } from "./engine";
+export { FIREEngine, createEngineInput, createProjectionRow } from './engine';
 export type {
   EngineInput,
   AnnualFinancialProjection,
   DetailedProjection,
-} from "./engine";
+} from './engine';
 
 // Portfolio management
 export {
@@ -26,31 +26,31 @@ export {
   LiquidityAwareFlowStrategy,
   SimpleFlowStrategy,
   PortfolioCalculator,
-} from "./portfolio";
+} from './portfolio';
 export type {
   CashFlowStrategy,
   YearlyPortfolioResult,
   PortfolioState,
   AssetRandomFactor,
   PortfolioRandomFactors,
-} from "./portfolio";
+} from './portfolio';
 
 // Data validation
-export * from "../utils/validation";
+export * from '../utils/validation';
 
 // Type definitions
-export * from "../types";
+export * from '../types';
 
 // FIRE Planner
-export { FIREPlanner } from "./planner";
+export { FIREPlanner } from './planner';
 
 // FIRE Advisor
 export {
   FIREAdvisor,
   createAdvisor,
   createSimpleRecommendation,
-} from "./advisor";
-export type { SimpleRecommendation } from "./advisor";
+} from './advisor';
+export type { SimpleRecommendation } from './advisor';
 
 // Internationalization
 export {
@@ -62,11 +62,11 @@ export {
   getSupportedLanguages,
   createI18nManager,
   BrowserI18nManager,
-} from "./i18n";
+} from './i18n';
 
 // Monte Carlo simulation
-export { MonteCarloSimulator, createMonteCarloResult } from "./monte_carlo";
-export type { MonteCarloResult } from "./monte_carlo";
+export { MonteCarloSimulator, createMonteCarloResult } from './monte_carlo';
+export type { MonteCarloResult } from './monte_carlo';
 
 // Black Swan Events
 export {
@@ -86,4 +86,4 @@ export {
   InheritanceEvent,
   InvestmentWindfallEvent,
   createBlackSwanEvents,
-} from "./black_swan_events";
+} from './black_swan_events';

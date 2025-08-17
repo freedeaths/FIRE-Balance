@@ -6,14 +6,14 @@
  * for managing three-stage planning workflow and configuration persistence.
  */
 
-import Decimal from "decimal.js";
+import Decimal from 'decimal.js';
 import type {
   UserProfile,
   IncomeExpenseItem,
   SimulationSettings,
   FIRECalculationResult,
-} from "./data_models";
-import { createSimulationSettings } from "./data_models";
+} from './data_models';
+import { createSimulationSettings } from './data_models';
 
 // =============================================================================
 // Planner Stage Enumeration
@@ -24,9 +24,9 @@ import { createSimulationSettings } from "./data_models";
  * Direct TypeScript equivalent of Python's PlannerStage enum
  */
 export enum PlannerStage {
-  STAGE1_INPUT = "stage1_input",
-  STAGE2_ADJUSTMENT = "stage2_adjustment",
-  STAGE3_ANALYSIS = "stage3_analysis",
+  STAGE1_INPUT = 'stage1_input',
+  STAGE2_ADJUSTMENT = 'stage2_adjustment',
+  STAGE3_ANALYSIS = 'stage3_analysis',
 }
 
 // =============================================================================
@@ -53,27 +53,27 @@ export interface Override {
  * Accepts number inputs and converts to Decimal internally
  */
 export function createOverride(
-  data: Partial<Override> & { value?: number | Decimal },
+  data: Partial<Override> & { value?: number | Decimal }
 ): Override {
   const override: Override = {
     age: data.age ?? 0,
-    item_id: data.item_id ?? "",
+    item_id: data.item_id ?? '',
     value:
-      typeof data.value === "number"
+      typeof data.value === 'number'
         ? new Decimal(data.value)
-        : (data.value ?? new Decimal(0)),
+        : data.value ?? new Decimal(0),
   };
 
   // Validate age range
   if (override.age < 0 || override.age > 150) {
     throw new Error(
-      `Override age must be between 0 and 150, got ${override.age}`,
+      `Override age must be between 0 and 150, got ${override.age}`
     );
   }
 
   // Validate item_id
   if (!override.item_id) {
-    throw new Error("Override item_id cannot be empty");
+    throw new Error('Override item_id cannot be empty');
   }
 
   return override;
@@ -106,12 +106,12 @@ export interface PlannerResults {
  * Accepts number inputs and converts to Decimal internally
  */
 export function createPlannerResults(
-  data: Partial<PlannerResults> & { monte_carlo_success_rate?: number },
+  data: Partial<PlannerResults> & { monte_carlo_success_rate?: number }
 ): PlannerResults {
   return {
     fire_calculation: data.fire_calculation!,
     monte_carlo_success_rate:
-      typeof data.monte_carlo_success_rate === "number"
+      typeof data.monte_carlo_success_rate === 'number'
         ? new Decimal(data.monte_carlo_success_rate)
         : data.monte_carlo_success_rate,
     recommendations: data.recommendations ?? [],
@@ -191,9 +191,9 @@ export interface AnnualProjectionRow {
  * Generate a UUID v4 string (simplified implementation)
  */
 function generateUUID(): string {
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
     const r = (Math.random() * 16) | 0;
-    const v = c == "x" ? r : (r & 0x3) | 0x8;
+    const v = c == 'x' ? r : (r & 0x3) | 0x8;
     return v.toString(16);
   });
 }
@@ -202,7 +202,7 @@ function generateUUID(): string {
  * Create PlannerData with defaults and validation
  */
 export function createPlannerData(
-  data: Partial<PlannerData> = {},
+  data: Partial<PlannerData> = {}
 ): PlannerData {
   const now = new Date();
 
@@ -217,7 +217,7 @@ export function createPlannerData(
     session_id: data.session_id ?? generateUUID(),
     created_at: data.created_at ?? now,
     updated_at: data.updated_at ?? now,
-    language: data.language ?? "en",
+    language: data.language ?? 'en',
     simulation_settings:
       data.simulation_settings ?? createSimulationSettings({}),
   };
@@ -270,10 +270,10 @@ export interface PlannerConfigV1 {
  * Create PlannerConfigV1 with defaults
  */
 export function createPlannerConfigV1(
-  data: Partial<PlannerConfigV1> = {},
+  data: Partial<PlannerConfigV1> = {}
 ): PlannerConfigV1 {
   return {
-    version: data.version ?? "1.0",
+    version: data.version ?? '1.0',
     metadata: data.metadata ?? {},
     profile: data.profile ?? {},
     income_items: data.income_items ?? [],
@@ -296,33 +296,33 @@ export function configToPlannerData(config: PlannerConfigV1): PlannerData {
     current_net_worth: new Decimal(config.profile.current_net_worth ?? 0),
     inflation_rate: new Decimal(config.profile.inflation_rate ?? 3.0),
     safety_buffer_months: new Decimal(
-      config.profile.safety_buffer_months ?? 12.0,
+      config.profile.safety_buffer_months ?? 12.0
     ),
     portfolio: config.profile.portfolio ?? {
       asset_classes: [
         {
-          name: "stocks",
-          display_name: "Stocks",
+          name: 'stocks',
+          display_name: 'Stocks',
           allocation_percentage: new Decimal(70.0),
           expected_return: new Decimal(7.0),
           volatility: new Decimal(15.0),
-          liquidity_level: "medium" as const,
+          liquidity_level: 'medium' as const,
         },
         {
-          name: "bonds",
-          display_name: "Bonds",
+          name: 'bonds',
+          display_name: 'Bonds',
           allocation_percentage: new Decimal(20.0),
           expected_return: new Decimal(3.0),
           volatility: new Decimal(5.0),
-          liquidity_level: "low" as const,
+          liquidity_level: 'low' as const,
         },
         {
-          name: "cash",
-          display_name: "Cash",
+          name: 'cash',
+          display_name: 'Cash',
           allocation_percentage: new Decimal(10.0),
           expected_return: new Decimal(1.0),
           volatility: new Decimal(1.0),
-          liquidity_level: "high" as const,
+          liquidity_level: 'high' as const,
         },
       ],
       enable_rebalancing: true,
@@ -330,55 +330,53 @@ export function configToPlannerData(config: PlannerConfigV1): PlannerData {
   };
 
   // Convert income/expense items
-  const income_items: IncomeExpenseItem[] = config.income_items.map((item) => ({
-    id: item.id ?? "",
-    name: item.name ?? "",
+  const income_items: IncomeExpenseItem[] = config.income_items.map(item => ({
+    id: item.id ?? '',
+    name: item.name ?? '',
     after_tax_amount_per_period: new Decimal(
-      item.after_tax_amount_per_period ?? 0,
+      item.after_tax_amount_per_period ?? 0
     ),
-    time_unit: item.time_unit ?? "annually",
-    frequency: item.frequency ?? "recurring",
+    time_unit: item.time_unit ?? 'annually',
+    frequency: item.frequency ?? 'recurring',
     interval_periods: item.interval_periods ?? 1,
     start_age: item.start_age ?? 25,
     end_age: item.end_age ?? 65,
     annual_growth_rate: new Decimal(item.annual_growth_rate ?? 0.0),
     is_income: item.is_income ?? true,
-    category: item.category ?? "Other",
+    category: item.category ?? 'Other',
   }));
 
-  const expense_items: IncomeExpenseItem[] = config.expense_items.map(
-    (item) => ({
-      id: item.id ?? "",
-      name: item.name ?? "",
-      after_tax_amount_per_period: new Decimal(
-        item.after_tax_amount_per_period ?? 0,
-      ),
-      time_unit: item.time_unit ?? "annually",
-      frequency: item.frequency ?? "recurring",
-      interval_periods: item.interval_periods ?? 1,
-      start_age: item.start_age ?? 25,
-      end_age: item.end_age ?? 85,
-      annual_growth_rate: new Decimal(item.annual_growth_rate ?? 0.0),
-      is_income: item.is_income ?? false,
-      category: item.category ?? "Other",
-    }),
-  );
+  const expense_items: IncomeExpenseItem[] = config.expense_items.map(item => ({
+    id: item.id ?? '',
+    name: item.name ?? '',
+    after_tax_amount_per_period: new Decimal(
+      item.after_tax_amount_per_period ?? 0
+    ),
+    time_unit: item.time_unit ?? 'annually',
+    frequency: item.frequency ?? 'recurring',
+    interval_periods: item.interval_periods ?? 1,
+    start_age: item.start_age ?? 25,
+    end_age: item.end_age ?? 85,
+    annual_growth_rate: new Decimal(item.annual_growth_rate ?? 0.0),
+    is_income: item.is_income ?? false,
+    category: item.category ?? 'Other',
+  }));
 
   // Convert overrides
-  const overrides: Override[] = config.overrides.map((override) =>
+  const overrides: Override[] = config.overrides.map(override =>
     createOverride({
       age: override.age,
       item_id: override.item_id,
       value:
-        typeof override.value === "number"
+        typeof override.value === 'number'
           ? new Decimal(override.value)
           : new Decimal(override.value ?? 0),
-    }),
+    })
   );
 
   // Convert simulation settings
   const simulation_settings = createSimulationSettings(
-    config.simulation_settings,
+    config.simulation_settings
   );
 
   return createPlannerData({
@@ -387,7 +385,7 @@ export function configToPlannerData(config: PlannerConfigV1): PlannerData {
     expense_items,
     overrides,
     simulation_settings,
-    language: config.metadata.language ?? "en",
+    language: config.metadata.language ?? 'en',
   });
 }
 
@@ -396,7 +394,7 @@ export function configToPlannerData(config: PlannerConfigV1): PlannerData {
  */
 export function plannerDataToConfig(
   plannerData: PlannerData,
-  description = "",
+  description = ''
 ): PlannerConfigV1 {
   return createPlannerConfigV1({
     metadata: {
@@ -406,9 +404,9 @@ export function plannerDataToConfig(
       description,
     },
     profile: plannerData.user_profile ? { ...plannerData.user_profile } : {},
-    income_items: plannerData.income_items.map((item) => ({ ...item })),
-    expense_items: plannerData.expense_items.map((item) => ({ ...item })),
-    overrides: plannerData.overrides.map((override) => ({ ...override })),
+    income_items: plannerData.income_items.map(item => ({ ...item })),
+    expense_items: plannerData.expense_items.map(item => ({ ...item })),
+    overrides: plannerData.overrides.map(override => ({ ...override })),
     simulation_settings: { ...plannerData.simulation_settings },
   });
 }
@@ -422,7 +420,7 @@ export function plannerDataToConfig(
  */
 export function canTransitionToStage(
   currentStage: PlannerStage,
-  targetStage: PlannerStage,
+  targetStage: PlannerStage
 ): boolean {
   const stageOrder = [
     PlannerStage.STAGE1_INPUT,
@@ -458,7 +456,7 @@ export function getNextStage(currentStage: PlannerStage): PlannerStage | null {
  */
 export function isReadyForStage(
   data: PlannerData,
-  stage: PlannerStage,
+  stage: PlannerStage
 ): boolean {
   switch (stage) {
     case PlannerStage.STAGE1_INPUT:

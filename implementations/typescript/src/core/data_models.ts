@@ -5,8 +5,8 @@
  * All validation logic, defaults, and behaviors are preserved.
  */
 
-import { v4 as uuidv4 } from "uuid";
-import Decimal from "decimal.js";
+import { v4 as uuidv4 } from 'uuid';
+import Decimal from 'decimal.js';
 
 // =============================================================================
 // Enums - Direct mapping from Python
@@ -16,19 +16,19 @@ import Decimal from "decimal.js";
  * Enum for income/expense item frequency
  * Direct mapping from Python ItemFrequency
  */
-export type ItemFrequency = "recurring" | "one-time";
+export type ItemFrequency = 'recurring' | 'one-time';
 
 /**
  * Time unit for amount input
  * Direct mapping from Python TimeUnit
  */
-export type TimeUnit = "monthly" | "quarterly" | "annually";
+export type TimeUnit = 'monthly' | 'quarterly' | 'annually';
 
 /**
  * Asset liquidity level for cash flow strategy optimization
  * Direct mapping from Python LiquidityLevel
  */
-export type LiquidityLevel = "high" | "medium" | "low";
+export type LiquidityLevel = 'high' | 'medium' | 'low';
 
 // =============================================================================
 // Asset and Portfolio Classes - Direct mapping from Python
@@ -73,17 +73,17 @@ export function normalizeAssetClass(data: Partial<AssetClass>): AssetClass {
     const normalizedName = originalName
       .toLowerCase()
       .trim()
-      .replace(/\s+/g, " ");
+      .replace(/\s+/g, ' ');
     data.name = normalizedName;
   }
 
   return {
-    name: data.name || "",
-    display_name: data.display_name || "",
+    name: data.name || '',
+    display_name: data.display_name || '',
     allocation_percentage: new Decimal(data.allocation_percentage || 0),
     expected_return: new Decimal(data.expected_return || 0),
     volatility: new Decimal(data.volatility || 0),
-    liquidity_level: data.liquidity_level || "medium",
+    liquidity_level: data.liquidity_level || 'medium',
   };
 }
 
@@ -106,36 +106,36 @@ export interface PortfolioConfiguration {
 export const DEFAULT_PORTFOLIO: PortfolioConfiguration = {
   asset_classes: [
     {
-      name: "stocks", // Will be normalized to "stocks"
-      display_name: "Stocks",
+      name: 'stocks', // Will be normalized to "stocks"
+      display_name: 'Stocks',
       allocation_percentage: new Decimal(20.0),
       expected_return: new Decimal(5.0),
       volatility: new Decimal(15.0),
-      liquidity_level: "medium",
+      liquidity_level: 'medium',
     },
     {
-      name: "bonds", // Will be normalized to "bonds"
-      display_name: "Bonds",
+      name: 'bonds', // Will be normalized to "bonds"
+      display_name: 'Bonds',
       allocation_percentage: new Decimal(0.0),
       expected_return: new Decimal(3.0),
       volatility: new Decimal(5.0),
-      liquidity_level: "low",
+      liquidity_level: 'low',
     },
     {
-      name: "savings", // Will be normalized to "savings"
-      display_name: "Savings",
+      name: 'savings', // Will be normalized to "savings"
+      display_name: 'Savings',
       allocation_percentage: new Decimal(60.0),
       expected_return: new Decimal(1.0),
       volatility: new Decimal(5.0),
-      liquidity_level: "low",
+      liquidity_level: 'low',
     },
     {
-      name: "cash", // Will be normalized to "cash"
-      display_name: "Cash",
+      name: 'cash', // Will be normalized to "cash"
+      display_name: 'Cash',
       allocation_percentage: new Decimal(20.0),
       expected_return: new Decimal(0.0),
       volatility: new Decimal(1.0),
-      liquidity_level: "high",
+      liquidity_level: 'high',
     },
   ],
   enable_rebalancing: true,
@@ -148,15 +148,15 @@ export const DEFAULT_PORTFOLIO: PortfolioConfiguration = {
 export function validateAllocationSum(portfolio: PortfolioConfiguration): void {
   const total = portfolio.asset_classes.reduce(
     (sum, asset) => sum.add(asset.allocation_percentage),
-    new Decimal(0),
+    new Decimal(0)
   );
   // Use Decimal precision tolerance
-  const tolerance = new Decimal("1e-10");
+  const tolerance = new Decimal('1e-10');
 
   if (total.sub(100).abs().gt(tolerance)) {
     throw new Error(
       `Asset allocation percentages must sum to exactly 100%, ` +
-        `got ${total.toString()}% (difference: ${total.sub(100).toString()}%)`,
+        `got ${total.toString()}% (difference: ${total.sub(100).toString()}%)`
     );
   }
 }
@@ -166,21 +166,21 @@ export function validateAllocationSum(portfolio: PortfolioConfiguration): void {
  * Direct port of Python's validate_unique_asset_names
  */
 export function validateUniqueAssetNames(
-  portfolio: PortfolioConfiguration,
+  portfolio: PortfolioConfiguration
 ): void {
-  const names = portfolio.asset_classes.map((asset) => asset.name); // Already normalized to lowercase
+  const names = portfolio.asset_classes.map(asset => asset.name); // Already normalized to lowercase
   if (names.length !== new Set(names).size) {
     const duplicates = names.filter(
-      (name, index) => names.indexOf(name) !== index,
+      (name, index) => names.indexOf(name) !== index
     );
     const uniqueDuplicates = [...new Set(duplicates)];
     // Show display names in error for better UX
     const displayNames = portfolio.asset_classes
-      .filter((asset) => uniqueDuplicates.includes(asset.name))
-      .map((asset) => asset.display_name);
+      .filter(asset => uniqueDuplicates.includes(asset.name))
+      .map(asset => asset.display_name);
     throw new Error(
       `Asset names must be unique within portfolio (case-insensitive). ` +
-        `Duplicate names found: ${displayNames.join(", ")}`,
+        `Duplicate names found: ${displayNames.join(', ')}`
     );
   }
 }
@@ -264,7 +264,7 @@ export function validateBirthYear(birthYear: number): void {
   const currentYear = new Date().getFullYear();
   if (birthYear < 1950 || birthYear > currentYear) {
     throw new Error(
-      `Birth year must be between 1950 and ${currentYear}, got ${birthYear}`,
+      `Birth year must be between 1950 and ${currentYear}, got ${birthYear}`
     );
   }
 }
@@ -283,7 +283,7 @@ export function validateAgeProgression(profile: UserProfile): void {
     throw new Error(
       `Ages must follow progression: current_age(${current}) <= ` +
         `expected_fire_age(${fire}) <= legal_retirement_age(${retirement}) <= ` +
-        `life_expectancy(${life})`,
+        `life_expectancy(${life})`
     );
   }
 }
@@ -297,7 +297,7 @@ export function createUserProfile(
     current_net_worth?: number | Decimal;
     inflation_rate?: number | Decimal;
     safety_buffer_months?: number | Decimal;
-  },
+  }
 ): UserProfile {
   const profile: UserProfile = {
     birth_year: data.birth_year || 1990,
@@ -368,16 +368,16 @@ export function createIncomeExpenseItem(
   data: Partial<IncomeExpenseItem> & {
     after_tax_amount_per_period?: number | Decimal;
     annual_growth_rate?: number | Decimal;
-  },
+  }
 ): IncomeExpenseItem {
   const item: IncomeExpenseItem = {
     id: data.id || uuidv4(),
-    name: data.name || "",
+    name: data.name || '',
     after_tax_amount_per_period: new Decimal(
-      data.after_tax_amount_per_period || 0,
+      data.after_tax_amount_per_period || 0
     ),
-    time_unit: data.time_unit || "annually",
-    frequency: data.frequency || "recurring",
+    time_unit: data.time_unit || 'annually',
+    frequency: data.frequency || 'recurring',
     interval_periods: data.interval_periods ?? 1,
     start_age: data.start_age || 0,
     end_age: data.end_age,
@@ -388,7 +388,7 @@ export function createIncomeExpenseItem(
 
   // Validate interval_periods > 0 (matches Python's gt=0 constraint)
   if (item.interval_periods <= 0) {
-    throw new Error("interval_periods must be greater than 0");
+    throw new Error('interval_periods must be greater than 0');
   }
 
   return item;
@@ -567,39 +567,39 @@ export function createSimulationSettings(
     income_minimum_factor?: number | Decimal;
     expense_base_volatility?: number | Decimal;
     expense_minimum_factor?: number | Decimal;
-  },
+  }
 ): SimulationSettings {
   const settings: SimulationSettings = {
     num_simulations:
       data.num_simulations ?? DEFAULT_SIMULATION_SETTINGS.num_simulations,
     confidence_level: new Decimal(
-      data.confidence_level ?? DEFAULT_SIMULATION_SETTINGS.confidence_level,
+      data.confidence_level ?? DEFAULT_SIMULATION_SETTINGS.confidence_level
     ),
     include_black_swan_events:
       data.include_black_swan_events ??
       DEFAULT_SIMULATION_SETTINGS.include_black_swan_events,
     income_base_volatility: new Decimal(
       data.income_base_volatility ??
-        DEFAULT_SIMULATION_SETTINGS.income_base_volatility,
+        DEFAULT_SIMULATION_SETTINGS.income_base_volatility
     ),
     income_minimum_factor: new Decimal(
       data.income_minimum_factor ??
-        DEFAULT_SIMULATION_SETTINGS.income_minimum_factor,
+        DEFAULT_SIMULATION_SETTINGS.income_minimum_factor
     ),
     expense_base_volatility: new Decimal(
       data.expense_base_volatility ??
-        DEFAULT_SIMULATION_SETTINGS.expense_base_volatility,
+        DEFAULT_SIMULATION_SETTINGS.expense_base_volatility
     ),
     expense_minimum_factor: new Decimal(
       data.expense_minimum_factor ??
-        DEFAULT_SIMULATION_SETTINGS.expense_minimum_factor,
+        DEFAULT_SIMULATION_SETTINGS.expense_minimum_factor
     ),
   };
 
   // Validate confidence_level range (matches Python ge=0.5, le=0.99)
   if (settings.confidence_level.lt(0.5) || settings.confidence_level.gt(0.99)) {
     throw new Error(
-      `confidence_level must be between 0.5 and 0.99, got ${settings.confidence_level.toString()}`,
+      `confidence_level must be between 0.5 and 0.99, got ${settings.confidence_level.toString()}`
     );
   }
 
@@ -609,7 +609,7 @@ export function createSimulationSettings(
     settings.income_base_volatility.gt(1.0)
   ) {
     throw new Error(
-      `income_base_volatility must be between 0.0 and 1.0, got ${settings.income_base_volatility.toString()}`,
+      `income_base_volatility must be between 0.0 and 1.0, got ${settings.income_base_volatility.toString()}`
     );
   }
   if (
@@ -617,7 +617,7 @@ export function createSimulationSettings(
     settings.expense_base_volatility.gt(1.0)
   ) {
     throw new Error(
-      `expense_base_volatility must be between 0.0 and 1.0, got ${settings.expense_base_volatility.toString()}`,
+      `expense_base_volatility must be between 0.0 and 1.0, got ${settings.expense_base_volatility.toString()}`
     );
   }
 
@@ -627,7 +627,7 @@ export function createSimulationSettings(
     settings.income_minimum_factor.gt(1.0)
   ) {
     throw new Error(
-      `income_minimum_factor must be between 0.01 and 1.0, got ${settings.income_minimum_factor.toString()}`,
+      `income_minimum_factor must be between 0.01 and 1.0, got ${settings.income_minimum_factor.toString()}`
     );
   }
   if (
@@ -635,7 +635,7 @@ export function createSimulationSettings(
     settings.expense_minimum_factor.gt(1.0)
   ) {
     throw new Error(
-      `expense_minimum_factor must be between 0.1 and 1.0, got ${settings.expense_minimum_factor.toString()}`,
+      `expense_minimum_factor must be between 0.1 and 1.0, got ${settings.expense_minimum_factor.toString()}`
     );
   }
 

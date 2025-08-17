@@ -9,14 +9,14 @@
  * The app manages the planner state and provides a simplified layout structure.
  */
 
-import React, { useEffect } from "react";
-import { setLanguage } from "./core/i18n";
+import React, { useEffect } from 'react';
+import { setLanguage } from './core/i18n';
 
 // New Zustand stores
-import { useCurrentLanguage } from "./stores/appStore";
+import { useCurrentLanguage } from './stores/appStore';
 
 // Import new unified layout
-import { Layout } from "./components/layout/Layout";
+import { Layout } from './components/layout/Layout';
 
 /**
  * Main Application Component
@@ -28,7 +28,7 @@ const App: React.FC = () => {
 
   // Handle language changes
   useEffect(() => {
-    setLanguage(currentLanguage as "en" | "zh-CN" | "ja");
+    setLanguage(currentLanguage as 'en' | 'zh-CN' | 'ja');
   }, [currentLanguage]);
 
   return <Layout />;

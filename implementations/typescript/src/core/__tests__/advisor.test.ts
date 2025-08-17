@@ -3,48 +3,48 @@
  * Ensures identical advisor recommendations between TypeScript and Python implementations
  */
 
-import Decimal from "decimal.js";
+import Decimal from 'decimal.js';
 
-import { FIREAdvisor, createAdvisor } from "../advisor";
-import { FIREEngine, createEngineInput, createProjectionRow } from "../engine";
-import type { UserProfile, IncomeExpenseItem } from "../data_models";
+import { FIREAdvisor, createAdvisor } from '../advisor';
+import { FIREEngine, createEngineInput, createProjectionRow } from '../engine';
+import type { UserProfile, IncomeExpenseItem } from '../data_models';
 import {
   createUserProfile,
   createIncomeExpenseItem,
   createPortfolioConfiguration,
-} from "../data_models";
+} from '../data_models';
 
-import type { AnnualProjectionRow, SimpleRecommendation } from "../../types";
+import type { AnnualProjectionRow, SimpleRecommendation } from '../../types';
 
-describe("FIREAdvisor", () => {
+describe('FIREAdvisor', () => {
   let baseUserProfile: UserProfile;
 
   beforeEach(() => {
     const portfolio = createPortfolioConfiguration({
       asset_classes: [
         {
-          name: "stocks",
-          display_name: "Stocks",
+          name: 'stocks',
+          display_name: 'Stocks',
           allocation_percentage: new Decimal(70.0),
           expected_return: new Decimal(7.0),
           volatility: new Decimal(15.0),
-          liquidity_level: "medium",
+          liquidity_level: 'medium',
         },
         {
-          name: "bonds",
-          display_name: "Bonds",
+          name: 'bonds',
+          display_name: 'Bonds',
           allocation_percentage: new Decimal(20.0),
           expected_return: new Decimal(3.0),
           volatility: new Decimal(5.0),
-          liquidity_level: "low",
+          liquidity_level: 'low',
         },
         {
-          name: "cash",
-          display_name: "Cash",
+          name: 'cash',
+          display_name: 'Cash',
           allocation_percentage: new Decimal(10.0),
           expected_return: new Decimal(1.0),
           volatility: new Decimal(1.0),
-          liquidity_level: "high",
+          liquidity_level: 'high',
         },
       ],
       enable_rebalancing: true,
@@ -64,38 +64,38 @@ describe("FIREAdvisor", () => {
 
   const createDetailedProjectionAndItems = (
     userProfile: UserProfile,
-    annualProjection: AnnualProjectionRow[],
+    annualProjection: AnnualProjectionRow[]
   ) => {
     // Create sample income and expense items
     const incomeItems: IncomeExpenseItem[] = [
       createIncomeExpenseItem({
-        id: "work-income",
-        name: "Work Income",
+        id: 'work-income',
+        name: 'Work Income',
         after_tax_amount_per_period: new Decimal(50000),
-        time_unit: "annually",
-        frequency: "recurring",
+        time_unit: 'annually',
+        frequency: 'recurring',
         interval_periods: 1,
         start_age: new Date().getFullYear() - userProfile.birth_year,
         end_age: userProfile.expected_fire_age,
         annual_growth_rate: new Decimal(0.0),
         is_income: true,
-        category: "Employment",
+        category: 'Employment',
       }),
     ];
 
     const expenseItems: IncomeExpenseItem[] = [
       createIncomeExpenseItem({
-        id: "living-expenses",
-        name: "Living Expenses",
+        id: 'living-expenses',
+        name: 'Living Expenses',
         after_tax_amount_per_period: new Decimal(30000),
-        time_unit: "annually",
-        frequency: "recurring",
+        time_unit: 'annually',
+        frequency: 'recurring',
         interval_periods: 1,
         start_age: new Date().getFullYear() - userProfile.birth_year,
         end_age: userProfile.life_expectancy,
         annual_growth_rate: new Decimal(0.0),
         is_income: false,
-        category: "Living",
+        category: 'Living',
       }),
     ];
 
@@ -104,17 +104,17 @@ describe("FIREAdvisor", () => {
 
   // Helper to convert AnnualProjectionRow to AnnualFinancialProjection
   const convertProjectionRows = (rows: AnnualProjectionRow[]) => {
-    return rows.map((row) =>
+    return rows.map(row =>
       createProjectionRow(
         row.age,
         row.year,
         row.total_income,
-        row.total_expense,
-      ),
+        row.total_expense
+      )
     );
   };
 
-  test("advisor initialization", () => {
+  test('advisor initialization', () => {
     // Create sample projection
     const projection: AnnualProjectionRow[] = [
       { age: 34, year: 2024, total_income: 50000, total_expense: 30000 },
@@ -123,12 +123,12 @@ describe("FIREAdvisor", () => {
 
     const { incomeItems, expenseItems } = createDetailedProjectionAndItems(
       baseUserProfile,
-      projection,
+      projection
     );
     const engineInput = createEngineInput(
       baseUserProfile,
       convertProjectionRows(projection),
-      incomeItems,
+      incomeItems
     );
     const advisor = new FIREAdvisor(engineInput);
 
@@ -136,26 +136,26 @@ describe("FIREAdvisor", () => {
     expect(advisor.getEngineInput()).toBe(engineInput);
   });
 
-  test("advisor creation helper", () => {
+  test('advisor creation helper', () => {
     const projection: AnnualProjectionRow[] = [
       { age: 34, year: 2024, total_income: 50000, total_expense: 30000 },
     ];
 
     const { incomeItems } = createDetailedProjectionAndItems(
       baseUserProfile,
-      projection,
+      projection
     );
     const engineInput = createEngineInput(
       baseUserProfile,
       convertProjectionRows(projection),
-      incomeItems,
+      incomeItems
     );
     const advisor = createAdvisor(engineInput);
 
     expect(advisor).toBeInstanceOf(FIREAdvisor);
   });
 
-  test("early retirement recommendation", async () => {
+  test('early retirement recommendation', async () => {
     // Create scenario where FIRE is already achievable
     const achievableProfile = createUserProfile({
       ...baseUserProfile,
@@ -169,12 +169,12 @@ describe("FIREAdvisor", () => {
 
     const { incomeItems } = createDetailedProjectionAndItems(
       achievableProfile,
-      projection,
+      projection
     );
     const engineInput = createEngineInput(
       achievableProfile,
       convertProjectionRows(projection),
-      incomeItems,
+      incomeItems
     );
     const advisor = new FIREAdvisor(engineInput);
 
@@ -185,15 +185,15 @@ describe("FIREAdvisor", () => {
 
     // Should include early retirement recommendation when FIRE is achievable
     const earlyRetirement = recommendations.find(
-      (r) => r.type === "early_retirement",
+      r => r.type === 'early_retirement'
     );
     if (earlyRetirement) {
       expect(earlyRetirement.is_achievable).toBe(true);
-      expect(earlyRetirement.params).toHaveProperty("suggested_fire_age");
+      expect(earlyRetirement.params).toHaveProperty('suggested_fire_age');
     }
   });
 
-  test("delayed retirement recommendation", async () => {
+  test('delayed retirement recommendation', async () => {
     // Create scenario where FIRE is not achievable at target age
     const challengingProfile = createUserProfile({
       ...baseUserProfile,
@@ -216,12 +216,12 @@ describe("FIREAdvisor", () => {
 
     const { incomeItems } = createDetailedProjectionAndItems(
       challengingProfile,
-      projection,
+      projection
     );
     const engineInput = createEngineInput(
       challengingProfile,
       convertProjectionRows(projection),
-      incomeItems,
+      incomeItems
     );
     const advisor = new FIREAdvisor(engineInput);
 
@@ -232,15 +232,15 @@ describe("FIREAdvisor", () => {
 
     // Should include delayed retirement recommendation when FIRE is not achievable
     const delayedRetirement = recommendations.find(
-      (r) => r.type === "delayed_retirement",
+      r => r.type === 'delayed_retirement'
     );
     if (delayedRetirement) {
       expect(delayedRetirement.is_achievable).toBe(true);
-      expect(delayedRetirement.params).toHaveProperty("suggested_fire_age");
+      expect(delayedRetirement.params).toHaveProperty('suggested_fire_age');
     }
   });
 
-  test("income adjustment recommendation", async () => {
+  test('income adjustment recommendation', async () => {
     // Create scenario where income needs to be increased
     const lowIncomeProfile = createUserProfile({
       ...baseUserProfile,
@@ -261,12 +261,12 @@ describe("FIREAdvisor", () => {
 
     const { incomeItems } = createDetailedProjectionAndItems(
       lowIncomeProfile,
-      projection,
+      projection
     );
     const engineInput = createEngineInput(
       lowIncomeProfile,
       convertProjectionRows(projection),
-      incomeItems,
+      incomeItems
     );
     const advisor = new FIREAdvisor(engineInput);
 
@@ -276,20 +276,20 @@ describe("FIREAdvisor", () => {
 
     // Should include income adjustment recommendation
     const incomeAdjustment = recommendations.find(
-      (r) => r.type === "income_adjustment",
+      r => r.type === 'income_adjustment'
     );
     if (incomeAdjustment) {
       expect(incomeAdjustment.is_achievable).toBe(true);
       expect(incomeAdjustment.params).toHaveProperty(
-        "suggested_increase_percent",
+        'suggested_increase_percent'
       );
       expect(
-        incomeAdjustment.params.suggested_increase_percent,
+        incomeAdjustment.params.suggested_increase_percent
       ).toBeGreaterThan(0);
     }
   });
 
-  test("expense reduction recommendation", async () => {
+  test('expense reduction recommendation', async () => {
     // Create scenario where expenses need to be reduced
     const highExpenseProfile = createUserProfile({
       ...baseUserProfile,
@@ -310,12 +310,12 @@ describe("FIREAdvisor", () => {
 
     const { incomeItems } = createDetailedProjectionAndItems(
       highExpenseProfile,
-      projection,
+      projection
     );
     const engineInput = createEngineInput(
       highExpenseProfile,
       convertProjectionRows(projection),
-      incomeItems,
+      incomeItems
     );
     const advisor = new FIREAdvisor(engineInput);
 
@@ -325,20 +325,20 @@ describe("FIREAdvisor", () => {
 
     // Should include expense reduction recommendation
     const expenseReduction = recommendations.find(
-      (r) => r.type === "expense_reduction",
+      r => r.type === 'expense_reduction'
     );
     if (expenseReduction) {
       expect(expenseReduction.is_achievable).toBe(true);
       expect(expenseReduction.params).toHaveProperty(
-        "suggested_reduction_percent",
+        'suggested_reduction_percent'
       );
       expect(
-        expenseReduction.params.suggested_reduction_percent,
+        expenseReduction.params.suggested_reduction_percent
       ).toBeGreaterThan(0);
     }
   });
 
-  test("multiple recommendations", async () => {
+  test('multiple recommendations', async () => {
     // Create scenario that should generate multiple recommendations
     const complexProfile = createUserProfile({
       ...baseUserProfile,
@@ -360,12 +360,12 @@ describe("FIREAdvisor", () => {
 
     const { incomeItems } = createDetailedProjectionAndItems(
       complexProfile,
-      projection,
+      projection
     );
     const engineInput = createEngineInput(
       complexProfile,
       convertProjectionRows(projection),
-      incomeItems,
+      incomeItems
     );
     const advisor = new FIREAdvisor(engineInput);
 
@@ -375,25 +375,25 @@ describe("FIREAdvisor", () => {
     expect(recommendations.length).toBeGreaterThan(1); // Should have multiple recommendations
 
     // Verify all recommendations have required structure
-    recommendations.forEach((recommendation) => {
-      expect(recommendation).toHaveProperty("type");
-      expect(recommendation).toHaveProperty("params");
-      expect(recommendation).toHaveProperty("is_achievable");
-      expect(typeof recommendation.is_achievable).toBe("boolean");
+    recommendations.forEach(recommendation => {
+      expect(recommendation).toHaveProperty('type');
+      expect(recommendation).toHaveProperty('params');
+      expect(recommendation).toHaveProperty('is_achievable');
+      expect(typeof recommendation.is_achievable).toBe('boolean');
     });
   });
 
-  test("recommendation types", () => {
+  test('recommendation types', () => {
     // Test that we have all expected recommendation types
     const validRecommendationTypes = [
-      "early_retirement",
-      "delayed_retirement",
-      "income_adjustment",
-      "expense_reduction",
+      'early_retirement',
+      'delayed_retirement',
+      'income_adjustment',
+      'expense_reduction',
     ];
 
     // This test ensures the type system supports all recommendation types
-    validRecommendationTypes.forEach((type) => {
+    validRecommendationTypes.forEach(type => {
       const mockRecommendation: SimpleRecommendation = {
         type: type as any,
         params: { message: `Test ${type}` },
@@ -404,22 +404,22 @@ describe("FIREAdvisor", () => {
     });
   });
 
-  test("recommendation parameters structure", () => {
+  test('recommendation parameters structure', () => {
     // Test basic recommendation parameter structure
     const sampleRecommendation: SimpleRecommendation = {
-      type: "income_adjustment",
+      type: 'income_adjustment',
       params: {
-        message: "Consider increasing income",
+        message: 'Consider increasing income',
         suggested_increase_percent: 15,
       },
       is_achievable: true,
     };
 
-    expect(sampleRecommendation.params).toHaveProperty("message");
-    expect(typeof sampleRecommendation.params.message).toBe("string");
+    expect(sampleRecommendation.params).toHaveProperty('message');
+    expect(typeof sampleRecommendation.params.message).toBe('string');
   });
 
-  test("advisor with minimal data", async () => {
+  test('advisor with minimal data', async () => {
     // Test advisor with minimal projection data
     const minimalProjection: AnnualProjectionRow[] = [
       { age: 34, year: 2024, total_income: 50000, total_expense: 40000 },
@@ -427,12 +427,12 @@ describe("FIREAdvisor", () => {
 
     const { incomeItems } = createDetailedProjectionAndItems(
       baseUserProfile,
-      minimalProjection,
+      minimalProjection
     );
     const engineInput = createEngineInput(
       baseUserProfile,
       convertProjectionRows(minimalProjection),
-      incomeItems,
+      incomeItems
     );
     const advisor = new FIREAdvisor(engineInput);
 
@@ -443,7 +443,7 @@ describe("FIREAdvisor", () => {
     // Should handle minimal data gracefully
   });
 
-  test("advisor language support", async () => {
+  test('advisor language support', async () => {
     // Test advisor with language parameter
     const projection: AnnualProjectionRow[] = [
       { age: 34, year: 2024, total_income: 50000, total_expense: 30000 },
@@ -451,16 +451,16 @@ describe("FIREAdvisor", () => {
 
     const { incomeItems } = createDetailedProjectionAndItems(
       baseUserProfile,
-      projection,
+      projection
     );
     const engineInput = createEngineInput(
       baseUserProfile,
       convertProjectionRows(projection),
-      incomeItems,
+      incomeItems
     );
 
     // Test with different language
-    const advisor = new FIREAdvisor(engineInput, "zh");
+    const advisor = new FIREAdvisor(engineInput, 'zh');
 
     expect(advisor).toBeDefined();
 

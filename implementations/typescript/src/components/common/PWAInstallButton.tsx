@@ -5,14 +5,14 @@
  * Handles the beforeinstallprompt event and manages install state.
  */
 
-import React, { useState, useEffect, useCallback } from "react";
-import { Button } from "@mantine/core";
-import { IconDownload, IconCheck } from "@tabler/icons-react";
-import { getI18n } from "../../core/i18n";
+import React, { useState, useEffect, useCallback } from 'react';
+import { Button } from '@mantine/core';
+import { IconDownload, IconCheck } from '@tabler/icons-react';
+import { getI18n } from '../../core/i18n';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): PromiseLike<void>;
-  userChoice: PromiseLike<{ outcome: "accepted" | "dismissed" }>;
+  userChoice: PromiseLike<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
 export const PWAInstallButton: React.FC = () => {
@@ -24,20 +24,20 @@ export const PWAInstallButton: React.FC = () => {
   const t = useCallback(
     (key: string, variables?: Record<string, unknown>): string =>
       i18n.t(key, variables),
-    [i18n],
+    [i18n]
   );
 
   useEffect(() => {
     // Check if app is already installed
     const checkIfInstalled = () => {
       const isStandalone = window.matchMedia(
-        "(display-mode: standalone)",
+        '(display-mode: standalone)'
       ).matches;
       const isIOSStandalone = (window.navigator as any).standalone === true;
 
       if (isStandalone) {
         console.log(
-          "❌ App already installed (standalone mode) - Install button will be HIDDEN",
+          '❌ App already installed (standalone mode) - Install button will be HIDDEN'
         );
         setIsInstalled(true);
         return;
@@ -45,7 +45,7 @@ export const PWAInstallButton: React.FC = () => {
 
       if (isIOSStandalone) {
         console.log(
-          "❌ App already installed (iOS standalone) - Install button will be HIDDEN",
+          '❌ App already installed (iOS standalone) - Install button will be HIDDEN'
         );
         setIsInstalled(true);
         return;
@@ -62,38 +62,38 @@ export const PWAInstallButton: React.FC = () => {
 
     // Listen for app installed event
     const handleAppInstalled = () => {
-      console.log("App installed");
+      console.log('App installed');
       setIsInstalled(true);
       setDeferredPrompt(null);
     };
 
-    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
-    window.addEventListener("appinstalled", handleAppInstalled);
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('appinstalled', handleAppInstalled);
 
     return () => {
       window.removeEventListener(
-        "beforeinstallprompt",
-        handleBeforeInstallPrompt,
+        'beforeinstallprompt',
+        handleBeforeInstallPrompt
       );
-      window.removeEventListener("appinstalled", handleAppInstalled);
+      window.removeEventListener('appinstalled', handleAppInstalled);
     };
   }, []);
 
   const handleInstallClick = async () => {
-    console.log("Install button clicked", { deferredPrompt });
+    console.log('Install button clicked', { deferredPrompt });
 
     if (!deferredPrompt) {
-      alert("No install prompt available");
+      alert('No install prompt available');
       return;
     }
 
     try {
       await deferredPrompt.prompt();
       const choiceResult = await deferredPrompt.userChoice;
-      console.log("User choice:", choiceResult);
+      console.log('User choice:', choiceResult);
       setDeferredPrompt(null);
     } catch (error) {
-      console.error("Error during PWA installation:", error);
+      console.error('Error during PWA installation:', error);
     }
   };
 
@@ -103,12 +103,12 @@ export const PWAInstallButton: React.FC = () => {
       {deferredPrompt && (
         <Button
           leftSection={<IconDownload size={16} />}
-          variant="light"
-          color="blue"
-          size="sm"
+          variant='light'
+          color='blue'
+          size='sm'
           onClick={handleInstallClick}
         >
-          {t("pwa.install_app")}
+          {t('pwa.install_app')}
         </Button>
       )}
     </>

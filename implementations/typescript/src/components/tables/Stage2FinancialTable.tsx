@@ -10,15 +10,15 @@
  * - 撤销功能：删除 override，恢复到 base 值
  */
 
-import React, { useRef, useEffect, useMemo, useCallback } from "react";
-import { Card, Title, Text, Stack, Group, Alert } from "@mantine/core";
-import { useMediaQuery } from "@mantine/hooks";
-import { IconTable, IconInfoCircle } from "@tabler/icons-react";
-import Handsontable from "handsontable";
-import "handsontable/dist/handsontable.full.min.css";
-import { usePlannerStore } from "../../stores/plannerStore";
-import { useAppStore } from "../../stores/appStore";
-import { getI18n } from "../../core/i18n";
+import React, { useRef, useEffect, useMemo, useCallback } from 'react';
+import { Card, Title, Text, Stack, Group, Alert } from '@mantine/core';
+import { useMediaQuery } from '@mantine/hooks';
+import { IconTable, IconInfoCircle } from '@tabler/icons-react';
+import Handsontable from 'handsontable';
+import 'handsontable/dist/handsontable.full.min.css';
+import { usePlannerStore } from '../../stores/plannerStore';
+import { useAppStore } from '../../stores/appStore';
+import { getI18n } from '../../core/i18n';
 // 移除未使用的导入
 // import type { IncomeExpenseItem } from '../../types';
 
@@ -46,7 +46,7 @@ interface Stage2FinancialTableProps {
 // =============================================================================
 
 export function Stage2FinancialTable({
-  title = "财务规划表",
+  title = '财务规划表',
   showInstructions = false,
   style,
 }: Stage2FinancialTableProps) {
@@ -54,7 +54,7 @@ export function Stage2FinancialTable({
   const hotInstance = useRef<Handsontable | null>(null);
 
   // 响应式设计 - 检测移动端
-  const isMobile = useMediaQuery("(max-width: 768px)");
+  const isMobile = useMediaQuery('(max-width: 768px)');
 
   // 统一的渲染调度器，避免多个setTimeout冲突
   const renderSchedulerRef = useRef<NodeJS.Timeout | null>(null);
@@ -86,7 +86,7 @@ export function Stage2FinancialTable({
       // 尝试获取滚动容器，使用更安全的路径
       const scrollHolder =
         (hotInstance.current as any).view?.wt?.wtTable?.holder ||
-        hotInstance.current.rootElement?.querySelector(".wtHolder") ||
+        hotInstance.current.rootElement?.querySelector('.wtHolder') ||
         hotInstance.current.rootElement;
 
       if (!scrollHolder) {
@@ -111,29 +111,29 @@ export function Stage2FinancialTable({
       }, 0);
     } catch (error) {
       // 如果出错，至少保证渲染能执行
-      console.warn("Failed to preserve scroll position:", error);
+      console.warn('Failed to preserve scroll position:', error);
       hotInstance.current.render();
     }
   }, []);
 
   // i18n
-  const currentLanguage = useAppStore((state) => state.currentLanguage);
+  const currentLanguage = useAppStore(state => state.currentLanguage);
   const i18n = getI18n();
   const t = useCallback(
     (key: string, variables?: Record<string, unknown>) =>
       i18n.t(key, variables),
-    [i18n],
+    [i18n]
   );
 
   // 使用正确的选择器避免无限循环
-  const userProfile = usePlannerStore((state) => state.data.user_profile);
-  const incomeItems = usePlannerStore((state) => state.data.income_items);
-  const expenseItems = usePlannerStore((state) => state.data.expense_items);
-  const overrides = usePlannerStore((state) => state.data.overrides);
+  const userProfile = usePlannerStore(state => state.data.user_profile);
+  const incomeItems = usePlannerStore(state => state.data.income_items);
+  const expenseItems = usePlannerStore(state => state.data.expense_items);
+  const overrides = usePlannerStore(state => state.data.overrides);
 
   // 窗口宽度状态，用于响应式计算
   const [windowWidth, setWindowWidth] = React.useState(() =>
-    typeof window !== "undefined" ? window.innerWidth : 1024,
+    typeof window !== 'undefined' ? window.innerWidth : 1024
   );
 
   // 监听窗口大小变化
@@ -142,8 +142,8 @@ export function Stage2FinancialTable({
       setWindowWidth(window.innerWidth);
     };
 
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   // 智能响应式列宽计算
@@ -161,7 +161,7 @@ export function Stage2FinancialTable({
         const firstColumnWidth = Math.min(100, availableWidth * 0.28);
         const dataColumnWidth = Math.max(
           75,
-          (availableWidth - firstColumnWidth) / totalColumns,
+          (availableWidth - firstColumnWidth) / totalColumns
         );
         return [firstColumnWidth, ...Array(totalColumns).fill(dataColumnWidth)];
       } else if (totalColumns <= 4) {
@@ -169,7 +169,7 @@ export function Stage2FinancialTable({
         const firstColumnWidth = Math.min(85, availableWidth * 0.22);
         const dataColumnWidth = Math.max(
           65,
-          (availableWidth - firstColumnWidth) / totalColumns,
+          (availableWidth - firstColumnWidth) / totalColumns
         );
         return [firstColumnWidth, ...Array(totalColumns).fill(dataColumnWidth)];
       } else {
@@ -177,7 +177,7 @@ export function Stage2FinancialTable({
         const firstColumnWidth = Math.min(75, availableWidth * 0.18);
         const dataColumnWidth = Math.max(
           55,
-          (availableWidth - firstColumnWidth) / totalColumns,
+          (availableWidth - firstColumnWidth) / totalColumns
         );
         return [firstColumnWidth, ...Array(totalColumns).fill(dataColumnWidth)];
       }
@@ -193,18 +193,18 @@ export function Stage2FinancialTable({
     }
   }, [incomeItems, expenseItems, isMobile, windowWidth]);
 
-  const addOverride = usePlannerStore((state) => state.addOverride);
-  const updateOverride = usePlannerStore((state) => state.updateOverride);
-  const removeOverride = usePlannerStore((state) => state.removeOverride);
+  const addOverride = usePlannerStore(state => state.addOverride);
+  const updateOverride = usePlannerStore(state => state.updateOverride);
+  const removeOverride = usePlannerStore(state => state.removeOverride);
   const updateProjectionData = usePlannerStore(
-    (state) => state.updateProjectionData,
+    state => state.updateProjectionData
   );
 
   // 检测数值序列类型
   const detectSequenceType = useCallback(
-    (values: number[]): "copy" | "arithmetic" | "geometric" | "mixed" => {
-      if (values.length === 1) return "copy";
-      if (values.length === 2) return "arithmetic";
+    (values: number[]): 'copy' | 'arithmetic' | 'geometric' | 'mixed' => {
+      if (values.length === 1) return 'copy';
+      if (values.length === 2) return 'arithmetic';
 
       // 检测等差数列
       const diff = values[1] - values[0];
@@ -215,7 +215,7 @@ export function Stage2FinancialTable({
           break;
         }
       }
-      if (isArithmetic) return "arithmetic";
+      if (isArithmetic) return 'arithmetic';
 
       // 检测等比数列（用乘法验证）
       if (values[0] !== 0 && values[1] !== 0) {
@@ -230,12 +230,12 @@ export function Stage2FinancialTable({
             break;
           }
         }
-        if (isGeometric && Math.abs(ratio - 1) > 0.01) return "geometric";
+        if (isGeometric && Math.abs(ratio - 1) > 0.01) return 'geometric';
       }
 
-      return "mixed";
+      return 'mixed';
     },
-    [],
+    []
   );
 
   // 生成自动填充值
@@ -245,14 +245,14 @@ export function Stage2FinancialTable({
       const result: number[] = [...selectedValues];
 
       switch (sequenceType) {
-        case "copy":
+        case 'copy':
           const copyValue = selectedValues[0];
           for (let i = selectedValues.length; i < targetLength; i++) {
             result.push(copyValue);
           }
           break;
 
-        case "arithmetic":
+        case 'arithmetic':
           const diff = selectedValues[1] - selectedValues[0];
           let lastValue = selectedValues[selectedValues.length - 1];
           for (let i = selectedValues.length; i < targetLength; i++) {
@@ -261,7 +261,7 @@ export function Stage2FinancialTable({
           }
           break;
 
-        case "geometric":
+        case 'geometric':
           const ratio = selectedValues[1] / selectedValues[0];
           let lastGeoValue = selectedValues[selectedValues.length - 1];
           for (let i = selectedValues.length; i < targetLength; i++) {
@@ -270,7 +270,7 @@ export function Stage2FinancialTable({
           }
           break;
 
-        case "mixed":
+        case 'mixed':
           const lastTwo = selectedValues.slice(-2);
           const mixedDiff = lastTwo[1] - lastTwo[0];
           let lastMixedValue = selectedValues[selectedValues.length - 1];
@@ -283,7 +283,7 @@ export function Stage2FinancialTable({
 
       return result;
     },
-    [detectSequenceType],
+    [detectSequenceType]
   );
 
   // 判断列是否可编辑
@@ -315,16 +315,16 @@ export function Stage2FinancialTable({
       const year = birthYear + age;
       const row: Stage2ProjectionRow = { year, age };
 
-      allItems.forEach((item) => {
+      allItems.forEach(item => {
         if (age >= item.start_age && age <= (item.end_age || 999)) {
           const yearsFromStart = age - item.start_age;
           let baseAmount = item.after_tax_amount_per_period;
 
-          if (item.frequency === "recurring") {
-            if (item.time_unit === "monthly") {
+          if (item.frequency === 'recurring') {
+            if (item.time_unit === 'monthly') {
               baseAmount = baseAmount * 12;
             }
-          } else if (item.frequency === "one-time") {
+          } else if (item.frequency === 'one-time') {
             if (yearsFromStart !== 0) {
               row[item.id as string] = 0;
               return;
@@ -332,7 +332,7 @@ export function Stage2FinancialTable({
           }
 
           const isIncomeItem = incomeItems.some(
-            (inc: any) => inc.id === item.id,
+            (inc: any) => inc.id === item.id
           );
           let currentAmount: number;
 
@@ -363,11 +363,11 @@ export function Stage2FinancialTable({
   const finalProjectionData = useMemo((): Stage2ProjectionRow[] => {
     if (overrides.length === 0) return baseProjectionData;
 
-    return baseProjectionData.map((row) => {
+    return baseProjectionData.map(row => {
       const finalRow = { ...row };
 
       // 应用该年龄的所有 override
-      overrides.forEach((override) => {
+      overrides.forEach(override => {
         if (override.age === row.age) {
           finalRow[override.item_id] = override.value;
         }
@@ -382,22 +382,22 @@ export function Stage2FinancialTable({
     if (finalProjectionData.length === 0 || !incomeItems || !expenseItems)
       return;
 
-    const aggregatedProjectionData = finalProjectionData.map((row) => {
+    const aggregatedProjectionData = finalProjectionData.map(row => {
       let totalIncome = 0;
       let totalExpense = 0;
 
       // 计算该行的总收入
-      incomeItems.forEach((item) => {
+      incomeItems.forEach(item => {
         const value = row[item.id as string];
-        if (typeof value === "number") {
+        if (typeof value === 'number') {
           totalIncome += value;
         }
       });
 
       // 计算该行的总支出
-      expenseItems.forEach((item) => {
+      expenseItems.forEach(item => {
         const value = row[item.id as string];
-        if (typeof value === "number") {
+        if (typeof value === 'number') {
           totalExpense += value;
         }
       });
@@ -422,7 +422,7 @@ export function Stage2FinancialTable({
     const tableData = [];
 
     // 表头
-    const headers = [t("table.headers.year_age")];
+    const headers = [t('table.headers.year_age')];
     incomeItems.forEach((item: any) => {
       headers.push(`💰 ${item.name}`);
     });
@@ -432,9 +432,9 @@ export function Stage2FinancialTable({
     tableData.push(headers);
 
     // 数据行
-    finalProjectionData.forEach((rowData) => {
+    finalProjectionData.forEach(rowData => {
       const row = [
-        t("table.row.year_age_format", {
+        t('table.row.year_age_format', {
           year: rowData.year,
           age: rowData.age,
         }),
@@ -456,19 +456,19 @@ export function Stage2FinancialTable({
     const tableData = [];
 
     // 表头
-    const headers = [t("table.headers.year_age")];
-    incomeItems.forEach((item) => {
+    const headers = [t('table.headers.year_age')];
+    incomeItems.forEach(item => {
       headers.push(`💰 ${item.name}`);
     });
-    expenseItems.forEach((item) => {
+    expenseItems.forEach(item => {
       headers.push(`💸 ${item.name}`);
     });
     tableData.push(headers);
 
     // 数据行
-    baseProjectionData.forEach((rowData) => {
+    baseProjectionData.forEach(rowData => {
       const row = [
-        t("table.row.year_age_format", {
+        t('table.row.year_age_format', {
           year: rowData.year,
           age: rowData.age,
         }),
@@ -492,7 +492,7 @@ export function Stage2FinancialTable({
 
       return allItems[itemIndex]?.id || null;
     },
-    [incomeItems, expenseItems],
+    [incomeItems, expenseItems]
   );
 
   // 工具函数：检查单元格是否被 override
@@ -509,10 +509,10 @@ export function Stage2FinancialTable({
       // 动态获取最新的 overrides 状态，避免依赖闭包
       const currentOverrides = usePlannerStore.getState().data.overrides || [];
       return currentOverrides.some(
-        (override) => override.age === age && override.item_id === itemId,
+        override => override.age === age && override.item_id === itemId
       );
     },
-    [baseProjectionData, getItemIdFromColumn],
+    [baseProjectionData, getItemIdFromColumn]
   );
 
   // 处理撤销 override
@@ -531,7 +531,7 @@ export function Stage2FinancialTable({
         const currentOverrides =
           usePlannerStore.getState().data.overrides || [];
         const existingIndex = currentOverrides.findIndex(
-          (override) => override.age === age && override.item_id === itemId,
+          override => override.age === age && override.item_id === itemId
         );
         if (existingIndex >= 0) {
           removeOverride(existingIndex);
@@ -548,7 +548,7 @@ export function Stage2FinancialTable({
       baseTableData,
       removeOverride,
       scheduleRender,
-    ],
+    ]
   );
 
   // 创建 Handsontable
@@ -556,7 +556,7 @@ export function Stage2FinancialTable({
     if (!hotRef.current || tableData.length === 0) return;
 
     hotInstance.current = new Handsontable(hotRef.current, {
-      licenseKey: "non-commercial-and-evaluation",
+      licenseKey: 'non-commercial-and-evaluation',
       data: tableData,
       colWidths: columnWidths,
       rowHeights: 35,
@@ -566,7 +566,7 @@ export function Stage2FinancialTable({
       contextMenu: {
         items: {
           undo_override: {
-            name: t("table.context_menu.undo_override"),
+            name: t('table.context_menu.undo_override'),
             callback: () => {
               const selection = hotInstance.current?.getSelected();
               if (selection) {
@@ -588,11 +588,11 @@ export function Stage2FinancialTable({
 
       // 列配置
       columns: [
-        { type: "text", readOnly: true, className: "htCenter htMiddle" }, // 年份列
+        { type: 'text', readOnly: true, className: 'htCenter htMiddle' }, // 年份列
         ...Array(incomeItems.length + expenseItems.length).fill({
-          type: "numeric",
-          numericFormat: { pattern: "0,0" },
-          className: "htRight",
+          type: 'numeric',
+          numericFormat: { pattern: '0,0' },
+          className: 'htRight',
           readOnly: false,
         }),
       ],
@@ -603,24 +603,24 @@ export function Stage2FinancialTable({
 
         if (row === 0) {
           // 表头
-          cellProperties.className = "htCenter htMiddle";
+          cellProperties.className = 'htCenter htMiddle';
           cellProperties.renderer = function (_instance: any, td: HTMLElement) {
             Handsontable.renderers.TextRenderer.apply(this, arguments as any);
-            td.style.backgroundColor = "#f8f9fa";
-            td.style.fontWeight = "bold";
-            td.style.color = "#495057";
-            td.style.borderBottom = "2px solid #dee2e6";
+            td.style.backgroundColor = '#f8f9fa';
+            td.style.fontWeight = 'bold';
+            td.style.color = '#495057';
+            td.style.borderBottom = '2px solid #dee2e6';
           };
           cellProperties.readOnly = true;
         } else if (col === 0) {
           // 年份列
-          cellProperties.className = "htCenter htMiddle";
+          cellProperties.className = 'htCenter htMiddle';
           cellProperties.renderer = function (_instance: any, td: HTMLElement) {
             Handsontable.renderers.TextRenderer.apply(this, arguments as any);
-            td.style.backgroundColor = "#f8f9fa";
-            td.style.fontWeight = "bold";
-            td.style.color = "#495057";
-            td.style.borderRight = "2px solid #dee2e6";
+            td.style.backgroundColor = '#f8f9fa';
+            td.style.fontWeight = 'bold';
+            td.style.color = '#495057';
+            td.style.borderRight = '2px solid #dee2e6';
           };
           cellProperties.readOnly = true;
         } else {
@@ -631,48 +631,48 @@ export function Stage2FinancialTable({
             row: number,
             col: number,
             _prop: any,
-            value: any,
+            value: any
           ) {
             Handsontable.renderers.NumericRenderer.apply(
               this,
-              arguments as any,
+              arguments as any
             );
 
             const isOverridden = isCellOverridden(row, col);
             const itemId = getItemIdFromColumn(col);
             const isIncomeItem =
-              itemId && incomeItems.some((item) => item.id === itemId);
+              itemId && incomeItems.some(item => item.id === itemId);
 
             // 背景色
-            let baseColor = "";
+            let baseColor = '';
             if (isIncomeItem) {
-              baseColor = "#e8f5e8"; // 收入 - 绿色系
+              baseColor = '#e8f5e8'; // 收入 - 绿色系
             } else {
-              baseColor = "#ffeaea"; // 支出 - 红色系
+              baseColor = '#ffeaea'; // 支出 - 红色系
             }
             td.style.backgroundColor = baseColor;
 
             // Override 橙色边框
             if (isOverridden) {
-              td.style.border = "3px solid #ff9f40";
-              td.style.boxSizing = "border-box";
+              td.style.border = '3px solid #ff9f40';
+              td.style.boxSizing = 'border-box';
 
               // 添加 tooltip
               const originalValue = baseTableData[row]?.[col];
               if (originalValue !== undefined) {
-                td.title = t("table.override.tooltip_full", {
+                td.title = t('table.override.tooltip_full', {
                   value,
                   originalValue,
                 });
               }
             } else {
-              td.style.border = "";
-              td.title = "";
+              td.style.border = '';
+              td.title = '';
             }
 
             // 负数红色
-            if (typeof value === "number" && value < 0) {
-              td.style.color = "#dc3545";
+            if (typeof value === 'number' && value < 0) {
+              td.style.color = '#dc3545';
             }
           };
         }
@@ -685,7 +685,7 @@ export function Stage2FinancialTable({
         if (!changes) return;
 
         // 处理自动填充
-        if (source === "Autofill.fill") {
+        if (source === 'Autofill.fill') {
           // 获取选择的范围
           const selection = hotInstance.current?.getSelected();
           if (!selection) return;
@@ -693,7 +693,7 @@ export function Stage2FinancialTable({
           const [startRow, startCol, endRow, endCol] = selection[0];
 
           // 只允许编辑可编辑列
-          const validChanges = changes.filter((change) => {
+          const validChanges = changes.filter(change => {
             const [row, col] = change;
             return row > 0 && isColumnEditable(col);
           });
@@ -707,7 +707,7 @@ export function Stage2FinancialTable({
           const selectedData: number[] = [];
           for (let row = startRow; row <= endRow; row++) {
             const cellValue = hotInstance.current?.getDataAtCell(row, startCol);
-            if (typeof cellValue === "number") {
+            if (typeof cellValue === 'number') {
               selectedData.push(cellValue);
             }
           }
@@ -721,7 +721,7 @@ export function Stage2FinancialTable({
           const fillLength = validChanges.length + selectedData.length;
           const autofillValues = generateAutofillValues(
             selectedData,
-            fillLength,
+            fillLength
           );
 
           // 应用自动填充的值
@@ -736,7 +736,7 @@ export function Stage2FinancialTable({
         }
 
         // 处理常规编辑
-        changes.forEach((change) => {
+        changes.forEach(change => {
           const [row, col, oldValue, newValue] = change;
 
           // 表头行和不可编辑列不允许编辑
@@ -746,8 +746,8 @@ export function Stage2FinancialTable({
           }
 
           // 数值验证和格式化
-          if (typeof newValue === "string" && newValue.trim() !== "") {
-            const numValue = parseFloat(newValue.replace(/,/g, ""));
+          if (typeof newValue === 'string' && newValue.trim() !== '') {
+            const numValue = parseFloat(newValue.replace(/,/g, ''));
             if (!isNaN(numValue)) {
               change[3] = numValue;
             }
@@ -759,7 +759,7 @@ export function Stage2FinancialTable({
 
       // 处理数据变更
       afterChange: (changes: any[] | null, source: string) => {
-        if (!changes || source === "loadData") return;
+        if (!changes || source === 'loadData') return;
 
         changes.forEach(([row, col, , newValue]) => {
           if (row > 0 && col > 0) {
@@ -774,8 +774,8 @@ export function Stage2FinancialTable({
                 const currentOverrides =
                   usePlannerStore.getState().data.overrides || [];
                 const existingIndex = currentOverrides.findIndex(
-                  (override) =>
-                    override.age === age && override.item_id === itemId,
+                  override =>
+                    override.age === age && override.item_id === itemId
                 );
 
                 if (existingIndex >= 0) {
@@ -792,8 +792,8 @@ export function Stage2FinancialTable({
                 const currentOverrides2 =
                   usePlannerStore.getState().data.overrides || [];
                 const existingIndex2 = currentOverrides2.findIndex(
-                  (override) =>
-                    override.age === age && override.item_id === itemId,
+                  override =>
+                    override.age === age && override.item_id === itemId
                 );
                 if (existingIndex2 >= 0) {
                   removeOverride(existingIndex2);
@@ -813,7 +813,7 @@ export function Stage2FinancialTable({
         // MacBook: Backspace键 或 fn+Delete键
         // Windows/Linux: Delete键
         if (
-          (event.key === "Delete" || event.key === "Backspace") &&
+          (event.key === 'Delete' || event.key === 'Backspace') &&
           !event.ctrlKey &&
           !event.metaKey &&
           !event.altKey
@@ -894,25 +894,25 @@ export function Stage2FinancialTable({
   }, [overrides, scheduleRender]);
 
   return (
-    <Card shadow="sm" padding="lg" radius="md" style={style}>
-      <Stack gap="md">
-        <Group mb="md">
-          <IconTable size={24} color="var(--mantine-primary-color-6)" />
+    <Card shadow='sm' padding='lg' radius='md' style={style}>
+      <Stack gap='md'>
+        <Group mb='md'>
+          <IconTable size={24} color='var(--mantine-primary-color-6)' />
           <Title order={4}>{title}</Title>
         </Group>
 
         {showInstructions && (
-          <Alert icon={<IconInfoCircle size={16} />} color="blue" mb="md">
-            <Stack gap="xs">
-              <Text size="sm" fw={600}>
-                {t("table.instructions.title", { title })}
+          <Alert icon={<IconInfoCircle size={16} />} color='blue' mb='md'>
+            <Stack gap='xs'>
+              <Text size='sm' fw={600}>
+                {t('table.instructions.title', { title })}
               </Text>
-              <Text size="xs">{t("table.instructions.data_structure")}</Text>
-              <Text size="xs">{t("table.instructions.editable_columns")}</Text>
-              <Text size="xs">{t("table.instructions.autofill")}</Text>
-              <Text size="xs">{t("table.instructions.edit")}</Text>
-              <Text size="xs">{t("table.instructions.override_feature")}</Text>
-              <Text size="xs">{t("table.instructions.undo_override")}</Text>
+              <Text size='xs'>{t('table.instructions.data_structure')}</Text>
+              <Text size='xs'>{t('table.instructions.editable_columns')}</Text>
+              <Text size='xs'>{t('table.instructions.autofill')}</Text>
+              <Text size='xs'>{t('table.instructions.edit')}</Text>
+              <Text size='xs'>{t('table.instructions.override_feature')}</Text>
+              <Text size='xs'>{t('table.instructions.undo_override')}</Text>
             </Stack>
           </Alert>
         )}
@@ -920,11 +920,11 @@ export function Stage2FinancialTable({
         <div
           ref={hotRef}
           style={{
-            width: "100%",
-            height: "400px",
-            overflow: "hidden",
-            border: "1px solid var(--mantine-color-gray-3)",
-            borderRadius: "8px",
+            width: '100%',
+            height: '400px',
+            overflow: 'hidden',
+            border: '1px solid var(--mantine-color-gray-3)',
+            borderRadius: '8px',
           }}
         />
 
