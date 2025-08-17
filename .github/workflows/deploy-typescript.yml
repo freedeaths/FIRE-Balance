@@ -68,7 +68,7 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           projectName: fire-balance
           directory: ${{ env.WORKING_DIRECTORY }}/dist
-          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          # gitHubToken: ${{ secrets.GITHUB_TOKEN }}  # Disabled to avoid deployment permission issues
           wranglerVersion: '3'
 
       - name: 💬 Add deployment comment to PR

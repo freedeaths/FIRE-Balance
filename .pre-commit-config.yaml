@@ -69,8 +69,7 @@ repos:
     hooks:
       - id: typescript-prettier
         name: Prettier (TypeScript)
-        entry: implementations/typescript/node_modules/.bin/prettier
-        args: [--write]
+        entry: npx --prefix implementations/typescript prettier --write
         language: system
         files: ^implementations/typescript/.*\.(ts|tsx|js|jsx|json|yaml|yml|md)$
         pass_filenames: true
