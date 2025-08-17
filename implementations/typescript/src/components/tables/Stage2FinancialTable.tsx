@@ -59,27 +59,24 @@ export function Stage2FinancialTable({
   // 统一的渲染调度器，避免多个setTimeout冲突
   const renderSchedulerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const scheduleRender = useCallback(
-    (preserveScroll: boolean = true, delay: number = 10) => {
-      // 清除之前的渲染调度，避免冲突
-      if (renderSchedulerRef.current) {
-        clearTimeout(renderSchedulerRef.current);
+  const scheduleRender = useCallback((preserveScroll = true, delay = 10) => {
+    // 清除之前的渲染调度，避免冲突
+    if (renderSchedulerRef.current) {
+      clearTimeout(renderSchedulerRef.current);
+    }
+
+    renderSchedulerRef.current = setTimeout(() => {
+      if (!hotInstance.current) return;
+
+      if (preserveScroll) {
+        renderWithScrollPosition();
+      } else {
+        hotInstance.current.render();
       }
 
-      renderSchedulerRef.current = setTimeout(() => {
-        if (!hotInstance.current) return;
-
-        if (preserveScroll) {
-          renderWithScrollPosition();
-        } else {
-          hotInstance.current.render();
-        }
-
-        renderSchedulerRef.current = null;
-      }, delay);
-    },
-    [],
-  );
+      renderSchedulerRef.current = null;
+    }, delay);
+  }, []);
 
   // 保持滚动位置的重新渲染函数
   const renderWithScrollPosition = useCallback(() => {

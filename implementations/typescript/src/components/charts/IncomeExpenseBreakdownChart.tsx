@@ -186,7 +186,7 @@ const IncomeExpenseBreakdownChart = React.memo(
     const allItems = [...incomeItems, ...expenseItems];
 
     // Legend交互状态：控制哪些数据系列被隐藏（参考代码模式）
-    const [hiddenSeries, setHiddenSeries] = React.useState<Array<string>>([]);
+    const [hiddenSeries, setHiddenSeries] = React.useState<string[]>([]);
 
     // 生成唯一显示名称，处理重名问题
     const generateUniqueDisplayNames = () => {
@@ -281,7 +281,7 @@ const IncomeExpenseBreakdownChart = React.memo(
       "#be123c", // 深玫红
     ];
 
-    const colorMap: { [key: string]: string } = {};
+    const colorMap: Record<string, string> = {};
 
     // 为收入项目分配绿色系
     incomeItems.forEach((item, index) => {
@@ -446,7 +446,7 @@ const ChartContent = React.memo(function ChartContent({
   const allItems = [...incomeItems, ...expenseItems];
 
   // Legend交互状态：控制哪些数据系列被隐藏（参考代码模式）
-  const [hiddenSeries, setHiddenSeries] = React.useState<Array<string>>([]);
+  const [hiddenSeries, setHiddenSeries] = React.useState<string[]>([]);
 
   // 生成唯一显示名称，处理重名问题
   const generateUniqueDisplayNames = () => {
@@ -541,7 +541,7 @@ const ChartContent = React.memo(function ChartContent({
     "#be123c", // 深玫红
   ];
 
-  const colorMap: { [key: string]: string } = {};
+  const colorMap: Record<string, string> = {};
 
   // 为收入项目分配绿色系
   incomeItems.forEach((item, index) => {

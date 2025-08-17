@@ -349,13 +349,13 @@ describe("BlackSwanEventApplication", () => {
 });
 
 describe("MonteCarloAnalysis", () => {
-  let simulation_data: Array<{
+  let simulation_data: {
     run_id: number;
     final_net_worth: Decimal;
     minimum_net_worth: Decimal;
     fire_success: boolean;
     black_swan_events: string[];
-  }>;
+  }[];
   let simulator: MonteCarloSimulator;
 
   beforeEach(() => {

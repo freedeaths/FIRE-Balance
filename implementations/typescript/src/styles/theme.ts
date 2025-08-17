@@ -464,7 +464,7 @@ export const getResponsiveValue = <T>(
   return values.md || defaultValue;
 };
 
-export const getColorShade = (color: string, shade: number = 5): string => {
+export const getColorShade = (color: string, shade = 5): string => {
   // Helper to get specific color shades
   return theme.colors[color as keyof typeof theme.colors]?.[shade] || color;
 };

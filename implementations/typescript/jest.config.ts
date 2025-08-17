@@ -13,6 +13,7 @@ import type { Config } from "jest";
 // 调试信息
 if (process.env.PRE_COMMIT) {
   console.log("🧪 Jest config: Pre-commit environment detected");
+
   console.log("🔧 Jest config: Loading with debugging enabled");
 }
 

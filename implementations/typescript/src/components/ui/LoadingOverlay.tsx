@@ -5,7 +5,7 @@
  * Overlays on top of main content, centered on screen
  */
 
-import React from 'react';
+import React from "react";
 import {
   Overlay,
   Center,
@@ -15,9 +15,9 @@ import {
   Text,
   Progress,
   Modal,
-} from '@mantine/core';
-import { IconLoader } from '@tabler/icons-react';
-import { getI18n } from '../../core/i18n';
+} from "@mantine/core";
+import { IconLoader } from "@tabler/icons-react";
+import { getI18n } from "../../core/i18n";
 
 interface LoadingOverlayProps {
   /** Whether to show the overlay */
@@ -34,22 +34,23 @@ export function LoadingOverlay({
   visible,
   progress,
   title,
-  description
+  description,
 }: LoadingOverlayProps): React.JSX.Element {
   const i18n = getI18n();
-  const t = (key: string, variables?: Record<string, unknown>): string => i18n.t(key, variables);
+  const t = (key: string, variables?: Record<string, unknown>): string =>
+    i18n.t(key, variables);
 
   const getProgressText = (progress: number): string => {
-    if (progress < 30) return `🔄 ${t('calculating_fire_feasibility')}`;
-    if (progress < 70) return `📊 ${t('run_monte_carlo_simulation')}`;
-    if (progress < 100) return `🎯 ${t('stage3.recommendations.title')}`;
-    return `✅ ${t('stage3.completion.title')}`;
+    if (progress < 30) return `🔄 ${t("calculating_fire_feasibility")}`;
+    if (progress < 70) return `📊 ${t("run_monte_carlo_simulation")}`;
+    if (progress < 100) return `🎯 ${t("stage3.recommendations.title")}`;
+    return `✅ ${t("stage3.completion.title")}`;
   };
 
   const getProgressColor = (progress: number): string => {
-    if (progress < 30) return 'blue';
-    if (progress < 70) return 'orange';
-    return 'green';
+    if (progress < 30) return "blue";
+    if (progress < 70) return "orange";
+    return "green";
   };
 
   return (
@@ -75,7 +76,7 @@ export function LoadingOverlay({
 
         {/* Title */}
         <Title order={3} ta="center">
-          {title || t('calculating_fire_feasibility')}
+          {title || t("calculating_fire_feasibility")}
         </Title>
 
         {/* Progress description */}
@@ -91,14 +92,14 @@ export function LoadingOverlay({
           animated
           color={getProgressColor(progress)}
           style={{
-            height: '16px',
-            minWidth: '300px'
+            height: "16px",
+            minWidth: "300px",
           }}
         />
 
         {/* Help text */}
         <Text size="sm" c="dimmed" ta="center">
-          {t('running_simulations')}
+          {t("running_simulations")}
         </Text>
       </Stack>
     </Modal>

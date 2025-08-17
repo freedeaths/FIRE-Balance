@@ -12,15 +12,15 @@
  *   npx tsx cli.ts --help
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
-import { FIREPlanner, createPlannerFromJSON } from './src/core/planner';
-import { createSimulationSettings } from './src/core/data_models';
+import * as fs from "fs";
+import * as path from "path";
+import { FIREPlanner, createPlannerFromJSON } from "./src/core/planner";
+import { createSimulationSettings } from "./src/core/data_models";
 import type {
   PlannerConfigV1,
   PlannerResults,
-  SimulationSettings
-} from './src/core/planner_models';
+  SimulationSettings,
+} from "./src/core/planner_models";
 
 // =============================================================================
 // CLI Configuration and Types
@@ -56,7 +56,7 @@ interface CLIOutput {
       traditional_fire_number: number;
       traditional_fire_achieved: boolean;
       fire_success_probability: number;
-      yearly_results: Array<{
+      yearly_results: {
         age: number;
         total_income: number;
         total_expense: number;
@@ -65,7 +65,7 @@ interface CLIOutput {
         portfolio_value: number;
         net_worth: number;
         is_sustainable: boolean;
-      }>;
+      }[];
     };
     monte_carlo_success_rate?: number;
     recommendations: any[];
@@ -97,7 +97,7 @@ interface CLIOutput {
       success_rate: string;
       risk_assessment: string;
     };
-    recommendations: Array<{
+    recommendations: {
       number: number;
       type: string;
       title: string;
@@ -105,7 +105,7 @@ interface CLIOutput {
       is_achievable: boolean;
       status: string;
       params: any;
-    }>;
+    }[];
     key_insights: {
       years_until_fire: number;
       years_in_retirement: number;
@@ -122,26 +122,26 @@ interface CLIOutput {
 function parseArgs(argv: string[]): CLIArgs {
   const args: CLIArgs = {
     quickMc: false,
-    help: false
+    help: false,
   };
 
   for (let i = 2; i < argv.length; i++) {
     const arg = argv[i];
 
     switch (arg) {
-      case '--help':
-      case '-h':
+      case "--help":
+      case "-h":
         args.help = true;
         break;
-      case '--output':
-      case '-o':
+      case "--output":
+      case "-o":
         args.output = argv[++i];
         break;
-      case '--quick-mc':
+      case "--quick-mc":
         args.quickMc = true;
         break;
       default:
-        if (!args.jsonFile && !arg.startsWith('-')) {
+        if (!args.jsonFile && !arg.startsWith("-")) {
           args.jsonFile = arg;
         }
         break;
@@ -170,26 +170,27 @@ Example usage:
 `);
 }
 
-function printHeader(title: string, width: number = 80): void {
-  console.log("\n" + "=".repeat(width));
+function printHeader(title: string, width = 80): void {
+  console.log(`\n${"=".repeat(width)}`);
   console.log(title.padStart((width + title.length) / 2).padEnd(width));
   console.log("=".repeat(width));
 }
 
-function printSection(title: string, width: number = 60): void {
+function printSection(title: string, width = 60): void {
   console.log(`\n${"-".repeat(width)}`);
   console.log(title);
   console.log(`${"-".repeat(width)}`);
 }
 
 function formatCurrency(amount: number): string {
-  return `$${amount.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
+  return `$${amount.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
 }
 
 function progressCallback(progress: number): void {
   // Convert progress to percentage for display
   const percentage = Math.round(progress * 100);
-  if (percentage % 5 === 0 && percentage > 0) { // Show progress every 5%
+  if (percentage % 5 === 0 && percentage > 0) {
+    // Show progress every 5%
     console.log(`    Progress: ${percentage}%`);
   }
 }
@@ -213,11 +214,13 @@ function showPlanSummary(planner: FIREPlanner, jsonFile: string): boolean {
     printSection("User Profile");
     const currentAge = new Date().getFullYear() - profile.birth_year;
     console.log(
-      `Current Age: ${currentAge} → FIRE Age: ${profile.expected_fire_age} (Life: ${profile.life_expectancy})`
+      `Current Age: ${currentAge} → FIRE Age: ${profile.expected_fire_age} (Life: ${profile.life_expectancy})`,
     );
-    console.log(`Current Net Worth: ${formatCurrency(profile.current_net_worth)}`);
     console.log(
-      `Inflation Rate: ${profile.inflation_rate}% | Safety Buffer: ${profile.safety_buffer_months} months`
+      `Current Net Worth: ${formatCurrency(profile.current_net_worth)}`,
+    );
+    console.log(
+      `Inflation Rate: ${profile.inflation_rate}% | Safety Buffer: ${profile.safety_buffer_months} months`,
     );
   }
 
@@ -236,7 +239,9 @@ function runCalculations(planner: FIREPlanner): boolean {
 
   try {
     const df = planner.generateProjectionTable();
-    console.log(`✅ Generated projection table with ${df.length} years of data`);
+    console.log(
+      `✅ Generated projection table with ${df.length} years of data`,
+    );
   } catch (error) {
     console.log(`❌ Error generating projection: ${error}`);
     return false;
@@ -245,7 +250,9 @@ function runCalculations(planner: FIREPlanner): boolean {
   return true;
 }
 
-async function runAnalysis(planner: FIREPlanner): Promise<PlannerResults | null> {
+async function runAnalysis(
+  planner: FIREPlanner,
+): Promise<PlannerResults | null> {
   printHeader("FIRE ANALYSIS RESULTS");
 
   console.log("⚙️ Running FIRE calculations...");
@@ -255,7 +262,9 @@ async function runAnalysis(planner: FIREPlanner): Promise<PlannerResults | null>
   printSection("Monte Carlo Simulation Settings");
   console.log(`Number of Simulations: ${settings.num_simulations}`);
   console.log(`Confidence Level: ${settings.confidence_level}`);
-  console.log(`Include Black Swan Events: ${settings.include_black_swan_events}`);
+  console.log(
+    `Include Black Swan Events: ${settings.include_black_swan_events}`,
+  );
   console.log(`Income Volatility: ${settings.income_base_volatility}`);
   console.log(`Expense Volatility: ${settings.expense_base_volatility}`);
 
@@ -271,21 +280,29 @@ async function runAnalysis(planner: FIREPlanner): Promise<PlannerResults | null>
   printSection("FIRE Calculation Results");
   const fireResult = results.fire_calculation;
 
-  console.log(`🎯 FIRE Achievable: ${fireResult.is_fire_achievable ? 'YES' : 'NO'}`);
-  console.log(`💰 Net Worth at FIRE Age: ${formatCurrency(fireResult.fire_net_worth)}`);
   console.log(
-    `📉 Minimum Net Worth (Post-FIRE): ${formatCurrency(fireResult.min_net_worth_after_fire)}`
+    `🎯 FIRE Achievable: ${fireResult.is_fire_achievable ? "YES" : "NO"}`,
   );
-  console.log(`💵 Final Net Worth: ${formatCurrency(fireResult.final_net_worth)}`);
+  console.log(
+    `💰 Net Worth at FIRE Age: ${formatCurrency(fireResult.fire_net_worth)}`,
+  );
+  console.log(
+    `📉 Minimum Net Worth (Post-FIRE): ${formatCurrency(fireResult.min_net_worth_after_fire)}`,
+  );
+  console.log(
+    `💵 Final Net Worth: ${formatCurrency(fireResult.final_net_worth)}`,
+  );
   console.log(`🛡️ Safety Buffer (months): ${fireResult.safety_buffer_months}`);
-  console.log(`📊 Min Safety Buffer Ratio: ${fireResult.min_safety_buffer_ratio.toFixed(2)}`);
+  console.log(
+    `📊 Min Safety Buffer Ratio: ${fireResult.min_safety_buffer_ratio.toFixed(2)}`,
+  );
 
   printSection("Traditional FIRE Metrics");
   console.log(
-    `4% Rule FIRE Number: ${formatCurrency(fireResult.traditional_fire_number)}`
+    `4% Rule FIRE Number: ${formatCurrency(fireResult.traditional_fire_number)}`,
   );
   console.log(
-    `4% Rule Achieved: ${fireResult.traditional_fire_achieved ? 'YES' : 'NO'}`
+    `4% Rule Achieved: ${fireResult.traditional_fire_achieved ? "YES" : "NO"}`,
   );
 
   printSection("Monte Carlo Risk Analysis");
@@ -333,12 +350,12 @@ async function runAnalysis(planner: FIREPlanner): Promise<PlannerResults | null>
           description = `Even delaying to legal retirement age (${params.age}) would not achieve FIRE.`;
           break;
         case "increase_income":
-          title = `Increase Income by ${params.percentage?.toFixed(1) || 'N/A'}%`;
-          description = `Increase income by ${params.percentage?.toFixed(1) || 'N/A'}% ($${params.amount?.toLocaleString() || '0'} annually).`;
+          title = `Increase Income by ${params.percentage?.toFixed(1) || "N/A"}%`;
+          description = `Increase income by ${params.percentage?.toFixed(1) || "N/A"}% ($${params.amount?.toLocaleString() || "0"} annually).`;
           break;
         case "reduce_expenses":
-          title = `Reduce Expenses by ${params.percentage?.toFixed(1) || 'N/A'}%`;
-          description = `Reduce expenses by ${params.percentage?.toFixed(1) || 'N/A'}% ($${params.amount?.toLocaleString() || '0'} annually).`;
+          title = `Reduce Expenses by ${params.percentage?.toFixed(1) || "N/A"}%`;
+          description = `Reduce expenses by ${params.percentage?.toFixed(1) || "N/A"}% ($${params.amount?.toLocaleString() || "0"} annually).`;
           break;
         default:
           title = `Unknown recommendation: ${recType}`;
@@ -360,7 +377,8 @@ async function runAnalysis(planner: FIREPlanner): Promise<PlannerResults | null>
 
   // Additional analysis
   printSection("Key Insights");
-  const currentAge = new Date().getFullYear() - planner.data.user_profile!.birth_year;
+  const currentAge =
+    new Date().getFullYear() - planner.data.user_profile!.birth_year;
   const fireAge = planner.data.user_profile!.expected_fire_age;
   const yearsToFire = fireAge - currentAge;
   const retirementYears = fireResult.retirement_years;
@@ -369,11 +387,12 @@ async function runAnalysis(planner: FIREPlanner): Promise<PlannerResults | null>
   console.log(`🏖️ Years in retirement: ${retirementYears}`);
 
   if (fireResult.is_fire_achievable && yearsToFire > 0) {
-    const annualSavingsNeeded = (
-      fireResult.fire_net_worth - planner.data.user_profile!.current_net_worth
-    ) / yearsToFire;
+    const annualSavingsNeeded =
+      (fireResult.fire_net_worth -
+        planner.data.user_profile!.current_net_worth) /
+      yearsToFire;
     console.log(
-      `💸 Average annual savings needed: ${formatCurrency(annualSavingsNeeded)}`
+      `💸 Average annual savings needed: ${formatCurrency(annualSavingsNeeded)}`,
     );
   }
 
@@ -381,7 +400,11 @@ async function runAnalysis(planner: FIREPlanner): Promise<PlannerResults | null>
   return results;
 }
 
-function saveResultsToFile(planner: FIREPlanner, results: PlannerResults, outputPath: string): void {
+function saveResultsToFile(
+  planner: FIREPlanner,
+  results: PlannerResults,
+  outputPath: string,
+): void {
   // Generate formatted analysis report (matching Python implementation)
   const analysisReport = generateAnalysisReport(planner, results);
 
@@ -390,43 +413,53 @@ function saveResultsToFile(planner: FIREPlanner, results: PlannerResults, output
     metadata: {
       export_timestamp: new Date().toISOString(),
       export_type: "fire_analysis_results",
-      description: "Complete FIRE analysis results including calculations, projections, and recommendations"
+      description:
+        "Complete FIRE analysis results including calculations, projections, and recommendations",
     },
-    input_configuration: planner.exportToConfig(`FIRE Results - ${new Date().toISOString()}`),
+    input_configuration: planner.exportToConfig(
+      `FIRE Results - ${new Date().toISOString()}`,
+    ),
     results: {
       fire_calculation: {
         is_fire_achievable: results.fire_calculation.is_fire_achievable,
         fire_net_worth: results.fire_calculation.fire_net_worth,
-        min_net_worth_after_fire: results.fire_calculation.min_net_worth_after_fire,
+        min_net_worth_after_fire:
+          results.fire_calculation.min_net_worth_after_fire,
         final_net_worth: results.fire_calculation.final_net_worth,
         safety_buffer_months: results.fire_calculation.safety_buffer_months,
-        min_safety_buffer_ratio: results.fire_calculation.min_safety_buffer_ratio,
+        min_safety_buffer_ratio:
+          results.fire_calculation.min_safety_buffer_ratio,
         retirement_years: results.fire_calculation.retirement_years,
         total_years_simulated: results.fire_calculation.total_years_simulated,
-        traditional_fire_number: results.fire_calculation.traditional_fire_number,
-        traditional_fire_achieved: results.fire_calculation.traditional_fire_achieved,
-        fire_success_probability: results.fire_calculation.fire_success_probability,
-        yearly_results: results.fire_calculation.yearly_results.map(state => ({
-          age: state.age,
-          total_income: state.total_income,
-          total_expense: state.total_expense,
-          investment_return: state.investment_return,
-          net_cash_flow: state.net_cash_flow,
-          portfolio_value: state.portfolio_value,
-          net_worth: state.net_worth,
-          is_sustainable: state.is_sustainable,
-        }))
+        traditional_fire_number:
+          results.fire_calculation.traditional_fire_number,
+        traditional_fire_achieved:
+          results.fire_calculation.traditional_fire_achieved,
+        fire_success_probability:
+          results.fire_calculation.fire_success_probability,
+        yearly_results: results.fire_calculation.yearly_results.map(
+          (state) => ({
+            age: state.age,
+            total_income: state.total_income,
+            total_expense: state.total_expense,
+            investment_return: state.investment_return,
+            net_cash_flow: state.net_cash_flow,
+            portfolio_value: state.portfolio_value,
+            net_worth: state.net_worth,
+            is_sustainable: state.is_sustainable,
+          }),
+        ),
       },
       monte_carlo_success_rate: results.monte_carlo_success_rate,
       recommendations: results.recommendations || [],
-      calculation_timestamp: results.calculation_timestamp.toISOString()
+      calculation_timestamp: results.calculation_timestamp.toISOString(),
     },
-    analysis_report: analysisReport
+    analysis_report: analysisReport,
   };
 
   // Save to file
   try {
-    fs.writeFileSync(outputPath, JSON.stringify(outputData, null, 2), 'utf-8');
+    fs.writeFileSync(outputPath, JSON.stringify(outputData, null, 2), "utf-8");
     console.log(`\n💾 Results saved to: ${outputPath}`);
   } catch (error) {
     console.error(`Error saving results to ${outputPath}:`, error);
@@ -434,7 +467,10 @@ function saveResultsToFile(planner: FIREPlanner, results: PlannerResults, output
   }
 }
 
-function generateAnalysisReport(planner: FIREPlanner, results: PlannerResults): CLIOutput['analysis_report'] {
+function generateAnalysisReport(
+  planner: FIREPlanner,
+  results: PlannerResults,
+): CLIOutput["analysis_report"] {
   const fireResult = results.fire_calculation;
   const profile = planner.data.user_profile!;
   const currentAge = new Date().getFullYear() - profile.birth_year;
@@ -446,7 +482,7 @@ function generateAnalysisReport(planner: FIREPlanner, results: PlannerResults): 
     life_expectancy: profile.life_expectancy,
     current_net_worth: formatCurrency(profile.current_net_worth),
     inflation_rate: `${profile.inflation_rate}%`,
-    safety_buffer_months: profile.safety_buffer_months
+    safety_buffer_months: profile.safety_buffer_months,
   };
 
   // FIRE calculation summary
@@ -454,72 +490,84 @@ function generateAnalysisReport(planner: FIREPlanner, results: PlannerResults): 
     is_achievable: fireResult.is_fire_achievable,
     achievable_text: fireResult.is_fire_achievable ? "✅ YES" : "❌ NO",
     net_worth_at_fire: formatCurrency(fireResult.fire_net_worth),
-    min_net_worth_post_fire: formatCurrency(fireResult.min_net_worth_after_fire),
+    min_net_worth_post_fire: formatCurrency(
+      fireResult.min_net_worth_after_fire,
+    ),
     final_net_worth: formatCurrency(fireResult.final_net_worth),
-    safety_buffer_ratio: fireResult.min_safety_buffer_ratio.toFixed(2)
+    safety_buffer_ratio: fireResult.min_safety_buffer_ratio.toFixed(2),
   };
 
   // Traditional FIRE metrics
   const traditionalMetrics = {
-    four_percent_rule_number: formatCurrency(fireResult.traditional_fire_number),
+    four_percent_rule_number: formatCurrency(
+      fireResult.traditional_fire_number,
+    ),
     four_percent_rule_achieved: fireResult.traditional_fire_achieved,
-    four_percent_rule_text: fireResult.traditional_fire_achieved ? "✅ YES" : "❌ NO"
+    four_percent_rule_text: fireResult.traditional_fire_achieved
+      ? "✅ YES"
+      : "❌ NO",
   };
 
   // Monte Carlo analysis
   const mcSuccessRate = results.monte_carlo_success_rate || 0.0;
-  const riskAssessment = mcSuccessRate < 0.7 ? "🔴 HIGH RISK" :
-                        mcSuccessRate < 0.9 ? "🟡 MODERATE RISK" : "🟢 LOW RISK";
+  const riskAssessment =
+    mcSuccessRate < 0.7
+      ? "🔴 HIGH RISK"
+      : mcSuccessRate < 0.9
+        ? "🟡 MODERATE RISK"
+        : "🟢 LOW RISK";
 
   const monteCarloSummary = {
     success_rate: `${(mcSuccessRate * 100).toFixed(2)}%`,
-    risk_assessment: riskAssessment
+    risk_assessment: riskAssessment,
   };
 
   // Format recommendations
-  const recommendationsFormatted = (results.recommendations || []).map((rec, i) => {
-    const recType = rec.type;
-    const params = rec.params;
-    let title: string;
-    let description: string;
+  const recommendationsFormatted = (results.recommendations || []).map(
+    (rec, i) => {
+      const recType = rec.type;
+      const params = rec.params;
+      let title: string;
+      let description: string;
 
-    switch (recType) {
-      case "early_retirement":
-        title = `Early Retirement at Age ${params.age}`;
-        description = `You can retire ${params.years} year(s) earlier at age ${params.age}.`;
-        break;
-      case "delayed_retirement":
-        title = `Delayed Retirement to Age ${params.age}`;
-        description = `Delay retirement by ${params.years} year(s) to age ${params.age}.`;
-        break;
-      case "delayed_retirement_not_feasible":
-        title = "Delayed Retirement Not Feasible";
-        description = `Even delaying to legal retirement age (${params.age}) would not achieve FIRE.`;
-        break;
-      case "increase_income":
-        title = `Increase Income by ${params.percentage?.toFixed(1) || 'N/A'}%`;
-        description = `Increase income by ${params.percentage?.toFixed(1) || 'N/A'}% ($${params.amount?.toLocaleString() || '0'} annually).`;
-        break;
-      case "reduce_expenses":
-        title = `Reduce Expenses by ${params.percentage?.toFixed(1) || 'N/A'}%`;
-        description = `Reduce expenses by ${params.percentage?.toFixed(1) || 'N/A'}% ($${params.amount?.toLocaleString() || '0'} annually).`;
-        break;
-      default:
-        title = `Recommendation ${i + 1}`;
-        description = "Details not available";
-        break;
-    }
+      switch (recType) {
+        case "early_retirement":
+          title = `Early Retirement at Age ${params.age}`;
+          description = `You can retire ${params.years} year(s) earlier at age ${params.age}.`;
+          break;
+        case "delayed_retirement":
+          title = `Delayed Retirement to Age ${params.age}`;
+          description = `Delay retirement by ${params.years} year(s) to age ${params.age}.`;
+          break;
+        case "delayed_retirement_not_feasible":
+          title = "Delayed Retirement Not Feasible";
+          description = `Even delaying to legal retirement age (${params.age}) would not achieve FIRE.`;
+          break;
+        case "increase_income":
+          title = `Increase Income by ${params.percentage?.toFixed(1) || "N/A"}%`;
+          description = `Increase income by ${params.percentage?.toFixed(1) || "N/A"}% ($${params.amount?.toLocaleString() || "0"} annually).`;
+          break;
+        case "reduce_expenses":
+          title = `Reduce Expenses by ${params.percentage?.toFixed(1) || "N/A"}%`;
+          description = `Reduce expenses by ${params.percentage?.toFixed(1) || "N/A"}% ($${params.amount?.toLocaleString() || "0"} annually).`;
+          break;
+        default:
+          title = `Recommendation ${i + 1}`;
+          description = "Details not available";
+          break;
+      }
 
-    return {
-      number: i + 1,
-      type: recType,
-      title,
-      description,
-      is_achievable: rec.is_achievable,
-      status: rec.is_achievable ? "✅" : "❌",
-      params
-    };
-  });
+      return {
+        number: i + 1,
+        type: recType,
+        title,
+        description,
+        is_achievable: rec.is_achievable,
+        status: rec.is_achievable ? "✅" : "❌",
+        params,
+      };
+    },
+  );
 
   // Key insights
   const yearsToFire = profile.expected_fire_age - currentAge;
@@ -527,12 +575,13 @@ function generateAnalysisReport(planner: FIREPlanner, results: PlannerResults): 
 
   const keyInsights: any = {
     years_until_fire: yearsToFire,
-    years_in_retirement: retirementYears
+    years_in_retirement: retirementYears,
   };
 
   // Additional calculations if plan is achievable
   if (fireResult.is_fire_achievable && yearsToFire > 0) {
-    const annualSavingsNeeded = (fireResult.fire_net_worth - profile.current_net_worth) / yearsToFire;
+    const annualSavingsNeeded =
+      (fireResult.fire_net_worth - profile.current_net_worth) / yearsToFire;
     keyInsights.avg_annual_savings_needed = formatCurrency(annualSavingsNeeded);
   }
 
@@ -543,7 +592,7 @@ function generateAnalysisReport(planner: FIREPlanner, results: PlannerResults): 
     monte_carlo_analysis: monteCarloSummary,
     recommendations: recommendationsFormatted,
     key_insights: keyInsights,
-    generation_timestamp: new Date().toISOString()
+    generation_timestamp: new Date().toISOString(),
   };
 }
 
@@ -564,7 +613,11 @@ async function main(): Promise<void> {
   if (args.jsonFile) {
     jsonFile = path.resolve(args.jsonFile);
   } else {
-    jsonFile = path.resolve(__dirname, '..', 'example_fire_plan_predefined.json');
+    jsonFile = path.resolve(
+      __dirname,
+      "..",
+      "example_fire_plan_predefined.json",
+    );
   }
 
   if (!fs.existsSync(jsonFile)) {
@@ -579,7 +632,7 @@ async function main(): Promise<void> {
   // Initialize planner
   let planner: FIREPlanner;
   try {
-    const jsonContent = fs.readFileSync(jsonFile, 'utf-8');
+    const jsonContent = fs.readFileSync(jsonFile, "utf-8");
     planner = createPlannerFromJSON(jsonContent);
 
     if (args.quickMc) {
@@ -587,7 +640,7 @@ async function main(): Promise<void> {
       const quickSettings = createSimulationSettings({
         num_simulations: 200,
         confidence_level: 0.95,
-        include_black_swan_events: true
+        include_black_swan_events: true,
       });
       planner.setSimulationSettings(quickSettings);
     }
@@ -622,7 +675,6 @@ async function main(): Promise<void> {
 
     printHeader("✅ ANALYSIS COMPLETE");
     console.log("FIRE calculations completed successfully!");
-
   } catch (error) {
     if (error instanceof Error && error.message.includes("interrupted")) {
       console.log("\n\n⏹️ Analysis interrupted by user");
@@ -635,8 +687,8 @@ async function main(): Promise<void> {
 
 // Run if called directly
 if (import.meta.url === `file://${process.argv[1]}`) {
-  main().catch(error => {
-    console.error('❌ CLI error:', error);
+  main().catch((error) => {
+    console.error("❌ CLI error:", error);
     process.exit(1);
   });
 }

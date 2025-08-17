@@ -51,7 +51,7 @@ export class FIREPlanner {
   public data: PlannerData;
   private currentLanguage: string;
 
-  constructor(language: string = "en") {
+  constructor(language = "en") {
     this.data = createPlannerData({ language });
     this.currentLanguage = language;
   }
@@ -367,14 +367,14 @@ export class FIREPlanner {
   /**
    * Export current state to configuration
    */
-  exportToConfig(description: string = ""): PlannerConfigV1 {
+  exportToConfig(description = ""): PlannerConfigV1 {
     return plannerDataToConfig(this.data, description);
   }
 
   /**
    * Save configuration to JSON string
    */
-  saveToJSON(description: string = ""): string {
+  saveToJSON(description = ""): string {
     const config = this.exportToConfig(description);
     return JSON.stringify(config, null, 2);
   }
@@ -754,7 +754,7 @@ export class FIREPlanner {
 /**
  * Create a new FIRE planner instance
  */
-export function createPlanner(language: string = "en"): FIREPlanner {
+export function createPlanner(language = "en"): FIREPlanner {
   return new FIREPlanner(language);
 }
 

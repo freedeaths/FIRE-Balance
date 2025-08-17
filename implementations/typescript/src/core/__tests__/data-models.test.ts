@@ -368,7 +368,7 @@ describe("AssetClass", () => {
 
   test("name normalization", () => {
     // Test various input formats
-    const testCases: Array<[string, string, string]> = [
+    const testCases: [string, string, string][] = [
       ["Stocks", "stocks", "Stocks"], // (input, internal, display)
       ["BONDS", "bonds", "BONDS"],
       ["  Cash  ", "cash", "Cash"], // Leading/trailing whitespace (trimmed for display)

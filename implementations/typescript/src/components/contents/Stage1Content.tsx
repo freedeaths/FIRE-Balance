@@ -12,8 +12,8 @@
  * - 进度指示
  */
 
-import React, { useState } from 'react';
-import type { JSX } from 'react';
+import React, { useState } from "react";
+import type { JSX } from "react";
 import {
   Container,
   Card,
@@ -23,20 +23,20 @@ import {
   Stack,
   Group,
   Alert,
-} from '@mantine/core';
+} from "@mantine/core";
 import {
   IconUser,
   IconChartPie,
   IconWallet,
   IconInfoCircle,
-} from '@tabler/icons-react';
-import { usePlannerStore } from '../../stores/plannerStore';
-import { useAppStore } from '../../stores/appStore';
-import { FormField } from '../forms/FormField';
-import { IncomeExpenseForm } from '../forms/IncomeExpenseForm';
-import { getI18n } from '../../core/i18n';
-import type { UserProfile } from '../../types';
-import { DEFAULT_PORTFOLIO } from '../../types';
+} from "@tabler/icons-react";
+import { usePlannerStore } from "../../stores/plannerStore";
+import { useAppStore } from "../../stores/appStore";
+import { FormField } from "../forms/FormField";
+import { IncomeExpenseForm } from "../forms/IncomeExpenseForm";
+import { getI18n } from "../../core/i18n";
+import type { UserProfile } from "../../types";
+import { DEFAULT_PORTFOLIO } from "../../types";
 
 export function Stage1Content() {
   // Store hooks
@@ -44,71 +44,117 @@ export function Stage1Content() {
   const { currentLanguage } = useAppStore();
 
   // Local state
-  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [validationErrors, setValidationErrors] = useState<
+    Record<string, string>
+  >({});
 
   // i18n
   const i18n = getI18n();
-  const t = (key: string, variables?: Record<string, any>) => i18n.t(key, variables);
+  const t = (key: string, variables?: Record<string, any>) =>
+    i18n.t(key, variables);
 
   // Get data from store
-  const userProfile = plannerStore.data.user_profile || {} as UserProfile;
+  const userProfile = plannerStore.data.user_profile || ({} as UserProfile);
   const incomeItems = plannerStore.data.income_items || [];
   const expenseItems = plannerStore.data.expense_items || [];
 
   // Profile字段验证函数
-  const validateProfileField = (field: keyof UserProfile, value: number, currentProfile: UserProfile): string | null => {
+  const validateProfileField = (
+    field: keyof UserProfile,
+    value: number,
+    currentProfile: UserProfile,
+  ): string | null => {
     const currentYear = new Date().getFullYear();
 
     switch (field) {
-      case 'birth_year': {
+      case "birth_year": {
         if (value < 1900) {
-          return t('validation.birth_year_too_old_min', { birthYear: value });
+          return t("validation.birth_year_too_old_min", { birthYear: value });
         }
         if (value > currentYear) {
-          return t('validation.birth_year_future', { birthYear: value, currentYear });
+          return t("validation.birth_year_future", {
+            birthYear: value,
+            currentYear,
+          });
         }
         // 检查年龄范围
         const age = currentYear - value;
         if (age < 18) {
-          return t('validation.birth_year_too_recent', { birthYear: value, currentAge: age });
+          return t("validation.birth_year_too_recent", {
+            birthYear: value,
+            currentAge: age,
+          });
         }
         if (age > 100) {
-          return t('validation.birth_year_too_old_max', { birthYear: value, currentAge: age });
+          return t("validation.birth_year_too_old_max", {
+            birthYear: value,
+            currentAge: age,
+          });
         }
         break;
       }
 
-      case 'expected_fire_age': {
+      case "expected_fire_age": {
         if (currentProfile.birth_year) {
           const currentAge = currentYear - currentProfile.birth_year;
           if (value < currentAge) {
-            return t('validation.fire_age_too_small', { fireAge: value, currentAge });
+            return t("validation.fire_age_too_small", {
+              fireAge: value,
+              currentAge,
+            });
           }
         }
-        if (currentProfile.legal_retirement_age && value >= currentProfile.legal_retirement_age) {
-          return t('validation.fire_age_too_large', { fireAge: value, retirementAge: currentProfile.legal_retirement_age });
+        if (
+          currentProfile.legal_retirement_age &&
+          value >= currentProfile.legal_retirement_age
+        ) {
+          return t("validation.fire_age_too_large", {
+            fireAge: value,
+            retirementAge: currentProfile.legal_retirement_age,
+          });
         }
         break;
       }
 
-      case 'legal_retirement_age': {
-        if (currentProfile.expected_fire_age && value <= currentProfile.expected_fire_age) {
-          return t('validation.legal_retirement_age_too_small', { retirementAge: value, fireAge: currentProfile.expected_fire_age });
+      case "legal_retirement_age": {
+        if (
+          currentProfile.expected_fire_age &&
+          value <= currentProfile.expected_fire_age
+        ) {
+          return t("validation.legal_retirement_age_too_small", {
+            retirementAge: value,
+            fireAge: currentProfile.expected_fire_age,
+          });
         }
-        if (currentProfile.life_expectancy && value >= currentProfile.life_expectancy) {
-          return t('validation.legal_retirement_age_too_large', { retirementAge: value, lifeExpectancy: currentProfile.life_expectancy });
+        if (
+          currentProfile.life_expectancy &&
+          value >= currentProfile.life_expectancy
+        ) {
+          return t("validation.legal_retirement_age_too_large", {
+            retirementAge: value,
+            lifeExpectancy: currentProfile.life_expectancy,
+          });
         }
         break;
       }
 
-      case 'life_expectancy': {
-        if (currentProfile.legal_retirement_age && value <= currentProfile.legal_retirement_age) {
-          return t('validation.life_expectancy_too_small', { lifeExpectancy: value, retirementAge: currentProfile.legal_retirement_age });
+      case "life_expectancy": {
+        if (
+          currentProfile.legal_retirement_age &&
+          value <= currentProfile.legal_retirement_age
+        ) {
+          return t("validation.life_expectancy_too_small", {
+            lifeExpectancy: value,
+            retirementAge: currentProfile.legal_retirement_age,
+          });
         }
         if (currentProfile.birth_year) {
           const currentAge = currentYear - currentProfile.birth_year;
           if (value - currentAge < 10) {
-            return t('validation.life_span_too_short', { lifeExpectancy: value, currentAge });
+            return t("validation.life_span_too_short", {
+              lifeExpectancy: value,
+              currentAge,
+            });
           }
         }
         break;
@@ -131,11 +177,11 @@ export function Stage1Content() {
     // 实时验证当前字段
     const error = validateProfileField(field, value, updatedProfile);
 
-    setValidationErrors(prev => {
+    setValidationErrors((prev) => {
       const result: Record<string, string> = {};
 
       // 添加现有错误，除了当前字段
-      Object.keys(prev).forEach(key => {
+      Object.keys(prev).forEach((key) => {
         if (key !== field) {
           result[key] = prev[key];
         }
@@ -147,10 +193,14 @@ export function Stage1Content() {
       }
 
       // 当更新某个字段时，重新验证相关字段
-      if (field === 'birth_year') {
+      if (field === "birth_year") {
         // 重新验证FIRE年龄和预期寿命
         if (updatedProfile.expected_fire_age) {
-          const fireError = validateProfileField('expected_fire_age', updatedProfile.expected_fire_age, updatedProfile);
+          const fireError = validateProfileField(
+            "expected_fire_age",
+            updatedProfile.expected_fire_age,
+            updatedProfile,
+          );
           if (fireError) {
             result.expected_fire_age = fireError;
           } else {
@@ -158,7 +208,11 @@ export function Stage1Content() {
           }
         }
         if (updatedProfile.life_expectancy) {
-          const lifeError = validateProfileField('life_expectancy', updatedProfile.life_expectancy, updatedProfile);
+          const lifeError = validateProfileField(
+            "life_expectancy",
+            updatedProfile.life_expectancy,
+            updatedProfile,
+          );
           if (lifeError) {
             result.life_expectancy = lifeError;
           } else {
@@ -167,10 +221,14 @@ export function Stage1Content() {
         }
       }
 
-      if (field === 'expected_fire_age') {
+      if (field === "expected_fire_age") {
         // 重新验证法定退休年龄
         if (updatedProfile.legal_retirement_age) {
-          const retirementError = validateProfileField('legal_retirement_age', updatedProfile.legal_retirement_age, updatedProfile);
+          const retirementError = validateProfileField(
+            "legal_retirement_age",
+            updatedProfile.legal_retirement_age,
+            updatedProfile,
+          );
           if (retirementError) {
             result.legal_retirement_age = retirementError;
           } else {
@@ -179,10 +237,14 @@ export function Stage1Content() {
         }
       }
 
-      if (field === 'legal_retirement_age') {
+      if (field === "legal_retirement_age") {
         // 重新验证FIRE年龄和预期寿命
         if (updatedProfile.expected_fire_age) {
-          const fireError = validateProfileField('expected_fire_age', updatedProfile.expected_fire_age, updatedProfile);
+          const fireError = validateProfileField(
+            "expected_fire_age",
+            updatedProfile.expected_fire_age,
+            updatedProfile,
+          );
           if (fireError) {
             result.expected_fire_age = fireError;
           } else {
@@ -190,7 +252,11 @@ export function Stage1Content() {
           }
         }
         if (updatedProfile.life_expectancy) {
-          const lifeError = validateProfileField('life_expectancy', updatedProfile.life_expectancy, updatedProfile);
+          const lifeError = validateProfileField(
+            "life_expectancy",
+            updatedProfile.life_expectancy,
+            updatedProfile,
+          );
           if (lifeError) {
             result.life_expectancy = lifeError;
           } else {
@@ -199,10 +265,14 @@ export function Stage1Content() {
         }
       }
 
-      if (field === 'life_expectancy') {
+      if (field === "life_expectancy") {
         // 重新验证法定退休年龄
         if (updatedProfile.legal_retirement_age) {
-          const retirementError = validateProfileField('legal_retirement_age', updatedProfile.legal_retirement_age, updatedProfile);
+          const retirementError = validateProfileField(
+            "legal_retirement_age",
+            updatedProfile.legal_retirement_age,
+            updatedProfile,
+          );
           if (retirementError) {
             result.legal_retirement_age = retirementError;
           } else {
@@ -223,7 +293,7 @@ export function Stage1Content() {
     <Card shadow="sm" padding="lg" radius="md">
       <Group mb="md">
         <IconUser size={24} color="var(--mantine-primary-color-6)" />
-        <Title order={4}>{t('user_profile')}</Title>
+        <Title order={4}>{t("user_profile")}</Title>
       </Group>
 
       <Grid>
@@ -237,7 +307,7 @@ export function Stage1Content() {
           <FormField
             type="number"
             name="birth_year"
-            label={t('birth_year')}
+            label={t("birth_year")}
             value={userProfile.birth_year}
             placeholder="1990"
             min={1900}
@@ -245,7 +315,7 @@ export function Stage1Content() {
             precision={0}
             error={validationErrors.birth_year}
             data-error={!!validationErrors.birth_year}
-            onChange={(value) => handleFieldChange('birth_year', value)}
+            onChange={(value) => handleFieldChange("birth_year", value)}
           />
         </Grid.Col>
 
@@ -253,7 +323,7 @@ export function Stage1Content() {
           <FormField
             type="number"
             name="expected_fire_age"
-            label={t('expected_fire_age')}
+            label={t("expected_fire_age")}
             value={userProfile.expected_fire_age}
             placeholder="50"
             min={20}
@@ -261,7 +331,7 @@ export function Stage1Content() {
             precision={0}
             error={validationErrors.expected_fire_age}
             data-error={!!validationErrors.expected_fire_age}
-            onChange={(value) => handleFieldChange('expected_fire_age', value)}
+            onChange={(value) => handleFieldChange("expected_fire_age", value)}
           />
         </Grid.Col>
 
@@ -269,7 +339,7 @@ export function Stage1Content() {
           <FormField
             type="number"
             name="legal_retirement_age"
-            label={t('legal_retirement_age')}
+            label={t("legal_retirement_age")}
             value={userProfile.legal_retirement_age}
             placeholder="65"
             min={50}
@@ -277,7 +347,9 @@ export function Stage1Content() {
             precision={0}
             error={validationErrors.legal_retirement_age}
             data-error={!!validationErrors.legal_retirement_age}
-            onChange={(value) => handleFieldChange('legal_retirement_age', value)}
+            onChange={(value) =>
+              handleFieldChange("legal_retirement_age", value)
+            }
           />
         </Grid.Col>
 
@@ -285,7 +357,7 @@ export function Stage1Content() {
           <FormField
             type="number"
             name="life_expectancy"
-            label={t('life_expectancy')}
+            label={t("life_expectancy")}
             value={userProfile.life_expectancy}
             placeholder="80"
             min={60}
@@ -293,7 +365,7 @@ export function Stage1Content() {
             precision={0}
             error={validationErrors.life_expectancy}
             data-error={!!validationErrors.life_expectancy}
-            onChange={(value) => handleFieldChange('life_expectancy', value)}
+            onChange={(value) => handleFieldChange("life_expectancy", value)}
           />
         </Grid.Col>
 
@@ -307,11 +379,11 @@ export function Stage1Content() {
           <FormField
             type="currency"
             name="current_net_worth"
-            label={t('current_net_worth')}
+            label={t("current_net_worth")}
             value={userProfile.current_net_worth}
             placeholder="100000"
             min={0}
-            onChange={(value) => handleFieldChange('current_net_worth', value)}
+            onChange={(value) => handleFieldChange("current_net_worth", value)}
           />
         </Grid.Col>
 
@@ -319,7 +391,7 @@ export function Stage1Content() {
           <FormField
             type="percentage"
             name="inflation_rate"
-            label={t('inflation_rate')}
+            label={t("inflation_rate")}
             value={userProfile.inflation_rate}
             placeholder="0.0"
             min={0}
@@ -327,7 +399,7 @@ export function Stage1Content() {
             precision={2}
             error={validationErrors.inflation_rate}
             data-error={!!validationErrors.inflation_rate}
-            onChange={(value) => handleFieldChange('inflation_rate', value)}
+            onChange={(value) => handleFieldChange("inflation_rate", value)}
           />
         </Grid.Col>
 
@@ -335,7 +407,7 @@ export function Stage1Content() {
           <FormField
             type="number"
             name="safety_buffer_months"
-            label={t('safety_buffer_months')}
+            label={t("safety_buffer_months")}
             value={userProfile.safety_buffer_months}
             placeholder="6"
             min={0}
@@ -343,7 +415,9 @@ export function Stage1Content() {
             precision={0}
             error={validationErrors.safety_buffer_months}
             data-error={!!validationErrors.safety_buffer_months}
-            onChange={(value) => handleFieldChange('safety_buffer_months', value)}
+            onChange={(value) =>
+              handleFieldChange("safety_buffer_months", value)
+            }
           />
         </Grid.Col>
       </Grid>
@@ -356,11 +430,11 @@ export function Stage1Content() {
     // 只在用户有实际输入时使用用户数据，否则使用空结构但保持DEFAULT_PORTFOLIO的结构用于渲染
     const portfolio = userPortfolio || {
       ...DEFAULT_PORTFOLIO,
-      asset_classes: DEFAULT_PORTFOLIO.asset_classes.map(asset => ({
+      asset_classes: DEFAULT_PORTFOLIO.asset_classes.map((asset) => ({
         ...asset,
         allocation_percentage: undefined as unknown as number, // 使用undefined让FormField显示placeholder
         expected_return: undefined as unknown as number, // 使用undefined让FormField显示placeholder
-      }))
+      })),
     };
 
     // 计算加权平均期望收益率
@@ -368,20 +442,28 @@ export function Stage1Content() {
       if (!portfolio.asset_classes.length) return 0;
 
       const totalAllocation = portfolio.asset_classes.reduce(
-        (sum, asset) => sum + (asset.allocation_percentage || 0), 0
+        (sum, asset) => sum + (asset.allocation_percentage || 0),
+        0,
       );
 
       if (totalAllocation === 0) return 0;
 
       const weightedSum = portfolio.asset_classes.reduce(
-        (sum, asset) => sum + (asset.allocation_percentage || 0) * (asset.expected_return || 0), 0
+        (sum, asset) =>
+          sum +
+          (asset.allocation_percentage || 0) * (asset.expected_return || 0),
+        0,
       );
 
       return weightedSum / totalAllocation;
     };
 
     // 更新资产配置
-    const updateAssetClass = (index: number, field: keyof typeof portfolio.asset_classes[0], value: number): void => {
+    const updateAssetClass = (
+      index: number,
+      field: keyof (typeof portfolio.asset_classes)[0],
+      value: number,
+    ): void => {
       const updatedAssets = [...portfolio.asset_classes];
       updatedAssets[index] = { ...updatedAssets[index], [field]: value };
 
@@ -390,13 +472,14 @@ export function Stage1Content() {
           ...portfolio,
           asset_classes: updatedAssets,
           enable_rebalancing: portfolio.enable_rebalancing || false,
-        }
+        },
       });
     };
 
     // 计算总配置百分比
     const totalAllocation = portfolio.asset_classes.reduce(
-      (sum, asset) => sum + (asset.allocation_percentage || 0), 0
+      (sum, asset) => sum + (asset.allocation_percentage || 0),
+      0,
     );
 
     const isValidTotal = Math.abs(totalAllocation - 100) < 0.01;
@@ -405,63 +488,71 @@ export function Stage1Content() {
       <Card shadow="sm" padding="lg" radius="md">
         <Group mb="md">
           <IconChartPie size={24} color="var(--mantine-primary-color-6)" />
-          <Title order={4}>{t('investment_portfolio_settings')}</Title>
+          <Title order={4}>{t("investment_portfolio_settings")}</Title>
         </Group>
 
         <Text size="sm" c="dimmed" mb="md">
-          {t('portfolio_configure_description')}
+          {t("portfolio_configure_description")}
         </Text>
 
         <Alert icon={<IconInfoCircle size={16} />} color="blue" mb="md">
-          <Text size="xs">
-            {t('portfolio_allocation_notice')}
-          </Text>
+          <Text size="xs">{t("portfolio_allocation_notice")}</Text>
         </Alert>
 
         {/* 简单的表格布局 - 桌面端一行两个，移动端保持三列 */}
         <Grid>
           {/* 表头 */}
           <Grid.Col span={12}>
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'auto 1fr 1fr',
-              gap: '16px',
-              marginBottom: '8px',
-              fontWeight: 600,
-              fontSize: '14px',
-              color: 'var(--mantine-color-dimmed)',
-              paddingLeft: '12px'
-            }}>
-              <div style={{
-                textAlign: 'right',
-                paddingRight: '8px',
-                minWidth: '80px'
-              }}>{t('asset_class')}</div>
-              <div style={{ textAlign: 'center' }}>{t('allocation_percentage')}</div>
-              <div style={{ textAlign: 'center' }}>{t('expected_return')}</div>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "auto 1fr 1fr",
+                gap: "16px",
+                marginBottom: "8px",
+                fontWeight: 600,
+                fontSize: "14px",
+                color: "var(--mantine-color-dimmed)",
+                paddingLeft: "12px",
+              }}
+            >
+              <div
+                style={{
+                  textAlign: "right",
+                  paddingRight: "8px",
+                  minWidth: "80px",
+                }}
+              >
+                {t("asset_class")}
+              </div>
+              <div style={{ textAlign: "center" }}>
+                {t("allocation_percentage")}
+              </div>
+              <div style={{ textAlign: "center" }}>{t("expected_return")}</div>
             </div>
           </Grid.Col>
 
           {/* 资产配置行 */}
           {portfolio.asset_classes.map((asset, index) => (
             <Grid.Col key={asset.name} span={12}>
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'auto 1fr 1fr',
-                gap: '16px',
-                alignItems: 'center',
-                padding: '12px',
-                backgroundColor: '#f8f9fa',
-                borderRadius: '6px'
-              }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "auto 1fr 1fr",
+                  gap: "16px",
+                  alignItems: "center",
+                  padding: "12px",
+                  backgroundColor: "#f8f9fa",
+                  borderRadius: "6px",
+                }}
+              >
                 <Text
                   size="sm"
                   fw={500}
                   c="dimmed"
                   style={{
-                    minWidth: '80px',
-                    textAlign: 'right',
-                    paddingRight: '8px'
+                    minWidth: "80px",
+                    textAlign: "right",
+                    paddingRight: "8px",
                   }}
                 >
                   {t(asset.name.toLowerCase())}
@@ -471,8 +562,14 @@ export function Stage1Content() {
                   type="percentage"
                   name={`allocation_${index}`}
                   value={asset.allocation_percentage}
-                  placeholder={DEFAULT_PORTFOLIO.asset_classes.find(defaultAsset => defaultAsset.name === asset.name)?.allocation_percentage?.toString() || "0.00"}
-                  onChange={(value) => updateAssetClass(index, 'allocation_percentage', value)}
+                  placeholder={
+                    DEFAULT_PORTFOLIO.asset_classes
+                      .find((defaultAsset) => defaultAsset.name === asset.name)
+                      ?.allocation_percentage?.toString() || "0.00"
+                  }
+                  onChange={(value) =>
+                    updateAssetClass(index, "allocation_percentage", value)
+                  }
                   label=""
                 />
 
@@ -480,8 +577,14 @@ export function Stage1Content() {
                   type="percentage"
                   name={`return_${index}`}
                   value={asset.expected_return}
-                  placeholder={DEFAULT_PORTFOLIO.asset_classes.find(defaultAsset => defaultAsset.name === asset.name)?.expected_return?.toString() || "0.00"}
-                  onChange={(value) => updateAssetClass(index, 'expected_return', value)}
+                  placeholder={
+                    DEFAULT_PORTFOLIO.asset_classes
+                      .find((defaultAsset) => defaultAsset.name === asset.name)
+                      ?.expected_return?.toString() || "0.00"
+                  }
+                  onChange={(value) =>
+                    updateAssetClass(index, "expected_return", value)
+                  }
                   label=""
                 />
               </div>
@@ -490,33 +593,39 @@ export function Stage1Content() {
         </Grid>
 
         {/* 总计和验证 - 一行平衡布局 */}
-        <div style={{
-          marginTop: '16px',
-          padding: '12px',
-          backgroundColor: isValidTotal ? '#e6f7e6' : '#ffe6e6',
-          borderRadius: '6px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '12px'
-        }}>
+        <div
+          style={{
+            marginTop: "16px",
+            padding: "12px",
+            backgroundColor: isValidTotal ? "#e6f7e6" : "#ffe6e6",
+            borderRadius: "6px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "12px",
+          }}
+        >
           {/* 左侧：验证状态 */}
           <div>
             {isValidTotal ? (
               <Text c="green" size="sm" fw={600}>
-                ✅ {t('allocation_total', { total: totalAllocation.toFixed(1) })}
+                ✅{" "}
+                {t("allocation_total", { total: totalAllocation.toFixed(1) })}
               </Text>
             ) : (
               <Text c="red" size="sm" fw={600}>
-                ❌ {t('allocation_total', { total: totalAllocation.toFixed(1) })}
+                ❌{" "}
+                {t("allocation_total", { total: totalAllocation.toFixed(1) })}
               </Text>
             )}
           </div>
 
           {/* 右侧：加权收益率 */}
           <Group gap="sm">
-            <Text size="sm" c="dimmed">{t('portfolio_expected_return')}:</Text>
+            <Text size="sm" c="dimmed">
+              {t("portfolio_expected_return")}:
+            </Text>
             <Text size="lg" fw={700}>
               {calculateWeightedReturn().toFixed(2)}%
             </Text>
@@ -530,7 +639,7 @@ export function Stage1Content() {
     <Card shadow="sm" padding="lg" radius="md">
       <Group mb="md">
         <IconWallet size={24} color="var(--mantine-primary-color-6)" />
-        <Title order={4}>{t('income_expense_items')}</Title>
+        <Title order={4}>{t("income_expense_items")}</Title>
       </Group>
 
       <Stack gap="lg">
@@ -538,7 +647,7 @@ export function Stage1Content() {
         <div>
           <IncomeExpenseForm
             type="income"
-            title={t('income_items_header')}
+            title={t("income_items_header")}
             showTemplates
           />
           {validationErrors.income_items && (
@@ -549,13 +658,19 @@ export function Stage1Content() {
         </div>
 
         {/* 分割线 */}
-        <div style={{ height: '1px', backgroundColor: 'var(--mantine-color-gray-3)', margin: '16px 0' }} />
+        <div
+          style={{
+            height: "1px",
+            backgroundColor: "var(--mantine-color-gray-3)",
+            margin: "16px 0",
+          }}
+        />
 
         {/* 支出项目 */}
         <div>
           <IncomeExpenseForm
             type="expense"
-            title={t('expense_items_header')}
+            title={t("expense_items_header")}
             showTemplates
           />
           {validationErrors.expense_items && (

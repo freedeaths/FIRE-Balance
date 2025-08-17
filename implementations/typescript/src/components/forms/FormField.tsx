@@ -8,7 +8,7 @@
  * - 响应式设计适配
  */
 
-import React from 'react';
+import React from "react";
 import {
   TextInput,
   NumberInput,
@@ -21,8 +21,8 @@ import {
   InputLabel,
   InputError,
   InputDescription,
-} from '@mantine/core';
-import type { ReactNode } from 'react';
+} from "@mantine/core";
+import type { ReactNode } from "react";
 
 // =============================================================================
 // Types
@@ -30,7 +30,15 @@ import type { ReactNode } from 'react';
 
 export interface FormFieldProps {
   /** 字段类型 */
-  type: 'text' | 'number' | 'select' | 'checkbox' | 'textarea' | 'date' | 'currency' | 'percentage';
+  type:
+    | "text"
+    | "number"
+    | "select"
+    | "checkbox"
+    | "textarea"
+    | "date"
+    | "currency"
+    | "percentage";
   /** 字段标识符 */
   name: string;
   /** 字段标签 */
@@ -48,7 +56,7 @@ export interface FormFieldProps {
   /** 是否禁用 */
   disabled?: boolean;
   /** Select 类型的选项 */
-  options?: Array<{ value: string; label: string }>;
+  options?: { value: string; label: string }[];
   /** 最小值（数字类型） */
   min?: number;
   /** 最大值（数字类型） */
@@ -97,7 +105,6 @@ export function FormField({
   onBlur,
   onFocus,
 }: FormFieldProps) {
-
   // =============================================================================
   // 渲染不同类型的字段
   // =============================================================================
@@ -105,7 +112,7 @@ export function FormField({
   const renderField = () => {
     const commonProps = {
       name,
-      value: value || '',
+      value: value || "",
       placeholder,
       disabled,
       readOnly: readonly,
@@ -116,7 +123,7 @@ export function FormField({
     };
 
     switch (type) {
-      case 'text':
+      case "text":
         return (
           <TextInput
             {...commonProps}
@@ -124,24 +131,27 @@ export function FormField({
           />
         );
 
-      case 'number':
+      case "number":
         return (
           <TextInput
             {...commonProps}
-            value={value !== undefined ? value.toString() : ''}
+            value={value !== undefined ? value.toString() : ""}
             type="number"
             inputMode="numeric" // 移动端优化
             onChange={(event) => {
               const stringValue = event.target.value;
 
               // 允许空值和正在输入的状态
-              if (stringValue === '') {
+              if (stringValue === "") {
                 onChange?.(undefined);
                 return;
               }
 
               // 对于整数字段，只允许整数
-              const numericValue = precision === 0 ? parseInt(stringValue) : parseFloat(stringValue);
+              const numericValue =
+                precision === 0
+                  ? parseInt(stringValue)
+                  : parseFloat(stringValue);
 
               if (!isNaN(numericValue)) {
                 onChange?.(numericValue);
@@ -150,19 +160,25 @@ export function FormField({
           />
         );
 
-      case 'currency':
+      case "currency":
         return (
           <TextInput
             {...commonProps}
-            value={value !== undefined ? value.toString() : ''}
+            value={value !== undefined ? value.toString() : ""}
             type="number"
             inputMode="decimal" // 移动端优化，支持小数
-            leftSection={currencySymbol ? <span style={{ color: 'var(--mantine-color-dimmed)' }}>{currencySymbol}</span> : undefined}
+            leftSection={
+              currencySymbol ? (
+                <span style={{ color: "var(--mantine-color-dimmed)" }}>
+                  {currencySymbol}
+                </span>
+              ) : undefined
+            }
             onChange={(event) => {
               const stringValue = event.target.value;
 
               // 允许空值和正在输入的状态
-              if (stringValue === '') {
+              if (stringValue === "") {
                 onChange?.(undefined);
                 return;
               }
@@ -176,20 +192,26 @@ export function FormField({
           />
         );
 
-      case 'percentage':
+      case "percentage":
         return (
           <TextInput
             {...commonProps}
-            value={value !== undefined ? value.toString() : ''}
+            value={value !== undefined ? value.toString() : ""}
             type="number"
-            step={precision !== undefined && precision > 0 ? Math.pow(10, -precision) : 'any'}
+            step={
+              precision !== undefined && precision > 0
+                ? Math.pow(10, -precision)
+                : "any"
+            }
             inputMode="decimal" // 移动端优化，支持小数
-            rightSection={<span style={{ color: 'var(--mantine-color-dimmed)' }}>%</span>}
+            rightSection={
+              <span style={{ color: "var(--mantine-color-dimmed)" }}>%</span>
+            }
             onChange={(event) => {
               const stringValue = event.target.value;
 
               // 允许空值 - 让用户可以清空输入框
-              if (stringValue === '') {
+              if (stringValue === "") {
                 onChange?.(undefined);
                 return;
               }
@@ -206,7 +228,7 @@ export function FormField({
           />
         );
 
-      case 'select':
+      case "select":
         return (
           <Select
             {...commonProps}
@@ -215,7 +237,7 @@ export function FormField({
           />
         );
 
-      case 'checkbox':
+      case "checkbox":
         return (
           <Checkbox
             name={name}
@@ -225,7 +247,7 @@ export function FormField({
           />
         );
 
-      case 'textarea':
+      case "textarea":
         return (
           <Textarea
             {...commonProps}
@@ -234,12 +256,12 @@ export function FormField({
           />
         );
 
-      case 'date':
+      case "date":
         return (
           <TextInput
             {...commonProps}
             type="date"
-            value={value ? new Date(value).toISOString().split('T')[0] : ''}
+            value={value ? new Date(value).toISOString().split("T")[0] : ""}
             onChange={(event) => onChange?.(event.target.value)}
           />
         );
@@ -259,7 +281,7 @@ export function FormField({
   // =============================================================================
 
   // Checkbox 类型需要特殊布局
-  if (type === 'checkbox') {
+  if (type === "checkbox") {
     return (
       <Stack gap="xs">
         <Group gap="sm">
@@ -267,18 +289,18 @@ export function FormField({
           {label && (
             <Text size="sm" fw={required ? 500 : 400}>
               {label}
-              {required && <Text component="span" c="red" ml={4}>*</Text>}
+              {required && (
+                <Text component="span" c="red" ml={4}>
+                  *
+                </Text>
+              )}
             </Text>
           )}
         </Group>
 
-        {description && (
-          <InputDescription>{description}</InputDescription>
-        )}
+        {description && <InputDescription>{description}</InputDescription>}
 
-        {error && (
-          <InputError>{error}</InputError>
-        )}
+        {error && <InputError>{error}</InputError>}
       </Stack>
     );
   }
@@ -294,13 +316,9 @@ export function FormField({
 
       {renderField()}
 
-      {description && (
-        <InputDescription>{description}</InputDescription>
-      )}
+      {description && <InputDescription>{description}</InputDescription>}
 
-      {error && (
-        <InputError>{error}</InputError>
-      )}
+      {error && <InputError>{error}</InputError>}
     </Stack>
   );
 }

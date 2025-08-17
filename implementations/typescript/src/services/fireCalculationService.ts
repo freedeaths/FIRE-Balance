@@ -8,14 +8,14 @@
  * - 与plannerStore交互
  */
 
-import { Decimal } from 'decimal.js';
-import { FIREPlanner } from '../core/planner';
-import { usePlannerStore } from '../stores/plannerStore';
+import { Decimal } from "decimal.js";
+import { FIREPlanner } from "../core/planner";
+import { usePlannerStore } from "../stores/plannerStore";
 import type {
   PlannerResults as CorePlannerResults,
-  PlannerData as CorePlannerData
-} from '../core/planner_models';
-import type { PlannerResults as UIPlannerResults } from '../types';
+  PlannerData as CorePlannerData,
+} from "../core/planner_models";
+import type { PlannerResults as UIPlannerResults } from "../types";
 
 // =============================================================================
 // 类型转换函数
@@ -24,37 +24,47 @@ import type { PlannerResults as UIPlannerResults } from '../types';
 /**
  * 将 Core PlannerResults (Decimal) 转换为 UI PlannerResults (number)
  */
-function convertCoreResultsToUI(coreResults: CorePlannerResults): UIPlannerResults {
+function convertCoreResultsToUI(
+  coreResults: CorePlannerResults,
+): UIPlannerResults {
   return {
     fire_calculation: {
       is_fire_achievable: coreResults.fire_calculation.is_fire_achievable,
       fire_net_worth: coreResults.fire_calculation.fire_net_worth.toNumber(),
-      min_net_worth_after_fire: coreResults.fire_calculation.min_net_worth_after_fire.toNumber(),
+      min_net_worth_after_fire:
+        coreResults.fire_calculation.min_net_worth_after_fire.toNumber(),
       final_net_worth: coreResults.fire_calculation.final_net_worth.toNumber(),
-      safety_buffer_months: coreResults.fire_calculation.safety_buffer_months.toNumber(),
-      min_safety_buffer_ratio: coreResults.fire_calculation.min_safety_buffer_ratio.toNumber(),
+      safety_buffer_months:
+        coreResults.fire_calculation.safety_buffer_months.toNumber(),
+      min_safety_buffer_ratio:
+        coreResults.fire_calculation.min_safety_buffer_ratio.toNumber(),
       retirement_years: coreResults.fire_calculation.retirement_years,
       total_years_simulated: coreResults.fire_calculation.total_years_simulated,
-      traditional_fire_number: coreResults.fire_calculation.traditional_fire_number.toNumber(),
-      traditional_fire_achieved: coreResults.fire_calculation.traditional_fire_achieved,
-      fire_success_probability: coreResults.fire_calculation.fire_success_probability?.toNumber() || 0,
-      yearly_results: coreResults.fire_calculation.yearly_results.map(state => ({
-        age: state.age,
-        year: state.year,
-        total_income: state.total_income.toNumber(),
-        total_expense: state.total_expense.toNumber(),
-        investment_return: state.investment_return.toNumber(),
-        net_cash_flow: state.net_cash_flow.toNumber(),
-        portfolio_value: state.portfolio_value.toNumber(),
-        net_worth: state.net_worth.toNumber(),
-        is_sustainable: state.is_sustainable,
-        fire_number: state.fire_number.toNumber(),
-        fire_progress: state.fire_progress.toNumber(),
-      }))
+      traditional_fire_number:
+        coreResults.fire_calculation.traditional_fire_number.toNumber(),
+      traditional_fire_achieved:
+        coreResults.fire_calculation.traditional_fire_achieved,
+      fire_success_probability:
+        coreResults.fire_calculation.fire_success_probability?.toNumber() || 0,
+      yearly_results: coreResults.fire_calculation.yearly_results.map(
+        (state) => ({
+          age: state.age,
+          year: state.year,
+          total_income: state.total_income.toNumber(),
+          total_expense: state.total_expense.toNumber(),
+          investment_return: state.investment_return.toNumber(),
+          net_cash_flow: state.net_cash_flow.toNumber(),
+          portfolio_value: state.portfolio_value.toNumber(),
+          net_worth: state.net_worth.toNumber(),
+          is_sustainable: state.is_sustainable,
+          fire_number: state.fire_number.toNumber(),
+          fire_progress: state.fire_progress.toNumber(),
+        }),
+      ),
     },
     monte_carlo_success_rate: coreResults.monte_carlo_success_rate?.toNumber(),
     recommendations: coreResults.recommendations,
-    calculation_timestamp: coreResults.calculation_timestamp.toISOString()
+    calculation_timestamp: coreResults.calculation_timestamp.toISOString(),
   };
 }
 
@@ -62,37 +72,33 @@ function convertCoreResultsToUI(coreResults: CorePlannerResults): UIPlannerResul
 // FIRE计算服务
 // =============================================================================
 
-export interface FIRECalculationProgressCallback {
-  (progress: number): void;
-}
+export type FIRECalculationProgressCallback = (progress: number) => void;
 
 export class FIRECalculationService {
-
   /**
    * 运行Stage3的FIRE计算（包含Monte Carlo）
    */
   static async runCalculationsForStage3(
-    progressCallback?: FIRECalculationProgressCallback
+    progressCallback?: FIRECalculationProgressCallback,
   ): Promise<UIPlannerResults> {
-
     const plannerData = usePlannerStore.getState().data;
 
     if (!plannerData.user_profile) {
-      throw new Error('User profile is missing');
+      throw new Error("User profile is missing");
     }
 
     // 基本数据验证
     if (!plannerData.user_profile) {
-      throw new Error('User profile is missing');
+      throw new Error("User profile is missing");
     }
     if (!plannerData.simulation_settings) {
-      throw new Error('Simulation settings are missing');
+      throw new Error("Simulation settings are missing");
     }
     if (!plannerData.income_items || plannerData.income_items.length === 0) {
-      throw new Error('Income items are missing');
+      throw new Error("Income items are missing");
     }
     if (!plannerData.expense_items || plannerData.expense_items.length === 0) {
-      throw new Error('Expense items are missing');
+      throw new Error("Expense items are missing");
     }
 
     // 创建 FIREPlanner 实例
@@ -103,24 +109,36 @@ export class FIRECalculationService {
     let convertedData: CorePlannerData;
 
     try {
-
       // 转换 simulation_settings
       const convertedSimulationSettings = {
         ...plannerData.simulation_settings,
-        num_simulations: plannerData.simulation_settings.num_simulations ?? 1000,
-        confidence_level: new Decimal(plannerData.simulation_settings.confidence_level ?? 0.95),
-        income_base_volatility: new Decimal(plannerData.simulation_settings.income_base_volatility ?? 0.1),
-        income_minimum_factor: new Decimal(plannerData.simulation_settings.income_minimum_factor ?? 0.5),
-        expense_base_volatility: new Decimal(plannerData.simulation_settings.expense_base_volatility ?? 0.05),
-        expense_minimum_factor: new Decimal(plannerData.simulation_settings.expense_minimum_factor ?? 0.8)
+        num_simulations:
+          plannerData.simulation_settings.num_simulations ?? 1000,
+        confidence_level: new Decimal(
+          plannerData.simulation_settings.confidence_level ?? 0.95,
+        ),
+        income_base_volatility: new Decimal(
+          plannerData.simulation_settings.income_base_volatility ?? 0.1,
+        ),
+        income_minimum_factor: new Decimal(
+          plannerData.simulation_settings.income_minimum_factor ?? 0.5,
+        ),
+        expense_base_volatility: new Decimal(
+          plannerData.simulation_settings.expense_base_volatility ?? 0.05,
+        ),
+        expense_minimum_factor: new Decimal(
+          plannerData.simulation_settings.expense_minimum_factor ?? 0.8,
+        ),
       };
 
       // 转换 income_items
       const convertedIncomeItems = plannerData.income_items.map((item) => {
         return {
           ...item,
-          after_tax_amount_per_period: new Decimal(item.after_tax_amount_per_period ?? 0),
-          annual_growth_rate: new Decimal(item.annual_growth_rate ?? 0)
+          after_tax_amount_per_period: new Decimal(
+            item.after_tax_amount_per_period ?? 0,
+          ),
+          annual_growth_rate: new Decimal(item.annual_growth_rate ?? 0),
         };
       });
 
@@ -128,8 +146,10 @@ export class FIRECalculationService {
       const convertedExpenseItems = plannerData.expense_items.map((item) => {
         return {
           ...item,
-          after_tax_amount_per_period: new Decimal(item.after_tax_amount_per_period ?? 0),
-          annual_growth_rate: new Decimal(item.annual_growth_rate ?? 0)
+          after_tax_amount_per_period: new Decimal(
+            item.after_tax_amount_per_period ?? 0,
+          ),
+          annual_growth_rate: new Decimal(item.annual_growth_rate ?? 0),
         };
       });
 
@@ -137,29 +157,38 @@ export class FIRECalculationService {
       const convertedOverrides = plannerData.overrides.map((override) => {
         return {
           ...override,
-          value: new Decimal(override.value ?? 0)
+          value: new Decimal(override.value ?? 0),
         };
       });
 
       // 转换 user_profile
-      const convertedAssetClasses = plannerData.user_profile.portfolio.asset_classes.map((asset) => {
-        return {
-          ...asset,
-          allocation_percentage: new Decimal(asset.allocation_percentage ?? 0),
-          expected_return: new Decimal(asset.expected_return ?? 0),
-          volatility: new Decimal(asset.volatility ?? 0)
-        };
-      });
+      const convertedAssetClasses =
+        plannerData.user_profile.portfolio.asset_classes.map((asset) => {
+          return {
+            ...asset,
+            allocation_percentage: new Decimal(
+              asset.allocation_percentage ?? 0,
+            ),
+            expected_return: new Decimal(asset.expected_return ?? 0),
+            volatility: new Decimal(asset.volatility ?? 0),
+          };
+        });
 
       const convertedUserProfile = {
         ...plannerData.user_profile,
-        current_net_worth: new Decimal(plannerData.user_profile.current_net_worth ?? 0),
-        inflation_rate: new Decimal(plannerData.user_profile.inflation_rate ?? 0.03),
-        safety_buffer_months: new Decimal(plannerData.user_profile.safety_buffer_months ?? 6),
+        current_net_worth: new Decimal(
+          plannerData.user_profile.current_net_worth ?? 0,
+        ),
+        inflation_rate: new Decimal(
+          plannerData.user_profile.inflation_rate ?? 0.03,
+        ),
+        safety_buffer_months: new Decimal(
+          plannerData.user_profile.safety_buffer_months ?? 6,
+        ),
         portfolio: {
           ...plannerData.user_profile.portfolio,
-          asset_classes: convertedAssetClasses
-        }
+          asset_classes: convertedAssetClasses,
+        },
       };
 
       // 转换 projection_data (如果存在)
@@ -169,7 +198,7 @@ export class FIRECalculationService {
           return {
             ...row,
             total_income: new Decimal(row.total_income ?? 0),
-            total_expense: new Decimal(row.total_expense ?? 0)
+            total_expense: new Decimal(row.total_expense ?? 0),
           };
         });
       }
@@ -185,13 +214,13 @@ export class FIRECalculationService {
         expense_items: convertedExpenseItems,
         overrides: convertedOverrides,
         user_profile: convertedUserProfile,
-        projection_df: convertedProjectionData
+        projection_df: convertedProjectionData,
       };
-
-
     } catch (error) {
-      console.error('❌ 数据转换失败:', error);
-      throw new Error(`数据转换失败: ${error instanceof Error ? error.message : String(error)}`);
+      console.error("❌ 数据转换失败:", error);
+      throw new Error(
+        `数据转换失败: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
 
     // 设置转换后的数据

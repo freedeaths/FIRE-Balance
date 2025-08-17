@@ -10,9 +10,9 @@
  */
 
 // Import translations using @shared alias
-import enTranslations from '@shared/i18n/en.json';
-import zhTranslations from '@shared/i18n/zh-CN.json';
-import jaTranslations from '@shared/i18n/ja.json';
+import enTranslations from "@shared/i18n/en.json";
+import zhTranslations from "@shared/i18n/zh-CN.json";
+import jaTranslations from "@shared/i18n/ja.json";
 
 // =============================================================================
 // Types
@@ -26,13 +26,13 @@ type TranslationData = Record<string, any>;
 /**
  * Language codes supported by the application
  */
-type LanguageCode = 'en' | 'zh-CN' | 'ja';
+type LanguageCode = "en" | "zh-CN" | "ja";
 
 // Translation data mapping
 const TRANSLATIONS: Record<LanguageCode, TranslationData> = {
-  'en': enTranslations,
-  'zh-CN': zhTranslations,
-  'ja': jaTranslations,
+  en: enTranslations,
+  "zh-CN": zhTranslations,
+  ja: jaTranslations,
 };
 
 // =============================================================================
@@ -50,7 +50,7 @@ export class I18nManager {
   /**
    * Initialize i18n manager with specified language
    */
-  constructor(language: LanguageCode = 'en') {
+  constructor(language: LanguageCode = "en") {
     this.language = language;
     this.translations = this._loadTranslations();
   }
@@ -62,18 +62,20 @@ export class I18nManager {
     // Use pre-imported translations (browser-compatible)
     const translations = TRANSLATIONS[this.language];
 
-    if (translations && typeof translations === 'object') {
+    if (translations && typeof translations === "object") {
       return translations;
     }
 
     // Fallback to English
-    const fallback = TRANSLATIONS['en'];
-    if (fallback && typeof fallback === 'object') {
-      console.warn(`Translations not found for ${this.language}, falling back to English`);
+    const fallback = TRANSLATIONS["en"];
+    if (fallback && typeof fallback === "object") {
+      console.warn(
+        `Translations not found for ${this.language}, falling back to English`,
+      );
       return fallback;
     }
 
-    console.error('No translations available');
+    console.error("No translations available");
     return {};
   }
 
@@ -90,11 +92,11 @@ export class I18nManager {
    */
   t(key: string, kwargs: Record<string, any> = {}): string {
     // Navigate nested dictionary using dot notation
-    const keys = key.split('.');
+    const keys = key.split(".");
     let value: any = this.translations;
 
     for (const k of keys) {
-      if (typeof value === 'object' && value !== null && k in value) {
+      if (typeof value === "object" && value !== null && k in value) {
         value = value[k];
       } else {
         // Return key if translation not found
@@ -103,7 +105,7 @@ export class I18nManager {
     }
 
     // If final value is not a string, return key
-    if (typeof value !== 'string') {
+    if (typeof value !== "string") {
       return key;
     }
 
@@ -114,7 +116,10 @@ export class I18nManager {
         let result = value;
         for (const [variable, replacement] of Object.entries(kwargs)) {
           const placeholder = `{${variable}}`;
-          result = result.replace(new RegExp(placeholder, 'g'), String(replacement));
+          result = result.replace(
+            new RegExp(placeholder, "g"),
+            String(replacement),
+          );
         }
         return result;
       } catch (error) {
@@ -130,7 +135,7 @@ export class I18nManager {
    * Get list of supported language codes
    */
   getSupportedLanguages(): LanguageCode[] {
-    return ['en', 'zh-CN', 'ja'];
+    return ["en", "zh-CN", "ja"];
   }
 
   /**
@@ -152,18 +157,18 @@ export class I18nManager {
    * Check if a translation key exists
    */
   hasTranslation(key: string): boolean {
-    const keys = key.split('.');
+    const keys = key.split(".");
     let value: any = this.translations;
 
     for (const k of keys) {
-      if (typeof value === 'object' && value !== null && k in value) {
+      if (typeof value === "object" && value !== null && k in value) {
         value = value[k];
       } else {
         return false;
       }
     }
 
-    return typeof value === 'string';
+    return typeof value === "string";
   }
 
   /**
@@ -172,13 +177,13 @@ export class I18nManager {
   getAvailableKeys(): string[] {
     const keys: string[] = [];
 
-    const collectKeys = (obj: any, prefix: string = '') => {
+    const collectKeys = (obj: any, prefix = "") => {
       for (const [key, value] of Object.entries(obj)) {
         const fullKey = prefix ? `${prefix}.${key}` : key;
 
-        if (typeof value === 'object' && value !== null) {
+        if (typeof value === "object" && value !== null) {
           collectKeys(value, fullKey);
-        } else if (typeof value === 'string') {
+        } else if (typeof value === "string") {
           keys.push(fullKey);
         }
       }
@@ -242,7 +247,7 @@ export function getSupportedLanguages(): LanguageCode[] {
 /**
  * Create a new I18nManager instance (for testing or isolated usage)
  */
-export function createI18nManager(language: LanguageCode = 'en'): I18nManager {
+export function createI18nManager(language: LanguageCode = "en"): I18nManager {
   return new I18nManager(language);
 }
 
@@ -259,7 +264,7 @@ export class BrowserI18nManager {
   private translations: TranslationData;
   private baseUrl: string;
 
-  constructor(language: LanguageCode = 'en', baseUrl: string = '/i18n') {
+  constructor(language: LanguageCode = "en", baseUrl = "/i18n") {
     this.language = language;
     this.baseUrl = baseUrl;
     this.translations = {};
@@ -279,7 +284,10 @@ export class BrowserI18nManager {
         return;
       }
     } catch (error) {
-      console.warn(`Failed to load translations from ${translationUrl}:`, error);
+      console.warn(
+        `Failed to load translations from ${translationUrl}:`,
+        error,
+      );
     }
 
     // Fallback to English
@@ -290,7 +298,10 @@ export class BrowserI18nManager {
         return;
       }
     } catch (error) {
-      console.warn(`Failed to load fallback translations from ${fallbackUrl}:`, error);
+      console.warn(
+        `Failed to load fallback translations from ${fallbackUrl}:`,
+        error,
+      );
     }
 
     // Empty translations as final fallback
@@ -301,18 +312,18 @@ export class BrowserI18nManager {
    * Translate method (same as I18nManager)
    */
   t(key: string, kwargs: Record<string, any> = {}): string {
-    const keys = key.split('.');
+    const keys = key.split(".");
     let value: any = this.translations;
 
     for (const k of keys) {
-      if (typeof value === 'object' && value !== null && k in value) {
+      if (typeof value === "object" && value !== null && k in value) {
         value = value[k];
       } else {
         return key;
       }
     }
 
-    if (typeof value !== 'string') {
+    if (typeof value !== "string") {
       return key;
     }
 
@@ -321,7 +332,10 @@ export class BrowserI18nManager {
         let result = value;
         for (const [variable, replacement] of Object.entries(kwargs)) {
           const placeholder = `{${variable}}`;
-          result = result.replace(new RegExp(placeholder, 'g'), String(replacement));
+          result = result.replace(
+            new RegExp(placeholder, "g"),
+            String(replacement),
+          );
         }
         return result;
       } catch (error) {
@@ -345,6 +359,6 @@ export class BrowserI18nManager {
   }
 
   getSupportedLanguages(): LanguageCode[] {
-    return ['en', 'zh-CN', 'ja'];
+    return ["en", "zh-CN", "ja"];
   }
 }

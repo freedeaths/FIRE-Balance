@@ -11,31 +11,25 @@
  * 不包含复杂的业务逻辑！
  */
 
-import { useState, useMemo, useCallback } from 'react';
-import {
-  Group,
-  Button,
-  Badge,
-  Text,
-  Stack,
-  Box,
-  Alert,
-} from '@mantine/core';
+import { useState, useMemo, useCallback } from "react";
+import { Group, Button, Badge, Text, Stack, Box, Alert } from "@mantine/core";
 import {
   IconArrowRight,
   IconArrowLeft,
   IconAlertTriangle,
-} from '@tabler/icons-react';
-import { usePlannerStore } from '../../stores/plannerStore';
-import { getI18n } from '../../core/i18n';
-import { PlannerStage } from '../../types';
-import { ConfirmDialog } from './ConfirmDialog';
+} from "@tabler/icons-react";
+import { usePlannerStore } from "../../stores/plannerStore";
+import { getI18n } from "../../core/i18n";
+import { PlannerStage } from "../../types";
+import { ConfirmDialog } from "./ConfirmDialog";
 
 interface StageNavigationProps {
   currentStage: PlannerStage;
 }
 
-export function StageNavigation({ currentStage }: StageNavigationProps): React.JSX.Element {
+export function StageNavigation({
+  currentStage,
+}: StageNavigationProps): React.JSX.Element {
   // Store hooks
   const plannerStore = usePlannerStore();
   const isTransitioning = plannerStore.isTransitioning;
@@ -48,7 +42,11 @@ export function StageNavigation({ currentStage }: StageNavigationProps): React.J
 
   // i18n
   const i18n = getI18n();
-  const t = useCallback((key: string, variables?: Record<string, unknown>): string => i18n.t(key, variables), [i18n]);
+  const t = useCallback(
+    (key: string, variables?: Record<string, unknown>): string =>
+      i18n.t(key, variables),
+    [i18n],
+  );
 
   // 验证第一阶段数据完整性
   const validateStage1 = useMemo(() => {
@@ -57,36 +55,46 @@ export function StageNavigation({ currentStage }: StageNavigationProps): React.J
 
     // 检查用户档案
     if (!data.user_profile) {
-      errors.push(t('validation.user_profile_missing'));
+      errors.push(t("validation.user_profile_missing"));
     } else {
       const profile = data.user_profile;
-      if (!profile.birth_year) errors.push(t('validation.birth_year_required'));
-      if (!profile.expected_fire_age) errors.push(t('validation.fire_age_required'));
-      if (!profile.legal_retirement_age) errors.push(t('validation.retirement_age_required'));
-      if (!profile.life_expectancy) errors.push(t('validation.life_expectancy_required'));
-      if (profile.current_net_worth === undefined) errors.push(t('validation.net_worth_required'));
-      if (profile.inflation_rate === undefined || profile.inflation_rate === null) errors.push(t('validation.inflation_rate_required'));
-      if (!profile.safety_buffer_months) errors.push(t('validation.safety_buffer_required'));
+      if (!profile.birth_year) errors.push(t("validation.birth_year_required"));
+      if (!profile.expected_fire_age)
+        errors.push(t("validation.fire_age_required"));
+      if (!profile.legal_retirement_age)
+        errors.push(t("validation.retirement_age_required"));
+      if (!profile.life_expectancy)
+        errors.push(t("validation.life_expectancy_required"));
+      if (profile.current_net_worth === undefined)
+        errors.push(t("validation.net_worth_required"));
+      if (
+        profile.inflation_rate === undefined ||
+        profile.inflation_rate === null
+      )
+        errors.push(t("validation.inflation_rate_required"));
+      if (!profile.safety_buffer_months)
+        errors.push(t("validation.safety_buffer_required"));
     }
 
     // 检查投资组合配置
     if (!data.user_profile?.portfolio?.asset_classes?.length) {
-      errors.push(t('validation.portfolio_required'));
+      errors.push(t("validation.portfolio_required"));
     } else {
       const totalAllocation = data.user_profile.portfolio.asset_classes.reduce(
-        (sum, asset) => sum + (asset.allocation_percentage || 0), 0
+        (sum, asset) => sum + (asset.allocation_percentage || 0),
+        0,
       );
       if (Math.abs(totalAllocation - 100) > 0.01) {
-        errors.push(t('validation.portfolio_allocation_invalid'));
+        errors.push(t("validation.portfolio_allocation_invalid"));
       }
     }
 
     // 检查收支项目 - 至少各有一项
     if (!data.income_items?.length) {
-      errors.push(t('validation.income_items_required'));
+      errors.push(t("validation.income_items_required"));
     }
     if (!data.expense_items?.length) {
-      errors.push(t('validation.expense_items_required'));
+      errors.push(t("validation.expense_items_required"));
     }
 
     // 检查收支项目的年龄范围
@@ -98,26 +106,32 @@ export function StageNavigation({ currentStage }: StageNavigationProps): React.J
       // 验证收入项目
       data.income_items?.forEach((item, index) => {
         if (item.start_age < currentAge) {
-          errors.push(t('validation.income_start_age_too_early', {
-            index: index + 1,
-            startAge: item.start_age,
-            currentAge
-          }));
-        }
-        if (item.frequency === 'recurring' && item.end_age) {
-          if (item.end_age > lifeExpectancy) {
-            errors.push(t('validation.income_end_age_too_late', {
-              index: index + 1,
-              endAge: item.end_age,
-              lifeExpectancy
-            }));
-          }
-          if (item.start_age >= item.end_age) {
-            errors.push(t('validation.income_age_range_invalid', {
+          errors.push(
+            t("validation.income_start_age_too_early", {
               index: index + 1,
               startAge: item.start_age,
-              endAge: item.end_age
-            }));
+              currentAge,
+            }),
+          );
+        }
+        if (item.frequency === "recurring" && item.end_age) {
+          if (item.end_age > lifeExpectancy) {
+            errors.push(
+              t("validation.income_end_age_too_late", {
+                index: index + 1,
+                endAge: item.end_age,
+                lifeExpectancy,
+              }),
+            );
+          }
+          if (item.start_age >= item.end_age) {
+            errors.push(
+              t("validation.income_age_range_invalid", {
+                index: index + 1,
+                startAge: item.start_age,
+                endAge: item.end_age,
+              }),
+            );
           }
         }
       });
@@ -125,26 +139,32 @@ export function StageNavigation({ currentStage }: StageNavigationProps): React.J
       // 验证支出项目
       data.expense_items?.forEach((item, index) => {
         if (item.start_age < currentAge) {
-          errors.push(t('validation.expense_start_age_too_early', {
-            index: index + 1,
-            startAge: item.start_age,
-            currentAge
-          }));
-        }
-        if (item.frequency === 'recurring' && item.end_age) {
-          if (item.end_age > lifeExpectancy) {
-            errors.push(t('validation.expense_end_age_too_late', {
-              index: index + 1,
-              endAge: item.end_age,
-              lifeExpectancy
-            }));
-          }
-          if (item.start_age >= item.end_age) {
-            errors.push(t('validation.expense_age_range_invalid', {
+          errors.push(
+            t("validation.expense_start_age_too_early", {
               index: index + 1,
               startAge: item.start_age,
-              endAge: item.end_age
-            }));
+              currentAge,
+            }),
+          );
+        }
+        if (item.frequency === "recurring" && item.end_age) {
+          if (item.end_age > lifeExpectancy) {
+            errors.push(
+              t("validation.expense_end_age_too_late", {
+                index: index + 1,
+                endAge: item.end_age,
+                lifeExpectancy,
+              }),
+            );
+          }
+          if (item.start_age >= item.end_age) {
+            errors.push(
+              t("validation.expense_age_range_invalid", {
+                index: index + 1,
+                startAge: item.start_age,
+                endAge: item.end_age,
+              }),
+            );
           }
         }
       });
@@ -161,8 +181,8 @@ export function StageNavigation({ currentStage }: StageNavigationProps): React.J
     [PlannerStage.STAGE1_INPUT]: {
       canGoBack: false,
       canGoForward: true,
-      backLabel: '',
-      forwardLabel: t('ui.continue_to_stage2'),
+      backLabel: "",
+      forwardLabel: t("ui.continue_to_stage2"),
       stageNumber: 1,
       nextStageNumber: 2,
       validation: validateStage1, // 原有验证逻辑 - 恢复
@@ -170,8 +190,8 @@ export function StageNavigation({ currentStage }: StageNavigationProps): React.J
     [PlannerStage.STAGE2_ADJUSTMENT]: {
       canGoBack: true,
       canGoForward: true,
-      backLabel: t('ui.back_to_stage1'),
-      forwardLabel: t('ui.continue_to_analysis'),
+      backLabel: t("ui.back_to_stage1"),
+      forwardLabel: t("ui.continue_to_analysis"),
       stageNumber: 2,
       nextStageNumber: 3,
       validation: { isValid: true, errors: [] }, // Stage 2 validation can be added later
@@ -179,8 +199,8 @@ export function StageNavigation({ currentStage }: StageNavigationProps): React.J
     [PlannerStage.STAGE3_ANALYSIS]: {
       canGoBack: true,
       canGoForward: false,
-      backLabel: t('ui.back_to_projections'),
-      forwardLabel: '',
+      backLabel: t("ui.back_to_projections"),
+      forwardLabel: "",
       stageNumber: 3,
       nextStageNumber: null,
       validation: { isValid: true, errors: [] },
@@ -207,7 +227,13 @@ export function StageNavigation({ currentStage }: StageNavigationProps): React.J
     } finally {
       plannerStore.setTransitioning(false);
     }
-  }, [config.canGoForward, config.validation.isValid, isTransitioning, plannerStore, currentStage]);
+  }, [
+    config.canGoForward,
+    config.validation.isValid,
+    isTransitioning,
+    plannerStore,
+    currentStage,
+  ]);
 
   const handleBack = useCallback((): void => {
     if (!config.canGoBack || isTransitioning) return;
@@ -237,12 +263,12 @@ export function StageNavigation({ currentStage }: StageNavigationProps): React.J
 
   // 获取按钮颜色和变体（即时验证状态表达）
   const getButtonProps = (): { color: string; variant: string } => {
-    if (!config.canGoForward) return { color: 'blue', variant: 'filled' };
+    if (!config.canGoForward) return { color: "blue", variant: "filled" };
 
     if (config.validation.isValid) {
-      return { color: 'green', variant: 'filled' }; // 验证通过：绿色
+      return { color: "green", variant: "filled" }; // 验证通过：绿色
     } else {
-      return { color: 'orange', variant: 'outline' }; // 验证未通过：橙色轮廓
+      return { color: "orange", variant: "outline" }; // 验证未通过：橙色轮廓
     }
   };
 
@@ -252,17 +278,17 @@ export function StageNavigation({ currentStage }: StageNavigationProps): React.J
 
     if (config.validation.isValid) {
       return {
-        backgroundColor: '#f0f9f0',
-        borderRadius: '8px',
-        padding: '16px',
-        border: '2px solid #28a745'
+        backgroundColor: "#f0f9f0",
+        borderRadius: "8px",
+        padding: "16px",
+        border: "2px solid #28a745",
       }; // 验证通过：淡绿色背景
     } else {
       return {
-        backgroundColor: '#fff8f0',
-        borderRadius: '8px',
-        padding: '16px',
-        border: '2px solid #fd7e14'
+        backgroundColor: "#fff8f0",
+        borderRadius: "8px",
+        padding: "16px",
+        border: "2px solid #fd7e14",
       }; // 验证未通过：淡橙色背景
     }
   };
@@ -282,7 +308,7 @@ export function StageNavigation({ currentStage }: StageNavigationProps): React.J
           withCloseButton
         >
           <Text size="sm" fw={500} mb="xs">
-            {t('validation.please_fix_following_issues')}
+            {t("validation.please_fix_following_issues")}
           </Text>
           <Stack gap="xs">
             {config.validation.errors.map((error, index) => (
@@ -310,11 +336,11 @@ export function StageNavigation({ currentStage }: StageNavigationProps): React.J
             )}
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
             {/* 状态文字：只有验证通过时显示 */}
             {config.canGoForward && config.validation.isValid && (
               <Text size="sm" c="green" fw={500}>
-                ✅ {t('ui.ready_to_continue')}
+                ✅ {t("ui.ready_to_continue")}
               </Text>
             )}
 
@@ -338,7 +364,7 @@ export function StageNavigation({ currentStage }: StageNavigationProps): React.J
                 onClick={handleRestart}
                 disabled={isTransitioning}
               >
-                {t('ui.start_new_plan')}
+                {t("ui.start_new_plan")}
               </Button>
             )}
           </div>
@@ -351,19 +377,19 @@ export function StageNavigation({ currentStage }: StageNavigationProps): React.J
           {/* 阶段信息 */}
           <Group justify="center" gap="xs">
             <Badge variant="filled" color="blue" size="sm">
-              {t('stage')} {config.stageNumber}
+              {t("stage")} {config.stageNumber}
             </Badge>
 
             {config.canGoForward && config.validation.isValid && (
               <Text size="sm" c="green" fw={500}>
-                ✅ {t('ui.ready_to_continue')}
+                ✅ {t("ui.ready_to_continue")}
               </Text>
             )}
             {config.nextStageNumber && (
               <>
                 <IconArrowRight size={12} color="var(--mantine-color-dimmed)" />
                 <Badge variant="outline" color="gray" size="sm">
-                  {t('stage')} {config.nextStageNumber}
+                  {t("stage")} {config.nextStageNumber}
                 </Badge>
               </>
             )}
@@ -380,12 +406,12 @@ export function StageNavigation({ currentStage }: StageNavigationProps): React.J
                   onClick={handleBack}
                   disabled={isTransitioning}
                 >
-                  {t('previous')}
+                  {t("previous")}
                 </Button>
               )}
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               {config.canGoForward && (
                 <Button
                   size="sm"
@@ -395,7 +421,7 @@ export function StageNavigation({ currentStage }: StageNavigationProps): React.J
                   loading={isTransitioning}
                   disabled={isTransitioning}
                 >
-                  {t('next')}
+                  {t("next")}
                 </Button>
               )}
 
@@ -407,7 +433,7 @@ export function StageNavigation({ currentStage }: StageNavigationProps): React.J
                   onClick={handleRestart}
                   disabled={isTransitioning}
                 >
-                  {t('ui.new_plan')}
+                  {t("ui.new_plan")}
                 </Button>
               )}
             </div>
@@ -420,10 +446,10 @@ export function StageNavigation({ currentStage }: StageNavigationProps): React.J
         opened={showConfirmDialog}
         onClose={() => setShowConfirmDialog(false)}
         onConfirm={handleConfirmRestart}
-        title={t('import_export.clear_data')}
-        message={t('import_export.clear_data_confirm')}
-        confirmLabel={t('import_export.clear_data')}
-        cancelLabel={t('cancel')}
+        title={t("import_export.clear_data")}
+        message={t("import_export.clear_data_confirm")}
+        confirmLabel={t("import_export.clear_data")}
+        cancelLabel={t("cancel")}
         confirmColor="red"
         iconType="delete"
       />

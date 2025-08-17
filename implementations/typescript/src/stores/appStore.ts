@@ -5,11 +5,14 @@
  * This is the top-level store that coordinates with other stores.
  */
 
-import { create } from 'zustand';
-import { devtools, persist } from 'zustand/middleware';
-import type { AppStore, AppState, StoreConfig } from './types';
-import type { LanguageCode } from '../types';
-import { detectUserLanguage, saveLanguagePreference } from '../utils/languageDetection';
+import { create } from "zustand";
+import { devtools, persist } from "zustand/middleware";
+import type { AppStore, AppState, StoreConfig } from "./types";
+import type { LanguageCode } from "../types";
+import {
+  detectUserLanguage,
+  saveLanguagePreference,
+} from "../utils/languageDetection";
 
 // =============================================================================
 // Initial State
@@ -25,10 +28,10 @@ const initialAppState: AppState = {
   error: null,
 
   // Theme and preferences
-  theme: 'system',
+  theme: "system",
 
   // App metadata
-  version: '0.2.0-dev',
+  version: "0.2.0-dev",
   buildTime: undefined,
 };
 
@@ -38,84 +41,78 @@ const initialAppState: AppState = {
 
 export const createAppStore = (config?: StoreConfig) => {
   const storeCreator = (set: any, get: any) => ({
-          ...initialAppState,
+    ...initialAppState,
 
-          // =============================================================================
-          // Language Management
-          // =============================================================================
+    // =============================================================================
+    // Language Management
+    // =============================================================================
 
-          setLanguage: (language: LanguageCode) => {
-            // 保存语言偏好到本地存储
-            saveLanguagePreference(language);
-            set({ currentLanguage: language }, false, 'setLanguage');
-          },
+    setLanguage: (language: LanguageCode) => {
+      // 保存语言偏好到本地存储
+      saveLanguagePreference(language);
+      set({ currentLanguage: language }, false, "setLanguage");
+    },
 
-          setI18nLoaded: (loaded: boolean) => {
-            set({ isI18nLoaded: loaded }, false, 'setI18nLoaded');
-          },
+    setI18nLoaded: (loaded: boolean) => {
+      set({ isI18nLoaded: loaded }, false, "setI18nLoaded");
+    },
 
-          // =============================================================================
-          // Global State Management
-          // =============================================================================
+    // =============================================================================
+    // Global State Management
+    // =============================================================================
 
-          setLoading: (loading: boolean) => {
-            set({ isLoading: loading }, false, 'setLoading');
-          },
+    setLoading: (loading: boolean) => {
+      set({ isLoading: loading }, false, "setLoading");
+    },
 
-          setError: (error: string | null) => {
-            set({ error }, false, 'setError');
-          },
+    setError: (error: string | null) => {
+      set({ error }, false, "setError");
+    },
 
-          clearError: () => {
-            set({ error: null }, false, 'clearError');
-          },
+    clearError: () => {
+      set({ error: null }, false, "clearError");
+    },
 
-          // =============================================================================
-          // Theme Management
-          // =============================================================================
+    // =============================================================================
+    // Theme Management
+    // =============================================================================
 
-          setTheme: (theme: 'light' | 'dark' | 'system') => {
-            set({ theme }, false, 'setTheme');
-          },
+    setTheme: (theme: "light" | "dark" | "system") => {
+      set({ theme }, false, "setTheme");
+    },
 
-          // =============================================================================
-          // Utilities
-          // =============================================================================
+    // =============================================================================
+    // Utilities
+    // =============================================================================
 
-          reset: () => {
-            set(initialAppState, false, 'reset');
-          },
-        });
+    reset: () => {
+      set(initialAppState, false, "reset");
+    },
+  });
 
   // Create store with conditional persistence
   if (config?.persist?.enabled) {
     return create<AppStore>()(
       devtools(
-        persist(
-          storeCreator,
-          {
-            name: config.persist.key ?? 'fire-app-state',
-            partialize: (state) => ({
-              currentLanguage: state.currentLanguage,
-              theme: state.theme,
-            }),
-          }
-        ),
+        persist(storeCreator, {
+          name: config.persist.key ?? "fire-app-state",
+          partialize: (state) => ({
+            currentLanguage: state.currentLanguage,
+            theme: state.theme,
+          }),
+        }),
         {
-          name: 'FIRE-App-Store',
-          enabled: config?.devtools ?? process.env.NODE_ENV === 'development',
-        }
-      )
+          name: "FIRE-App-Store",
+          enabled: config?.devtools ?? process.env.NODE_ENV === "development",
+        },
+      ),
     );
   } else {
     return create<AppStore>()(
-      devtools(
-        storeCreator,
-        {
-          name: 'FIRE-App-Store',
-          enabled: config?.devtools ?? process.env.NODE_ENV === 'development',
-        }
-      )
+      devtools(storeCreator, {
+        name: "FIRE-App-Store",
+        enabled: config?.devtools ?? process.env.NODE_ENV === "development",
+      }),
     );
   }
 };
@@ -125,13 +122,13 @@ export const createAppStore = (config?: StoreConfig) => {
 // =============================================================================
 
 // Export the store type for external usage
-export type { AppStore } from './types';
+export type { AppStore } from "./types";
 
 export const useAppStore = createAppStore({
   persist: {
     enabled: true, // Enable persistence for language and theme settings
-    key: 'fire-app-state',
-    storage: 'localStorage',
+    key: "fire-app-state",
+    storage: "localStorage",
   },
   devtools: true,
 });
@@ -141,7 +138,8 @@ export const useAppStore = createAppStore({
 // =============================================================================
 
 // Language selectors
-export const useCurrentLanguage = () => useAppStore((state) => state.currentLanguage);
+export const useCurrentLanguage = () =>
+  useAppStore((state) => state.currentLanguage);
 export const useIsI18nLoaded = () => useAppStore((state) => state.isI18nLoaded);
 
 // UI state selectors
@@ -172,13 +170,11 @@ export const setLoading = (loading: boolean) =>
 export const setError = (error: string | null) =>
   useAppStore.getState().setError(error);
 
-export const clearError = () =>
-  useAppStore.getState().clearError();
+export const clearError = () => useAppStore.getState().clearError();
 
 // Theme actions
-export const setTheme = (theme: 'light' | 'dark' | 'system') =>
+export const setTheme = (theme: "light" | "dark" | "system") =>
   useAppStore.getState().setTheme(theme);
 
 // Utility actions
-export const resetAppStore = () =>
-  useAppStore.getState().reset();
+export const resetAppStore = () => useAppStore.getState().reset();
