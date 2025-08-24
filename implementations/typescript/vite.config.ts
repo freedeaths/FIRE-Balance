@@ -1,7 +1,144 @@
 import { defineConfig } from 'vite';
+import type { Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
+import fs from 'fs';
+import { marked } from 'marked';
+
+/**
+ * Custom plugin to convert usage markdown to HTML and copy to dist folder
+ */
+function copyUsageDocs(): Plugin {
+  return {
+    name: 'copy-usage-docs',
+    generateBundle() {
+      const docsDir = path.resolve(__dirname, '../../docs');
+      const usageFiles = [
+        { md: 'usage_en.md', html: 'usage_en.html' },
+        { md: 'usage_cn.md', html: 'usage_cn.html' },
+        { md: 'usage_ja.md', html: 'usage_ja.html' },
+      ];
+
+      usageFiles.forEach(({ md, html }) => {
+        const sourcePath = path.join(docsDir, md);
+        if (fs.existsSync(sourcePath)) {
+          const markdownContent = fs.readFileSync(sourcePath, 'utf-8');
+
+          // Configure marked for better HTML output
+          marked.setOptions({
+            breaks: true,
+            gfm: true,
+          });
+
+          // Convert markdown to HTML
+          const htmlContent = marked(markdownContent);
+
+          // Create a complete HTML document
+          const fullHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FIRE Balance - User Guide</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #333;
+            background: #fff;
+        }
+        h1, h2, h3, h4, h5, h6 {
+            color: #f97316;
+            margin-top: 2em;
+            margin-bottom: 0.5em;
+        }
+        h1 {
+            border-bottom: 2px solid #f97316;
+            padding-bottom: 0.3em;
+        }
+        h2 {
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 0.3em;
+        }
+        code {
+            background: #f3f4f6;
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+            font-family: 'Monaco', 'Menlo', monospace;
+        }
+        pre {
+            background: #f3f4f6;
+            padding: 1em;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        blockquote {
+            border-left: 4px solid #f97316;
+            margin: 0;
+            padding-left: 1em;
+            color: #666;
+        }
+        a {
+            color: #f97316;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        .header-nav {
+            text-align: center;
+            margin-bottom: 2em;
+            padding-bottom: 1em;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .header-nav a {
+            margin: 0 1em;
+            padding: 0.5em 1em;
+            background: #f3f4f6;
+            border-radius: 5px;
+            display: inline-block;
+        }
+        .header-nav a:hover {
+            background: #f97316;
+            color: white;
+            text-decoration: none;
+        }
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            .header-nav a {
+                display: block;
+                margin: 0.5em 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header-nav">
+        <a href="usage_en.html">English</a>
+        <a href="usage_cn.html">中文</a>
+        <a href="usage_ja.html">日本語</a>
+        <a href="./">← Back to App</a>
+    </div>
+    ${htmlContent}
+</body>
+</html>`;
+
+          this.emitFile({
+            type: 'asset',
+            fileName: html,
+            source: fullHtml,
+          });
+        }
+      });
+    },
+  };
+}
 
 /**
  * Vite configuration for FIRE Balance Calculator
@@ -12,11 +149,15 @@ import path from 'path';
  * - Path aliases for clean imports
  * - Optimized build settings
  * - Development server configuration
+ * - Copies usage documentation to dist for CDN accessibility
  */
 export default defineConfig({
   plugins: [
     // React plugin with fast refresh
     react(),
+
+    // Copy usage documentation to dist folder
+    copyUsageDocs(),
 
     // PWA plugin for offline support and app installation
     VitePWA({

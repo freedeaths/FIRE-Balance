@@ -10,7 +10,7 @@
 
 import React from 'react';
 import { Container, Group, Title, Menu, ActionIcon } from '@mantine/core';
-import { IconFlame, IconLanguage } from '@tabler/icons-react';
+import { IconFlame, IconLanguage, IconBook } from '@tabler/icons-react';
 import { useAppStore } from '../../stores/appStore';
 import { usePlannerStore } from '../../stores/plannerStore';
 import { getI18n } from '../../core/i18n';
@@ -134,10 +134,54 @@ export function Layout() {
             </Group>
 
             <div
-              style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}
+              style={{
+                flexShrink: 0,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
             >
-              {' '}
-              {/* 只放语言选择器 */}
+              {/* 使用指南链接 */}
+              <Menu shadow='md' width={160} position='bottom-end'>
+                <Menu.Target>
+                  <ActionIcon
+                    variant='subtle'
+                    size='lg'
+                    aria-label='User Guide'
+                    className='hover:bg-gray-100 transition-colors'
+                  >
+                    <IconBook size={20} />
+                  </ActionIcon>
+                </Menu.Target>
+                <Menu.Dropdown>
+                  <Menu.Item
+                    component='a'
+                    href='./usage_en.html'
+                    target='_blank'
+                    rel='noopener noreferrer'
+                  >
+                    📖 English Guide
+                  </Menu.Item>
+                  <Menu.Item
+                    component='a'
+                    href='./usage_cn.html'
+                    target='_blank'
+                    rel='noopener noreferrer'
+                  >
+                    📖 中文指南
+                  </Menu.Item>
+                  <Menu.Item
+                    component='a'
+                    href='./usage_ja.html'
+                    target='_blank'
+                    rel='noopener noreferrer'
+                  >
+                    📖 日本語ガイド
+                  </Menu.Item>
+                </Menu.Dropdown>
+              </Menu>
+
+              {/* 语言选择器 */}
               <Menu shadow='md' width={120} position='bottom-end'>
                 <Menu.Target>
                   <ActionIcon
