@@ -13,7 +13,7 @@ import type {
   AssetClass,
   PortfolioConfiguration,
 } from './data_models';
-import { getCurrentAge } from './data_models';
+import { getCurrentAgeAsOf } from './data_models';
 
 // Set up logger for portfolio calculations (console-based for browser)
 const logger = {
@@ -805,7 +805,10 @@ export class PortfolioSimulator {
    */
   private _createInitialPortfolio(userProfile: UserProfile): PortfolioState {
     // Get target allocation for current age
-    const currentAge = getCurrentAge(userProfile.birth_year);
+    const currentAge = getCurrentAgeAsOf(
+      userProfile.birth_year,
+      userProfile.as_of_year ?? new Date().getFullYear()
+    );
     const targetAllocation = this.calculator.getTargetAllocation(currentAge);
 
     // Distribute initial net worth according to target allocation

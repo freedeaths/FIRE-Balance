@@ -150,9 +150,10 @@ export function Stage3Content(): React.JSX.Element {
             year.year ||
             year.age -
               (userProfile.birth_year
-                ? new Date().getFullYear() - userProfile.birth_year
+                ? (userProfile.as_of_year || new Date().getFullYear()) -
+                  userProfile.birth_year
                 : 40) +
-              new Date().getFullYear(),
+              (userProfile.as_of_year || new Date().getFullYear()),
           total_income: new Decimal(
             typeof year.total_income === 'string'
               ? year.total_income
@@ -190,10 +191,14 @@ export function Stage3Content(): React.JSX.Element {
       // 准备完整的UserProfile对象，确保portfolio配置完整
       const completeUserProfile = {
         ...userProfile,
+        as_of_year: userProfile.as_of_year || new Date().getFullYear(),
         current_net_worth: new Decimal(userProfile.current_net_worth || 0),
         inflation_rate: new Decimal(userProfile.inflation_rate || 3),
         safety_buffer_months: new Decimal(
           userProfile.safety_buffer_months || 12
+        ),
+        bridge_discount_rate: new Decimal(
+          userProfile.bridge_discount_rate || 1.0
         ),
         portfolio: userProfile.portfolio
           ? {
@@ -530,7 +535,8 @@ export function Stage3Content(): React.JSX.Element {
                   }
                   currentAge={
                     plannerStore.data.user_profile
-                      ? new Date().getFullYear() -
+                      ? (plannerStore.data.user_profile.as_of_year ||
+                          new Date().getFullYear()) -
                         plannerStore.data.user_profile.birth_year
                       : 30
                   }
@@ -540,6 +546,9 @@ export function Stage3Content(): React.JSX.Element {
                   fireNetWorth={fireCalculation.fire_net_worth}
                   safetyBufferMonths={
                     plannerStore.data.user_profile?.safety_buffer_months || 6
+                  }
+                  bridgeDiscountRate={
+                    plannerStore.data.user_profile?.bridge_discount_rate || 1.0
                   }
                   height={400}
                   showCashFlowArea={true}

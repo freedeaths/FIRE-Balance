@@ -226,6 +226,9 @@ export interface UserProfile {
   /** User's birth year */
   birth_year: number;
 
+  /** Base year for age calculations (defaults to current year) */
+  as_of_year: number;
+
   /** User's expected FIRE age */
   expected_fire_age: number;
 
@@ -244,6 +247,12 @@ export interface UserProfile {
   /** Safety buffer in months of annual expenses (default: 6 months) */
   safety_buffer_months: Decimal;
 
+  /**
+   * Nominal discount rate (%) used to convert remaining bridge-period expenses
+   * (from expected FIRE age to legal retirement age) into a present-value requirement.
+   */
+  bridge_discount_rate: Decimal;
+
   /** Investment portfolio configuration */
   portfolio: PortfolioConfiguration;
 }
@@ -252,8 +261,16 @@ export interface UserProfile {
  * Calculate current age from birth year
  * Direct port of Python's current_age property
  */
+export function getCurrentAgeAsOf(birthYear: number, asOfYear: number): number {
+  return asOfYear - birthYear;
+}
+
+/**
+ * Calculate current age from birth year (system current year)
+ * Direct port of Python's current_age property
+ */
 export function getCurrentAge(birthYear: number): number {
-  return new Date().getFullYear() - birthYear;
+  return getCurrentAgeAsOf(birthYear, new Date().getFullYear());
 }
 
 /**
@@ -274,7 +291,7 @@ export function validateBirthYear(birthYear: number): void {
  * Direct port of Python's validate_age_progression
  */
 export function validateAgeProgression(profile: UserProfile): void {
-  const current = getCurrentAge(profile.birth_year);
+  const current = getCurrentAgeAsOf(profile.birth_year, profile.as_of_year);
   const fire = profile.expected_fire_age;
   const retirement = profile.legal_retirement_age;
   const life = profile.life_expectancy;
@@ -297,16 +314,20 @@ export function createUserProfile(
     current_net_worth?: number | Decimal;
     inflation_rate?: number | Decimal;
     safety_buffer_months?: number | Decimal;
+    bridge_discount_rate?: number | Decimal;
   }
 ): UserProfile {
+  const asOfYear = data.as_of_year ?? new Date().getFullYear();
   const profile: UserProfile = {
     birth_year: data.birth_year || 1990,
+    as_of_year: asOfYear,
     expected_fire_age: data.expected_fire_age || 50,
     legal_retirement_age: data.legal_retirement_age || 65,
     life_expectancy: data.life_expectancy || 85,
     current_net_worth: new Decimal(data.current_net_worth || 0.0),
     inflation_rate: new Decimal(data.inflation_rate || 3.0),
     safety_buffer_months: new Decimal(data.safety_buffer_months || 6),
+    bridge_discount_rate: new Decimal(data.bridge_discount_rate || 1.0),
     portfolio: data.portfolio || createPortfolioConfiguration({}),
   };
 

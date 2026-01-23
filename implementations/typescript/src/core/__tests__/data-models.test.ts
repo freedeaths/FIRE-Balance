@@ -465,6 +465,7 @@ describe('Validation Functions', () => {
 
   test('validateAgeProgression', () => {
     const validProfile: UserProfile = {
+      as_of_year: new Date().getFullYear(),
       birth_year: 1990,
       expected_fire_age: 50,
       legal_retirement_age: 65,
@@ -472,6 +473,7 @@ describe('Validation Functions', () => {
       current_net_worth: new Decimal(100000),
       inflation_rate: new Decimal(3),
       safety_buffer_months: new Decimal(6),
+      bridge_discount_rate: new Decimal(1.0),
       portfolio: {
         asset_classes: [],
         enable_rebalancing: true,

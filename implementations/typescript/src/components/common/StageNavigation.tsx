@@ -58,6 +58,7 @@ export function StageNavigation({
       errors.push(t('validation.user_profile_missing'));
     } else {
       const profile = data.user_profile;
+      const asOfYear = profile.as_of_year || new Date().getFullYear();
       if (!profile.birth_year) errors.push(t('validation.birth_year_required'));
       if (!profile.expected_fire_age)
         errors.push(t('validation.fire_age_required'));
@@ -74,6 +75,49 @@ export function StageNavigation({
         errors.push(t('validation.inflation_rate_required'));
       if (!profile.safety_buffer_months)
         errors.push(t('validation.safety_buffer_required'));
+
+      // 拦截年龄进展不一致：current_age <= FIRE <= legal retirement <= life expectancy
+      if (profile.birth_year) {
+        const currentAge = asOfYear - profile.birth_year;
+
+        if (
+          profile.expected_fire_age &&
+          profile.expected_fire_age < currentAge
+        ) {
+          errors.push(
+            t('validation.fire_age_too_small', {
+              fireAge: profile.expected_fire_age,
+              currentAge,
+            })
+          );
+        }
+
+        if (
+          profile.expected_fire_age &&
+          profile.legal_retirement_age &&
+          profile.legal_retirement_age <= profile.expected_fire_age
+        ) {
+          errors.push(
+            t('validation.legal_retirement_age_too_small', {
+              retirementAge: profile.legal_retirement_age,
+              fireAge: profile.expected_fire_age,
+            })
+          );
+        }
+
+        if (
+          profile.legal_retirement_age &&
+          profile.life_expectancy &&
+          profile.life_expectancy <= profile.legal_retirement_age
+        ) {
+          errors.push(
+            t('validation.life_expectancy_too_small', {
+              lifeExpectancy: profile.life_expectancy,
+              retirementAge: profile.legal_retirement_age,
+            })
+          );
+        }
+      }
     }
 
     // 检查投资组合配置
@@ -99,8 +143,8 @@ export function StageNavigation({
 
     // 检查收支项目的年龄范围
     if (data.user_profile) {
-      const currentYear = new Date().getFullYear();
-      const currentAge = currentYear - data.user_profile.birth_year;
+      const asOfYear = data.user_profile.as_of_year || new Date().getFullYear();
+      const currentAge = asOfYear - data.user_profile.birth_year;
       const lifeExpectancy = data.user_profile.life_expectancy;
 
       // 验证收入项目

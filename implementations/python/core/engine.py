@@ -66,6 +66,29 @@ class FIREEngine:
         # Re-run calculation to get fresh states
         return self._calculate_yearly_states()
 
+    def _get_required_safety_buffer_months(self, age: int) -> float:
+        base_months = float(self.profile.safety_buffer_months)
+        fire_age = int(self.profile.expected_fire_age)
+        legal_retirement_age = int(self.profile.legal_retirement_age)
+
+        if fire_age <= age < legal_retirement_age:
+            years_until_legal = legal_retirement_age - age
+            discount_rate = float(self.profile.bridge_discount_rate) / 100.0
+
+            if years_until_legal <= 0:
+                return base_months
+
+            if discount_rate <= 0:
+                return base_months + years_until_legal * 12.0
+
+            # Present-value of a 1-unit annual annuity for years_until_legal years.
+            annuity_years = (1.0 - (1.0 + discount_rate) ** (-years_until_legal)) / (
+                discount_rate
+            )
+            return base_months + annuity_years * 12.0
+
+        return base_months
+
     def calculate_single_year(
         self, age: int, year: int, total_income: float, total_expense: float
     ) -> YearlyState:
@@ -83,9 +106,8 @@ class FIREEngine:
         portfolio_value = portfolio_result.ending_portfolio_value
 
         # Calculate sustainability metrics
-        safety_buffer_amount = total_expense * (
-            self.profile.safety_buffer_months / 12.0
-        )
+        required_safety_buffer_months = self._get_required_safety_buffer_months(age)
+        safety_buffer_amount = total_expense * (required_safety_buffer_months / 12.0)
         fire_number = total_expense * 25.0
         fire_progress = float(portfolio_value) / fire_number if fire_number > 0 else 0.0
         is_sustainable = (
@@ -110,6 +132,7 @@ class FIREEngine:
         """Calculate all yearly states using atomic single-year calculations."""
         yearly_states: List[YearlyState] = []
         cumulative_debt = 0.0  # Track accumulated debt when portfolio is depleted
+        starting_portfolio_value = Decimal(str(self.profile.current_net_worth))
 
         # Reset portfolio simulator to initial state
         self.portfolio_simulator.reset_to_initial()
@@ -124,24 +147,29 @@ class FIREEngine:
             )
 
             # Calculate true net worth with cumulative debt tracking
-            portfolio_value = float(yearly_state.portfolio_value)
+            ending_portfolio_value = Decimal(str(yearly_state.portfolio_value))
+            portfolio_value = float(ending_portfolio_value)
 
             if portfolio_value > 0:
                 # Portfolio has value - net worth is portfolio value
                 yearly_state.net_worth = portfolio_value
                 cumulative_debt = 0.0  # Reset debt when portfolio recovers
             else:
-                # Portfolio is depleted - accumulate debt
-                cumulative_debt += (
-                    abs(yearly_state.net_cash_flow)
-                    if yearly_state.net_cash_flow < 0
-                    else 0
-                )
+                # Portfolio is depleted - accumulate ONLY the unfunded shortfall.
+                if yearly_state.net_cash_flow < 0:
+                    required_cash = Decimal(str(abs(yearly_state.net_cash_flow)))
+                    available_cash = starting_portfolio_value + Decimal(
+                        str(yearly_state.investment_return)
+                    )
+                    shortfall = required_cash - available_cash
+                    if shortfall > 0:
+                        cumulative_debt += float(shortfall)
                 yearly_state.net_worth = (
                     -cumulative_debt
                 )  # Negative net worth indicates debt
 
             yearly_states.append(yearly_state)
+            starting_portfolio_value = ending_portfolio_value
 
         return yearly_states
 
@@ -182,8 +210,11 @@ class FIREEngine:
         # Safety buffer analysis - calculate dynamically
         safety_buffer_ratios = []
         for s in yearly_states:
+            required_safety_buffer_months = self._get_required_safety_buffer_months(
+                s.age
+            )
             safety_buffer_amount = s.total_expense * (
-                self.profile.safety_buffer_months / 12.0
+                required_safety_buffer_months / 12.0
             )
             if safety_buffer_amount > 0:
                 ratio = (

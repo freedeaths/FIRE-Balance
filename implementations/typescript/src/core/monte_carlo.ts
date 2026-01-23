@@ -12,7 +12,7 @@ import type {
   SimulationSettings,
   UserProfile,
 } from './data_models';
-import { createSimulationSettings, getCurrentAge } from './data_models';
+import { createSimulationSettings } from './data_models';
 import type { AnnualFinancialProjection, EngineInput } from './engine';
 import { FIREEngine, createEngineInput } from './engine';
 import { createBlackSwanEvents } from './black_swan_events';
@@ -306,11 +306,10 @@ export class MonteCarloSimulator {
     const num_years = this.base_df.length;
     const variations = new Array(num_years).fill(new Decimal(1));
 
-    const current_age = getCurrentAge(this.engine.profile.birth_year);
     const fire_age = this.engine.profile.expected_fire_age;
 
     for (let i = 0; i < num_years; i++) {
-      const age = current_age + i;
+      const age = this.base_df[i].age;
 
       // Only apply income volatility during working years (before FIRE)
       if (age < fire_age) {
@@ -371,8 +370,7 @@ export class MonteCarloSimulator {
 
     const num_years = df.length;
     for (let year_idx = 0; year_idx < num_years; year_idx++) {
-      const current_age =
-        getCurrentAge(this.engine.profile.birth_year) + year_idx;
+      const current_age = df[year_idx].age;
 
       // Simulate new black swan events for this year
       const new_events = this._simulate_black_swan_events(current_age);

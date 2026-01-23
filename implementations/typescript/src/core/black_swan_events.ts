@@ -8,7 +8,7 @@
 
 import Decimal from 'decimal.js';
 import type { BlackSwanEvent, UserProfile } from './data_models';
-import { getCurrentAge } from './data_models';
+import { getCurrentAgeAsOf } from './data_models';
 
 // =============================================================================
 // Concrete Black Swan Event Implementations
@@ -311,7 +311,10 @@ export class InvestmentWindfallEvent implements BlackSwanEvent {
 export function createBlackSwanEvents(
   user_profile: UserProfile
 ): BlackSwanEvent[] {
-  const current_age = getCurrentAge(user_profile.birth_year);
+  const current_age = getCurrentAgeAsOf(
+    user_profile.birth_year,
+    user_profile.as_of_year ?? new Date().getFullYear()
+  );
   const fire_age = user_profile.expected_fire_age;
   const legal_retirement_age = user_profile.legal_retirement_age;
   const life_expectancy = user_profile.life_expectancy;
@@ -320,6 +323,8 @@ export function createBlackSwanEvents(
   const working_start = Math.max(22, current_age); // Start from current age or 22
   const working_end = Math.min(fire_age, legal_retirement_age); // End at FIRE or legal retirement
   const retirement_end = life_expectancy;
+  const career_start = current_age;
+  const career_end = fire_age;
 
   return [
     // Economic and financial crisis events
@@ -329,9 +334,9 @@ export function createBlackSwanEvents(
     new HyperinflationEvent([18, 100]),
 
     // Career and employment events
-    new UnemploymentEvent([working_start, working_end]),
+    new UnemploymentEvent([career_start, career_end]),
     new IndustryCollapseEvent([working_start, Math.min(working_end + 5, 65)]),
-    new UnexpectedPromotionEvent([working_start, Math.min(working_end, 55)]),
+    new UnexpectedPromotionEvent([career_start, career_end]),
 
     // Health and care events
     new MajorIllnessEvent([Math.max(current_age, 35), life_expectancy]),

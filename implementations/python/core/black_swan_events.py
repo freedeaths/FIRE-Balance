@@ -475,6 +475,8 @@ def create_black_swan_events(user_profile: "UserProfile") -> list[BlackSwanEvent
     working_start = max(22, current_age)  # Start from current age or 22
     working_end = min(fire_age, legal_retirement_age)  # End at FIRE or legal retirement
     retirement_end = life_expectancy
+    career_start = current_age
+    career_end = fire_age
 
     return [
         # Economic and financial crisis events
@@ -483,15 +485,9 @@ def create_black_swan_events(user_profile: "UserProfile") -> list[BlackSwanEvent
         MarketCrashEvent(age_range=(working_start, retirement_end)),
         HyperinflationEvent(age_range=(working_start, retirement_end)),
         # Career and employment events
-        UnemploymentEvent(age_range=(working_start, working_end)),
+        UnemploymentEvent(age_range=(career_start, career_end)),
         IndustryCollapseEvent(age_range=(working_start, working_end)),
-        UnexpectedPromotionEvent(
-            age_range=(
-                (working_start, working_end)
-                if working_end > 25
-                else (current_age, current_age)
-            )
-        ),
+        UnexpectedPromotionEvent(age_range=(career_start, career_end)),
         # Health and medical events
         MajorIllnessEvent(age_range=(working_start, life_expectancy)),
         LongTermCareEvent(age_range=(legal_retirement_age, life_expectancy)),

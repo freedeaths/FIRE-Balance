@@ -290,6 +290,7 @@ export function configToPlannerData(config: PlannerConfigV1): PlannerData {
   // Convert profile dict to UserProfile model
   const user_profile: UserProfile = {
     birth_year: config.profile.birth_year ?? 1990,
+    as_of_year: config.profile.as_of_year ?? new Date().getFullYear(),
     expected_fire_age: config.profile.expected_fire_age ?? 50,
     legal_retirement_age: config.profile.legal_retirement_age ?? 65,
     life_expectancy: config.profile.life_expectancy ?? 85,
@@ -297,6 +298,9 @@ export function configToPlannerData(config: PlannerConfigV1): PlannerData {
     inflation_rate: new Decimal(config.profile.inflation_rate ?? 3.0),
     safety_buffer_months: new Decimal(
       config.profile.safety_buffer_months ?? 12.0
+    ),
+    bridge_discount_rate: new Decimal(
+      config.profile.bridge_discount_rate ?? 1.0
     ),
     portfolio: config.profile.portfolio ?? {
       asset_classes: [

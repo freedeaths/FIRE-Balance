@@ -15,7 +15,7 @@ import type {
   FIRECalculationResult,
 } from './data_models';
 
-import { createSimulationSettings, getCurrentAge } from './data_models';
+import { createSimulationSettings, getCurrentAgeAsOf } from './data_models';
 
 import type {
   PlannerData,
@@ -400,8 +400,8 @@ export class FIREPlanner {
     }
 
     const profile = this.data.user_profile;
-    const currentYear = new Date().getFullYear();
-    const currentAge = getCurrentAge(profile.birth_year);
+    const currentYear = profile.as_of_year ?? new Date().getFullYear();
+    const currentAge = getCurrentAgeAsOf(profile.birth_year, currentYear);
 
     // Create age range from current age to life expectancy
     const projectionData: AnnualProjectionRow[] = [];
@@ -700,7 +700,10 @@ export class FIREPlanner {
       return;
     }
 
-    const currentAge = getCurrentAge(this.data.user_profile.birth_year);
+    const currentAge = getCurrentAgeAsOf(
+      this.data.user_profile.birth_year,
+      this.data.user_profile.as_of_year ?? new Date().getFullYear()
+    );
     const maxAge = this.data.user_profile.life_expectancy;
 
     // Remove overrides outside valid age range

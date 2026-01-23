@@ -15,7 +15,7 @@ import type {
   SimulationSettings,
   IncomeExpenseItem,
 } from './data_models';
-import { createSimulationSettings, getCurrentAge } from './data_models';
+import { createSimulationSettings, getCurrentAgeAsOf } from './data_models';
 import type {
   EngineInput,
   AnnualFinancialProjection,
@@ -128,7 +128,10 @@ export class FIREAdvisor {
    */
   private async _find_earliest_retirement(): Promise<SimpleRecommendation | null> {
     const current_expected_age = this.profile.expected_fire_age;
-    const current_age = getCurrentAge(this.profile.birth_year);
+    const current_age = getCurrentAgeAsOf(
+      this.profile.birth_year,
+      this.profile.as_of_year ?? new Date().getFullYear()
+    );
 
     // Start from one year earlier and work backwards
     let test_age = current_expected_age - 1;
@@ -519,7 +522,10 @@ export class FIREAdvisor {
     const modified_projection = this.detailed_projection_df.map(row => ({
       ...row,
     }));
-    const current_age = getCurrentAge(this.profile.birth_year);
+    const current_age = getCurrentAgeAsOf(
+      this.profile.birth_year,
+      this.profile.as_of_year ?? new Date().getFullYear()
+    );
 
     // Zero out income for years after target FIRE age
     for (let i = 0; i < modified_projection.length; i++) {

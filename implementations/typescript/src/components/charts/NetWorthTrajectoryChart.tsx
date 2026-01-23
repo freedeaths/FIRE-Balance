@@ -51,6 +51,8 @@ interface NetWorthTrajectoryChartProps {
   fireNetWorth?: number;
   /** 安全缓冲区月数 */
   safetyBufferMonths?: number;
+  /** 桥接期贴现率（名义，%） */
+  bridgeDiscountRate?: number;
   /** 图表高度 */
   height?: number;
   /** 图表标题 */
@@ -596,6 +598,7 @@ export function NetWorthTrajectoryChart({
   lifeExpectancy,
   fireNetWorth,
   safetyBufferMonths = 6,
+  bridgeDiscountRate = 1.0,
   height = 400,
   title,
   showCashFlowArea = false,
@@ -646,7 +649,25 @@ export function NetWorthTrajectoryChart({
           : 0;
 
         // 计算安全缓冲区：N个月的年支出（包含通胀调整）
-        const safetyBuffer = (totalExpense * safetyBufferMonths) / 12;
+        let requiredSafetyBufferMonths = safetyBufferMonths;
+        if (
+          legalRetirementAge &&
+          state.age >= targetFireAge &&
+          state.age < legalRetirementAge
+        ) {
+          const yearsUntilLegal = legalRetirementAge - state.age;
+          const discountRate = bridgeDiscountRate / 100;
+
+          if (discountRate <= 0) {
+            requiredSafetyBufferMonths += yearsUntilLegal * 12;
+          } else {
+            const annuityYears =
+              (1 - Math.pow(1 + discountRate, -yearsUntilLegal)) / discountRate;
+            requiredSafetyBufferMonths += annuityYears * 12;
+          }
+        }
+
+        const safetyBuffer = (totalExpense * requiredSafetyBufferMonths) / 12;
 
         return {
           age: state.age,
@@ -662,7 +683,15 @@ export function NetWorthTrajectoryChart({
             : 0,
         };
       });
-  }, [yearlyStates, currentAge, lifeExpectancy, safetyBufferMonths]);
+  }, [
+    yearlyStates,
+    currentAge,
+    lifeExpectancy,
+    safetyBufferMonths,
+    targetFireAge,
+    legalRetirementAge,
+    bridgeDiscountRate,
+  ]);
 
   // 计算Y轴动态范围 - 根据可见线条调整
   const yAxisDomain = useMemo(() => {

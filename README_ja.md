@@ -107,28 +107,56 @@ python cli/fire_planner.py --output results.json
 
 ## 📊 データ構造
 
-### ユーザープロファイル
+### プランJSON（エクスポート/インポート）
 ```json
 {
-  "gender": "male",
-  "current_age": 30,
-  "target_fire_age": 50,
-  "current_assets": 100000,
-  "portfolio": {...},
-  "historical_data": [...]
+  "version": "1.0",
+  "title": "FIRE Plan - 2026-01-23T06:25:04.196Z",
+  "created_at": "2026-01-23T06:25:04.196Z",
+  "user_profile": {
+    "birth_year": 1985,
+    "as_of_year": 2026,
+    "expected_fire_age": 49,
+    "legal_retirement_age": 65,
+    "life_expectancy": 95,
+    "current_net_worth": 3500000,
+    "inflation_rate": 3,
+    "safety_buffer_months": 6,
+    "bridge_discount_rate": 1,
+    "portfolio": {
+      "asset_classes": [
+        { "name": "stocks", "allocation_percentage": 20, "expected_return": 7, "volatility": 15, "liquidity_level": "medium" },
+        { "name": "bonds", "allocation_percentage": 0, "expected_return": 3, "volatility": 5, "liquidity_level": "low" },
+        { "name": "savings", "allocation_percentage": 0, "expected_return": 1, "volatility": 5, "liquidity_level": "low" },
+        { "name": "cash", "allocation_percentage": 80, "expected_return": 1, "volatility": 1, "liquidity_level": "high" }
+      ],
+      "enable_rebalancing": true
+    }
+  },
+  "income_items": [],
+  "expense_items": [],
+  "overrides": []
 }
 ```
+
+メモ：
+- `as_of_year` は保存済みプランを見直す/再読み込みする際の年齢計算の基準年です。
+- 安全バッファはブリッジ期間（FIRE年齢→法定退職年齢）で増減し、`bridge_discount_rate` で割引（現価換算）の強さを調整できます。
 
 ### 収支項目
 ```json
 {
   "id": "uuid4",
   "name": "ソフトウェアエンジニア給与",
-  "type": "recurring",
-  "amount": 80000,
+  "after_tax_amount_per_period": 80000,
+  "time_unit": "annually",
+  "frequency": "recurring",
+  "interval_periods": 1,
   "start_age": 25,
   "end_age": 50,
-  "growth_rate": 0.05
+  "annual_growth_rate": 5,
+  "is_income": true,
+  "category": "Income"
 }
 ```
 
@@ -136,9 +164,9 @@ python cli/fire_planner.py --output results.json
 
 アプリケーションは専用の翻訳ファイルで複数言語をサポートします：
 
-- `i18n/en.json` - 英語（デフォルト）
-- `i18n/zh-CN.json` - 簡体字中国語
-- `i18n/ja.json` - 日本語
+- `shared/i18n/en.json` - 英語（デフォルト）
+- `shared/i18n/zh-CN.json` - 簡体字中国語
+- `shared/i18n/ja.json` - 日本語
 
 サイドバーで言語切替が可能で、ユーザー設定を永続化します。
 

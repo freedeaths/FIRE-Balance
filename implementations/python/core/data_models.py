@@ -179,6 +179,16 @@ class UserProfile(BaseModel):
         description="Safety buffer in months of annual expenses (default: 6 months)",
     )
 
+    # Bridge-fund discount rate (nominal)
+    bridge_discount_rate: float = Field(
+        1.0,
+        description=(
+            "Nominal discount rate (%) used to convert remaining bridge-period "
+            "expenses (from expected FIRE age to legal retirement age) into a "
+            "present-value requirement."
+        ),
+    )
+
     # Investment configuration
     portfolio: PortfolioConfiguration = Field(
         default_factory=lambda: PortfolioConfiguration(enable_rebalancing=True)

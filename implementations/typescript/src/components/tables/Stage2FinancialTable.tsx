@@ -297,8 +297,8 @@ export function Stage2FinancialTable({
     if (!userProfile || !incomeItems || !expenseItems) return [];
 
     const birthYear = userProfile.birth_year || 1990;
-    const currentYear = new Date().getFullYear();
-    const currentAge = currentYear - birthYear;
+    const asOfYear = userProfile.as_of_year || new Date().getFullYear();
+    const currentAge = asOfYear - birthYear;
     const startAge = currentAge;
     const endAge = userProfile.life_expectancy || 85;
 

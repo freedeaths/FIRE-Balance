@@ -211,11 +211,26 @@ def render_stage3(t: Callable[..., str]) -> None:
             safety_buffer_values = []
             for _, row in chart_df.iterrows():
                 annual_expense = row["Total Expense"]
+                age = int(row["Age"])
 
                 # Safety buffer = months of expenses
-                safety_buffer = (
-                    sim_profile.safety_buffer_months / 12.0
-                ) * annual_expense
+                required_months = sim_profile.safety_buffer_months
+                if (
+                    sim_profile.expected_fire_age
+                    <= age
+                    < sim_profile.legal_retirement_age
+                ):
+                    years_until_legal = sim_profile.legal_retirement_age - age
+                    discount_rate = float(sim_profile.bridge_discount_rate) / 100.0
+
+                    if discount_rate <= 0:
+                        required_months += years_until_legal * 12
+                    else:
+                        annuity_years = (
+                            1 - (1 + discount_rate) ** (-years_until_legal)
+                        ) / discount_rate
+                        required_months += annuity_years * 12
+                safety_buffer = (required_months / 12.0) * annual_expense
                 safety_buffer_values.append(safety_buffer)
 
             chart_df_with_buffer["Safety Buffer"] = safety_buffer_values

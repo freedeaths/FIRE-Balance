@@ -47,22 +47,204 @@ export function ImportExportControls() {
     const reader = new FileReader();
     reader.onload = e => {
       try {
-        const jsonData = JSON.parse(e.target?.result as string);
+        let jsonData = JSON.parse(e.target?.result as string);
 
-        // 验证 JSON 格式（简单验证）
+        // Compatibility: enhanced_fire format (downloads/enhanced_fire/*.json)
+        // Shape: { user_profile, incomes, expenses, overrides }
+        if (
+          jsonData?.user_profile &&
+          (Array.isArray(jsonData.incomes) ||
+            Array.isArray(jsonData.expenses)) &&
+          !jsonData.version
+        ) {
+          const systemYear = new Date().getFullYear();
+          const asOfYear =
+            typeof jsonData.user_profile.as_of_year === 'number'
+              ? jsonData.user_profile.as_of_year
+              : typeof jsonData.user_profile.plan_year === 'number'
+                ? jsonData.user_profile.plan_year
+                : typeof jsonData.plan_year === 'number'
+                  ? jsonData.plan_year
+                  : systemYear;
+          const currentAge =
+            typeof jsonData.user_profile.current_age === 'number'
+              ? jsonData.user_profile.current_age
+              : 30;
+
+          const birthYear = asOfYear - currentAge;
+          const expectedFireAge =
+            typeof jsonData.user_profile.expected_fire_age === 'number'
+              ? jsonData.user_profile.expected_fire_age
+              : 50;
+
+          const inferredLegalRetirementAge = (() => {
+            if (
+              !Array.isArray(jsonData.incomes) ||
+              jsonData.incomes.length === 0
+            ) {
+              return 65;
+            }
+
+            const startAges = jsonData.incomes
+              .map((i: any) =>
+                typeof i?.start_age === 'number' ? i.start_age : Infinity
+              )
+              .filter((x: number) => Number.isFinite(x));
+
+            const candidates = startAges.filter(
+              (a: number) => a >= Math.max(55, expectedFireAge + 1)
+            );
+
+            if (candidates.length > 0) {
+              return Math.min(...candidates);
+            }
+
+            return 65;
+          })();
+
+          const legalRetirementAge =
+            typeof jsonData.user_profile.legal_retirement_age === 'number'
+              ? jsonData.user_profile.legal_retirement_age
+              : Number.isFinite(inferredLegalRetirementAge)
+                ? inferredLegalRetirementAge
+                : 65;
+
+          const lifeExpectancy =
+            typeof jsonData.user_profile.life_expectancy === 'number'
+              ? jsonData.user_profile.life_expectancy
+              : 85;
+
+          const toPlannerItem = (item: any, isIncome: boolean) => {
+            const frequency =
+              item?.frequency === 'one-time' ? 'one-time' : 'recurring';
+
+            const startAge =
+              typeof item?.start_age === 'number' ? item.start_age : currentAge;
+
+            const endAge =
+              frequency === 'recurring'
+                ? typeof item?.end_age === 'number'
+                  ? item.end_age
+                  : lifeExpectancy
+                : undefined;
+
+            return {
+              id:
+                typeof item?.id === 'string' && item.id
+                  ? item.id
+                  : `${Date.now()}-${Math.random()}`,
+              name: typeof item?.name === 'string' ? item.name : '',
+              after_tax_amount_per_period:
+                typeof item?.amount === 'number' ? item.amount : 0,
+              time_unit: 'annually',
+              frequency,
+              interval_periods: 1,
+              start_age: startAge,
+              end_age: endAge,
+              annual_growth_rate:
+                typeof item?.growth_rate === 'number' ? item.growth_rate : 0,
+              is_income: isIncome,
+              category: isIncome ? 'Income' : 'Expense',
+            };
+          };
+
+          jsonData = {
+            version: '1.0',
+            title: jsonData.title || `FIRE Plan - ${new Date().toISOString()}`,
+            created_at: jsonData.created_at || new Date().toISOString(),
+            user_profile: {
+              birth_year: birthYear,
+              as_of_year: asOfYear,
+              expected_fire_age: expectedFireAge,
+              legal_retirement_age: legalRetirementAge,
+              life_expectancy: lifeExpectancy,
+              current_net_worth:
+                typeof jsonData.user_profile.current_net_worth === 'number'
+                  ? jsonData.user_profile.current_net_worth
+                  : 0,
+              inflation_rate:
+                typeof jsonData.user_profile.inflation_rate === 'number'
+                  ? jsonData.user_profile.inflation_rate
+                  : 3.0,
+              safety_buffer_months:
+                typeof jsonData.user_profile.safety_buffer_months === 'number'
+                  ? jsonData.user_profile.safety_buffer_months
+                  : 6,
+              bridge_discount_rate:
+                typeof jsonData.user_profile.bridge_discount_rate === 'number'
+                  ? jsonData.user_profile.bridge_discount_rate
+                  : 1.0,
+              portfolio: {
+                asset_classes: [
+                  {
+                    name: 'stocks',
+                    display_name: 'Stocks',
+                    allocation_percentage:
+                      typeof jsonData.user_profile.stock_allocation === 'number'
+                        ? jsonData.user_profile.stock_allocation
+                        : 60,
+                    expected_return: 7,
+                    volatility: 15,
+                    liquidity_level: 'medium',
+                  },
+                  {
+                    name: 'bonds',
+                    display_name: 'Bonds',
+                    allocation_percentage:
+                      typeof jsonData.user_profile.bond_allocation === 'number'
+                        ? jsonData.user_profile.bond_allocation
+                        : 30,
+                    expected_return: 3,
+                    volatility: 5,
+                    liquidity_level: 'low',
+                  },
+                  {
+                    name: 'cash',
+                    display_name: 'Cash',
+                    allocation_percentage:
+                      typeof jsonData.user_profile.cash_allocation === 'number'
+                        ? jsonData.user_profile.cash_allocation
+                        : 10,
+                    expected_return: 1,
+                    volatility: 1,
+                    liquidity_level: 'high',
+                  },
+                ],
+                enable_rebalancing: true,
+                rebalancing_frequency:
+                  typeof jsonData.user_profile.rebalance_frequency === 'string'
+                    ? jsonData.user_profile.rebalance_frequency
+                    : undefined,
+              },
+            },
+            income_items: Array.isArray(jsonData.incomes)
+              ? jsonData.incomes.map((i: any) => toPlannerItem(i, true))
+              : [],
+            expense_items: Array.isArray(jsonData.expenses)
+              ? jsonData.expenses.map((i: any) => toPlannerItem(i, false))
+              : [],
+            overrides: Array.isArray(jsonData.overrides)
+              ? jsonData.overrides
+              : [],
+            simulation_settings: jsonData.simulation_settings,
+            language: jsonData.language,
+          };
+        }
+
+        // Compatibility: Python format uses `profile` field; convert to `user_profile`
+        if (jsonData.profile && !jsonData.user_profile) {
+          jsonData.user_profile = jsonData.profile;
+          delete jsonData.profile;
+        }
+
+        // Validate JSON format (basic validation)
         if (
           !jsonData.version ||
-          (!jsonData.profile && !jsonData.user_profile) ||
+          (!jsonData.user_profile && !jsonData.profile) ||
           !jsonData.income_items ||
           !jsonData.expense_items
         ) {
           throw new Error('Invalid JSON format');
-        }
-
-        // 兼容性处理：Python 格式使用 profile 字段，需要转换为 user_profile
-        if (jsonData.profile && !jsonData.user_profile) {
-          jsonData.user_profile = jsonData.profile;
-          delete jsonData.profile;
         }
 
         // 导入数据到 store（完全替换现有数据，但保持当前阶段）

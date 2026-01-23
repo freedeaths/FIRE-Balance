@@ -176,6 +176,8 @@ export class FIRECalculationService {
 
       const convertedUserProfile = {
         ...plannerData.user_profile,
+        as_of_year:
+          plannerData.user_profile.as_of_year ?? new Date().getFullYear(),
         current_net_worth: new Decimal(
           plannerData.user_profile.current_net_worth ?? 0
         ),
@@ -184,6 +186,9 @@ export class FIRECalculationService {
         ),
         safety_buffer_months: new Decimal(
           plannerData.user_profile.safety_buffer_months ?? 6
+        ),
+        bridge_discount_rate: new Decimal(
+          plannerData.user_profile.bridge_discount_rate ?? 1.0
         ),
         portfolio: {
           ...plannerData.user_profile.portfolio,
