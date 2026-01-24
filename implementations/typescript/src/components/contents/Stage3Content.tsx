@@ -383,12 +383,13 @@ export function Stage3Content(): React.JSX.Element {
     let hasDanger = false;
 
     for (const s of yearlyStates) {
-      const netWorth =
-        typeof s.net_worth === 'object' ? s.net_worth.toNumber() : s.net_worth;
-      const totalExpense =
-        typeof s.total_expense === 'object'
-          ? s.total_expense.toNumber()
-          : s.total_expense;
+      if (s.net_worth == null || s.total_expense == null) {
+        hasDanger = true;
+        break;
+      }
+
+      const netWorth = s.net_worth;
+      const totalExpense = s.total_expense;
 
       if (netWorth < 0) {
         hasDanger = true;
