@@ -94,6 +94,22 @@ export interface PlannerResults {
   /** Monte Carlo simulation success rate (0.0-1.0) */
   monte_carlo_success_rate?: Decimal;
 
+  /** Monte Carlo status distribution (safe/warning/danger) */
+  monte_carlo_status_rates?: {
+    safe: Decimal;
+    warning: Decimal;
+    danger: Decimal;
+  };
+
+  /** Per-year status distribution (safe/warning/danger) */
+  monte_carlo_yearly_status_rates?: Array<{
+    age: number;
+    year: number;
+    safe: Decimal;
+    warning: Decimal;
+    danger: Decimal;
+  }>;
+
   /** List of advisor recommendations */
   recommendations: Record<string, any>[];
 
@@ -114,6 +130,8 @@ export function createPlannerResults(
       typeof data.monte_carlo_success_rate === 'number'
         ? new Decimal(data.monte_carlo_success_rate)
         : data.monte_carlo_success_rate,
+    monte_carlo_status_rates: data.monte_carlo_status_rates,
+    monte_carlo_yearly_status_rates: data.monte_carlo_yearly_status_rates,
     recommendations: data.recommendations ?? [],
     calculation_timestamp: data.calculation_timestamp ?? new Date(),
   };

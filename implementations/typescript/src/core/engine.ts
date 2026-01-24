@@ -13,6 +13,7 @@ import type {
   YearlyState,
 } from './data_models';
 import { getCurrentAgeAsOf } from './data_models';
+import { getRequiredSafetyBufferMonths } from './safety_buffer';
 import { LiquidityAwareFlowStrategy, PortfolioSimulator } from './portfolio';
 
 // =============================================================================
@@ -110,33 +111,13 @@ export class FIREEngine {
   }
 
   private _getRequiredSafetyBufferMonths(age: number): Decimal {
-    const baseMonths = new Decimal(this.profile.safety_buffer_months);
-
-    if (
-      age >= this.profile.expected_fire_age &&
-      age < this.profile.legal_retirement_age
-    ) {
-      const yearsUntilLegal = this.profile.legal_retirement_age - age;
-      const discountRate = new Decimal(this.profile.bridge_discount_rate).div(
-        100
-      );
-
-      if (yearsUntilLegal <= 0) {
-        return baseMonths;
-      }
-
-      if (discountRate.lte(0)) {
-        return baseMonths.add(yearsUntilLegal * 12);
-      }
-
-      const one = new Decimal(1);
-      const annuityYears = one
-        .sub(one.add(discountRate).pow(-yearsUntilLegal))
-        .div(discountRate);
-      return baseMonths.add(annuityYears.mul(12));
-    }
-
-    return baseMonths;
+    return getRequiredSafetyBufferMonths({
+      age,
+      expectedFireAge: this.profile.expected_fire_age,
+      legalRetirementAge: this.profile.legal_retirement_age,
+      baseSafetyBufferMonths: this.profile.safety_buffer_months,
+      bridgeDiscountRatePercent: this.profile.bridge_discount_rate,
+    });
   }
 
   /**

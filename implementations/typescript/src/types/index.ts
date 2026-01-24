@@ -478,6 +478,22 @@ export interface PlannerResults {
   /** Monte Carlo success rate (0-1) */
   monte_carlo_success_rate?: number;
 
+  /** Monte Carlo status distribution (0-1) */
+  monte_carlo_status_rates?: {
+    safe: number;
+    warning: number;
+    danger: number;
+  };
+
+  /** Per-year status distribution (0-1) */
+  monte_carlo_yearly_status_rates?: Array<{
+    age: number;
+    year: number;
+    safe: number;
+    warning: number;
+    danger: number;
+  }>;
+
   /** Advisor recommendations */
   recommendations: any[];
 

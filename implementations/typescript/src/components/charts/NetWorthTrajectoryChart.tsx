@@ -25,6 +25,7 @@ import {
 } from 'recharts';
 import { Card, Title, Text, Group, Badge, Stack } from '@mantine/core';
 import { IconTrendingUp } from '@tabler/icons-react';
+import { getRequiredSafetyBufferMonths } from '../../core';
 import type { YearlyState } from '../../core';
 import { getI18n } from '../../core/i18n';
 import {
@@ -66,6 +67,7 @@ interface ChartDataPoint {
   year: number;
   netWorth: number;
   safetyBuffer: number;
+  requiredSafetyBufferMonths: number;
   netCashFlow: number;
   isSustainable: boolean;
   fireProgress: number;
@@ -202,9 +204,6 @@ const calculateZones = (data: ChartDataPoint[]): ZoneDefinition[] => {
 
         if (intersection !== null) {
           exactBoundary = intersection;
-          console.log(
-            `Safe/Warning boundary at age ${intersection.toFixed(2)}`
-          );
         }
       }
 
@@ -226,9 +225,6 @@ const calculateZones = (data: ChartDataPoint[]): ZoneDefinition[] => {
 
         if (intersection !== null) {
           exactBoundary = intersection;
-          console.log(
-            `Warning/Danger boundary at age ${intersection.toFixed(2)}`
-          );
         }
       }
 
@@ -239,7 +235,6 @@ const calculateZones = (data: ChartDataPoint[]): ZoneDefinition[] => {
         x2: exactBoundary,
         color: getZoneColor(currentZoneType),
       };
-      console.log('Adding zone:', newZone);
       zones.push(newZone);
 
       // 开始新区域
@@ -255,7 +250,6 @@ const calculateZones = (data: ChartDataPoint[]): ZoneDefinition[] => {
     x2: data[data.length - 1].age,
     color: getZoneColor(currentZoneType),
   };
-  console.log('Adding final zone:', finalZone);
   zones.push(finalZone);
 
   return zones;
@@ -323,6 +317,14 @@ function NetWorthChartContent({
                 {t('safety_buffer_line', { months: safetyBufferMonths })}
               </Text>
               <Text size='sm'>{formatCurrency(data.safetyBuffer)}</Text>
+              {Math.round(data.requiredSafetyBufferMonths) !==
+                Math.round(safetyBufferMonths) && (
+                <Text size='xs' c='dimmed'>
+                  {t('safety_buffer_required_months', {
+                    months: Math.round(data.requiredSafetyBufferMonths),
+                  })}
+                </Text>
+              )}
             </div>
             <div>
               <Text size='xs' c='dimmed'>
@@ -648,24 +650,13 @@ export function NetWorthTrajectoryChart({
             : state.net_cash_flow
           : 0;
 
-        // 计算安全缓冲区：N个月的年支出（包含通胀调整）
-        let requiredSafetyBufferMonths = safetyBufferMonths;
-        if (
-          legalRetirementAge &&
-          state.age >= targetFireAge &&
-          state.age < legalRetirementAge
-        ) {
-          const yearsUntilLegal = legalRetirementAge - state.age;
-          const discountRate = bridgeDiscountRate / 100;
-
-          if (discountRate <= 0) {
-            requiredSafetyBufferMonths += yearsUntilLegal * 12;
-          } else {
-            const annuityYears =
-              (1 - Math.pow(1 + discountRate, -yearsUntilLegal)) / discountRate;
-            requiredSafetyBufferMonths += annuityYears * 12;
-          }
-        }
+        const requiredSafetyBufferMonths = getRequiredSafetyBufferMonths({
+          age: state.age,
+          expectedFireAge: targetFireAge,
+          legalRetirementAge,
+          baseSafetyBufferMonths: safetyBufferMonths,
+          bridgeDiscountRatePercent: bridgeDiscountRate,
+        }).toNumber();
 
         const safetyBuffer = (totalExpense * requiredSafetyBufferMonths) / 12;
 
@@ -674,6 +665,7 @@ export function NetWorthTrajectoryChart({
           year: state.year,
           netWorth,
           safetyBuffer,
+          requiredSafetyBufferMonths,
           netCashFlow,
           isSustainable: state.is_sustainable,
           fireProgress: state.fire_progress

@@ -625,6 +625,18 @@ export class FIREPlanner {
 
     // Run Monte Carlo simulation with custom or default settings
     let monteCarloSuccessRate: Decimal | undefined = undefined;
+    let monteCarloStatusRates:
+      | { safe: Decimal; warning: Decimal; danger: Decimal }
+      | undefined = undefined;
+    let monteCarloYearlyStatusRates:
+      | Array<{
+          age: number;
+          year: number;
+          safe: Decimal;
+          warning: Decimal;
+          danger: Decimal;
+        }>
+      | undefined = undefined;
     let recommendations: Record<string, any>[] = [];
 
     try {
@@ -663,6 +675,8 @@ export class FIREPlanner {
 
       const mcResult = await mcSimulator.run_simulation(mcProgressCallback);
       monteCarloSuccessRate = mcResult.success_rate;
+      monteCarloStatusRates = mcResult.plan_status_rates;
+      monteCarloYearlyStatusRates = mcResult.yearly_status_rates;
 
       progressCallback?.(0.8); // 80% - Monte Carlo done
 
@@ -687,6 +701,8 @@ export class FIREPlanner {
       monte_carlo_success_rate: monteCarloSuccessRate
         ? monteCarloSuccessRate.toNumber()
         : undefined,
+      monte_carlo_status_rates: monteCarloStatusRates,
+      monte_carlo_yearly_status_rates: monteCarloYearlyStatusRates,
       recommendations,
       calculation_timestamp: new Date(),
     } as any);

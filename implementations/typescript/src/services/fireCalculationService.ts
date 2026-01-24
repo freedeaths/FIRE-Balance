@@ -63,6 +63,22 @@ function convertCoreResultsToUI(
       ),
     },
     monte_carlo_success_rate: coreResults.monte_carlo_success_rate?.toNumber(),
+    monte_carlo_status_rates: coreResults.monte_carlo_status_rates
+      ? {
+          safe: coreResults.monte_carlo_status_rates.safe.toNumber(),
+          warning: coreResults.monte_carlo_status_rates.warning.toNumber(),
+          danger: coreResults.monte_carlo_status_rates.danger.toNumber(),
+        }
+      : undefined,
+    monte_carlo_yearly_status_rates: coreResults.monte_carlo_yearly_status_rates
+      ? coreResults.monte_carlo_yearly_status_rates.map(row => ({
+          age: row.age,
+          year: row.year,
+          safe: row.safe.toNumber(),
+          warning: row.warning.toNumber(),
+          danger: row.danger.toNumber(),
+        }))
+      : undefined,
     recommendations: coreResults.recommendations,
     calculation_timestamp: coreResults.calculation_timestamp.toISOString(),
   };
