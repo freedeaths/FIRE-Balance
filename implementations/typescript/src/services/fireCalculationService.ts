@@ -63,6 +63,22 @@ function convertCoreResultsToUI(
       ),
     },
     monte_carlo_success_rate: coreResults.monte_carlo_success_rate?.toNumber(),
+    monte_carlo_status_rates: coreResults.monte_carlo_status_rates
+      ? {
+          safe: coreResults.monte_carlo_status_rates.safe.toNumber(),
+          warning: coreResults.monte_carlo_status_rates.warning.toNumber(),
+          danger: coreResults.monte_carlo_status_rates.danger.toNumber(),
+        }
+      : undefined,
+    monte_carlo_yearly_status_rates: coreResults.monte_carlo_yearly_status_rates
+      ? coreResults.monte_carlo_yearly_status_rates.map(row => ({
+          age: row.age,
+          year: row.year,
+          safe: row.safe.toNumber(),
+          warning: row.warning.toNumber(),
+          danger: row.danger.toNumber(),
+        }))
+      : undefined,
     recommendations: coreResults.recommendations,
     calculation_timestamp: coreResults.calculation_timestamp.toISOString(),
   };
@@ -176,6 +192,8 @@ export class FIRECalculationService {
 
       const convertedUserProfile = {
         ...plannerData.user_profile,
+        as_of_year:
+          plannerData.user_profile.as_of_year ?? new Date().getFullYear(),
         current_net_worth: new Decimal(
           plannerData.user_profile.current_net_worth ?? 0
         ),
@@ -184,6 +202,9 @@ export class FIRECalculationService {
         ),
         safety_buffer_months: new Decimal(
           plannerData.user_profile.safety_buffer_months ?? 6
+        ),
+        bridge_discount_rate: new Decimal(
+          plannerData.user_profile.bridge_discount_rate ?? 1.0
         ),
         portfolio: {
           ...plannerData.user_profile.portfolio,

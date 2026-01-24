@@ -254,6 +254,98 @@ class TestFIREEngine:
             assert state_6m.is_sustainable == sustainable_6m
             assert state_24m.is_sustainable == sustainable_24m
 
+    def test_depletion_safety_buffer_ramps_to_legal_retirement(self) -> None:
+        """Test that safety buffer requirement ramps during depletion stage."""
+        from core.data_models import AssetClass, LiquidityLevel, PortfolioConfiguration
+
+        profile = UserProfile(
+            birth_year=1990,
+            expected_fire_age=50,
+            legal_retirement_age=65,
+            life_expectancy=85,
+            current_net_worth=200000.0,
+            inflation_rate=0.0,
+            safety_buffer_months=12,
+            portfolio=PortfolioConfiguration(
+                asset_classes=[
+                    AssetClass(
+                        name="Cash",
+                        allocation_percentage=100.0,
+                        expected_return=0.0,
+                        volatility=0.0,
+                        liquidity_level=LiquidityLevel.HIGH,
+                    )
+                ],
+                enable_rebalancing=False,
+            ),
+        )
+
+        df = pd.DataFrame(
+            {
+                "age": [60, 64, 65],
+                "year": [2050, 2054, 2055],
+                "total_income": [100000.0, 100000.0, 100000.0],
+                "total_expense": [100000.0, 100000.0, 100000.0],
+            }
+        )
+
+        engine = FIREEngine(
+            EngineInput(user_profile=profile, annual_financial_projection=df)
+        )
+        states = engine.get_yearly_states()
+        states_by_age = {s.age: s for s in states}
+
+        assert states_by_age[60].is_sustainable is False
+        assert states_by_age[64].is_sustainable is True
+        assert states_by_age[65].is_sustainable is True
+
+    def test_depletion_net_worth_tracks_unfunded_shortfall(self) -> None:
+        """Net worth should reflect only the unfunded shortfall.
+
+        This is the shortfall after consuming remaining portfolio value.
+        """
+        from core.data_models import AssetClass, LiquidityLevel, PortfolioConfiguration
+
+        profile = UserProfile(
+            birth_year=1990,
+            expected_fire_age=50,
+            legal_retirement_age=65,
+            life_expectancy=85,
+            current_net_worth=500.0,
+            inflation_rate=0.0,
+            safety_buffer_months=0,
+            bridge_discount_rate=0.0,
+            portfolio=PortfolioConfiguration(
+                asset_classes=[
+                    AssetClass(
+                        name="Cash",
+                        allocation_percentage=100.0,
+                        expected_return=0.0,
+                        volatility=0.0,
+                        liquidity_level=LiquidityLevel.HIGH,
+                    )
+                ],
+                enable_rebalancing=False,
+            ),
+        )
+
+        df = pd.DataFrame(
+            {
+                "age": [60],
+                "year": [2050],
+                "total_income": [0.0],
+                "total_expense": [600.0],  # shortfall = 600 - 500 = 100
+            }
+        )
+
+        engine = FIREEngine(
+            EngineInput(user_profile=profile, annual_financial_projection=df)
+        )
+        states = engine.get_yearly_states()
+        assert len(states) == 1
+        assert float(states[0].portfolio_value) == 0.0
+        assert states[0].net_worth == pytest.approx(-100.0, rel=1e-9)
+
 
 class TestEngineInput:
     """Test engine input validation and creation."""
@@ -403,12 +495,14 @@ class TestOneTimeItems:
 
     def test_one_time_expense_appears_only_once(self) -> None:
         """Test that one-time expenses appear only in specified year."""
+        from datetime import datetime
+
         from core.data_models import IncomeExpenseItem, ItemFrequency, TimeUnit
         from core.planner import FIREPlanner
 
         # Create user profile (birth_year 1984 = age 41 in 2025)
         profile = UserProfile(
-            birth_year=1984,
+            birth_year=datetime.now().year - 41,
             expected_fire_age=50,
             legal_retirement_age=65,
             life_expectancy=85,
@@ -522,11 +616,13 @@ class TestOneTimeItems:
 
     def test_multiple_one_time_expenses(self) -> None:
         """Test multiple one-time expenses at different ages."""
+        from datetime import datetime
+
         from core.data_models import IncomeExpenseItem, ItemFrequency, TimeUnit
         from core.planner import FIREPlanner
 
         profile = UserProfile(
-            birth_year=1984,  # Age 41 in 2025
+            birth_year=datetime.now().year - 41,
             expected_fire_age=50,
             legal_retirement_age=65,
             life_expectancy=85,

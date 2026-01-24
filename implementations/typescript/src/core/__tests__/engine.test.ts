@@ -290,6 +290,84 @@ describe('FIREEngine', () => {
       expect(state24m.is_sustainable).toBe(sustainable24m);
     }
   });
+
+  test('depletion safety buffer ramps to legal retirement', () => {
+    const portfolio = createPortfolioConfiguration({
+      asset_classes: [
+        {
+          name: 'Cash',
+          allocation_percentage: new Decimal(100.0),
+          expected_return: new Decimal(0.0),
+          volatility: new Decimal(0.0),
+          liquidity_level: 'high',
+        },
+      ],
+      enable_rebalancing: false,
+    });
+
+    const profile = createUserProfile({
+      birth_year: 1990,
+      expected_fire_age: 50,
+      legal_retirement_age: 65,
+      life_expectancy: 85,
+      current_net_worth: new Decimal(200000.0),
+      inflation_rate: new Decimal(0.0),
+      safety_buffer_months: new Decimal(12.0),
+      portfolio,
+    });
+
+    const projectionData: AnnualFinancialProjection[] = [
+      createProjectionRow(60, 2050, 100000.0, 100000.0),
+      createProjectionRow(64, 2054, 100000.0, 100000.0),
+      createProjectionRow(65, 2055, 100000.0, 100000.0),
+    ];
+
+    const engine = new FIREEngine(createEngineInput(profile, projectionData));
+    const states = engine.get_yearly_states();
+    const statesByAge = new Map(states.map(s => [s.age, s]));
+
+    expect(statesByAge.get(60)?.is_sustainable).toBe(false);
+    expect(statesByAge.get(64)?.is_sustainable).toBe(true);
+    expect(statesByAge.get(65)?.is_sustainable).toBe(true);
+  });
+
+  test('depletion net worth tracks unfunded shortfall (not full negative cash flow)', () => {
+    const portfolio = createPortfolioConfiguration({
+      asset_classes: [
+        {
+          name: 'Cash',
+          allocation_percentage: new Decimal(100.0),
+          expected_return: new Decimal(0.0),
+          volatility: new Decimal(0.0),
+          liquidity_level: 'high',
+        },
+      ],
+      enable_rebalancing: false,
+    });
+
+    const profile = createUserProfile({
+      birth_year: 1990,
+      expected_fire_age: 50,
+      legal_retirement_age: 65,
+      life_expectancy: 85,
+      current_net_worth: new Decimal(500.0),
+      inflation_rate: new Decimal(0.0),
+      safety_buffer_months: new Decimal(0.0),
+      bridge_discount_rate: new Decimal(0.0),
+      portfolio,
+    });
+
+    const projectionData: AnnualFinancialProjection[] = [
+      createProjectionRow(60, 2050, 0.0, 600.0), // shortfall = 600 - 500 = 100
+    ];
+
+    const engine = new FIREEngine(createEngineInput(profile, projectionData));
+    const states = engine.get_yearly_states();
+    expect(states).toHaveLength(1);
+
+    expect(states[0].portfolio_value.toNumber()).toBe(0.0);
+    expect(states[0].net_worth.toNumber()).toBeCloseTo(-100.0, 10);
+  });
 });
 
 describe('EngineInput', () => {

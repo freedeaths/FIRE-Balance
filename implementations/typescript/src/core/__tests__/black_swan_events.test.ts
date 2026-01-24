@@ -24,7 +24,7 @@ import {
 } from '../black_swan_events';
 
 import type { UserProfile } from '../data_models';
-import { createUserProfile, getCurrentAge } from '../data_models';
+import { createUserProfile, getCurrentAgeAsOf } from '../data_models';
 
 describe('BlackSwanEventImplementations', () => {
   test('FinancialCrisisEvent properties', () => {
@@ -271,17 +271,25 @@ describe('CreateBlackSwanEventsFactory', () => {
 
   test('personalizes age ranges based on user profile', () => {
     const events = createBlackSwanEvents(profile);
-    const current_age = getCurrentAge(profile.birth_year);
+    const current_age = getCurrentAgeAsOf(
+      profile.birth_year,
+      profile.as_of_year
+    );
     const fire_age = profile.expected_fire_age;
     const legal_retirement_age = profile.legal_retirement_age;
     const life_expectancy = profile.life_expectancy;
 
     // Check unemployment event has personalized working age range
     const unemployment = events.find(e => e.event_id === 'unemployment');
-    expect(unemployment?.age_range[0]).toBe(Math.max(22, current_age));
-    expect(unemployment?.age_range[1]).toBe(
-      Math.min(fire_age, legal_retirement_age)
+    expect(unemployment?.age_range[0]).toBe(current_age);
+    expect(unemployment?.age_range[1]).toBe(fire_age);
+
+    // Unexpected promotion should also be limited to current age -> FIRE age
+    const unexpected_promotion = events.find(
+      e => e.event_id === 'unexpected_promotion'
     );
+    expect(unexpected_promotion?.age_range[0]).toBe(current_age);
+    expect(unexpected_promotion?.age_range[1]).toBe(fire_age);
 
     // Check major illness starts from appropriate age
     const major_illness = events.find(e => e.event_id === 'major_illness');
@@ -314,11 +322,14 @@ describe('CreateBlackSwanEventsFactory', () => {
     });
 
     const events = createBlackSwanEvents(older_profile);
-    const older_current_age = getCurrentAge(older_profile.birth_year);
+    const older_current_age = getCurrentAgeAsOf(
+      older_profile.birth_year,
+      older_profile.as_of_year
+    );
 
     // Unemployment should still be applicable for working years
     const unemployment = events.find(e => e.event_id === 'unemployment');
-    expect(unemployment?.age_range[0]).toBe(Math.max(22, older_current_age));
+    expect(unemployment?.age_range[0]).toBe(older_current_age);
     expect(unemployment?.age_range[1]).toBe(60); // FIRE age
 
     // Major illness should start from current age (already > 35)

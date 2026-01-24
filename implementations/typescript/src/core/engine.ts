@@ -12,7 +12,8 @@ import type {
   UserProfile,
   YearlyState,
 } from './data_models';
-import { getCurrentAge } from './data_models';
+import { getCurrentAgeAsOf } from './data_models';
+import { getRequiredSafetyBufferMonths } from './safety_buffer';
 import { LiquidityAwareFlowStrategy, PortfolioSimulator } from './portfolio';
 
 // =============================================================================
@@ -109,6 +110,16 @@ export class FIREEngine {
     return this._calculateYearlyStates();
   }
 
+  private _getRequiredSafetyBufferMonths(age: number): Decimal {
+    return getRequiredSafetyBufferMonths({
+      age,
+      expectedFireAge: this.profile.expected_fire_age,
+      legalRetirementAge: this.profile.legal_retirement_age,
+      baseSafetyBufferMonths: this.profile.safety_buffer_months,
+      bridgeDiscountRatePercent: this.profile.bridge_discount_rate,
+    });
+  }
+
   /**
    * Calculate state for a single year with pre-computed income/expense values
    */
@@ -131,15 +142,14 @@ export class FIREEngine {
     const portfolio_value = portfolio_result.ending_portfolio_value;
 
     // Calculate sustainability metrics
-    const safety_buffer_months_decimal = new Decimal(
-      this.profile.safety_buffer_months
-    );
+    const required_safety_buffer_months =
+      this._getRequiredSafetyBufferMonths(age);
     const twelve_decimal = new Decimal(12.0);
     const twenty_five_decimal = new Decimal(25.0);
     const zero_decimal = new Decimal(0.0);
 
     const safety_buffer_amount = total_expense.mul(
-      safety_buffer_months_decimal.div(twelve_decimal)
+      required_safety_buffer_months.div(twelve_decimal)
     );
     const fire_number = total_expense.mul(twenty_five_decimal);
     const fire_progress = fire_number.gt(zero_decimal)
@@ -168,6 +178,7 @@ export class FIREEngine {
   private _calculateYearlyStates(): YearlyState[] {
     const yearly_states: YearlyState[] = [];
     let cumulative_debt = new Decimal(0.0); // Track accumulated debt when portfolio is depleted
+    let starting_portfolio_value = new Decimal(this.profile.current_net_worth);
     const zero_decimal = new Decimal(0);
 
     // Reset portfolio simulator to initial state
@@ -190,16 +201,22 @@ export class FIREEngine {
         yearly_state.net_worth = portfolio_value;
         cumulative_debt = new Decimal(0.0); // Reset debt when portfolio recovers
       } else {
-        // Portfolio is depleted - accumulate debt
+        // Portfolio is depleted - accumulate ONLY the unfunded shortfall.
         if (yearly_state.net_cash_flow.lt(zero_decimal)) {
-          cumulative_debt = cumulative_debt.add(
-            yearly_state.net_cash_flow.abs()
+          const required_cash = yearly_state.net_cash_flow.abs();
+          const available_cash = starting_portfolio_value.add(
+            yearly_state.investment_return
           );
+          const shortfall = required_cash.sub(available_cash);
+          if (shortfall.gt(zero_decimal)) {
+            cumulative_debt = cumulative_debt.add(shortfall);
+          }
         }
         yearly_state.net_worth = cumulative_debt.neg(); // Negative net worth indicates debt
       }
 
       yearly_states.push(yearly_state);
+      starting_portfolio_value = portfolio_value;
     }
 
     return yearly_states;
@@ -220,7 +237,8 @@ export class FIREEngine {
     // Get net worth at expected FIRE age
     let fire_net_worth = new Decimal(0.0);
     const expected_fire_year_index =
-      this.profile.expected_fire_age - getCurrentAge(this.profile.birth_year);
+      this.profile.expected_fire_age -
+      getCurrentAgeAsOf(this.profile.birth_year, this.profile.as_of_year);
     if (
       expected_fire_year_index >= 0 &&
       expected_fire_year_index < yearly_states.length
@@ -254,15 +272,12 @@ export class FIREEngine {
 
     // Safety buffer analysis - calculate dynamically
     const safety_buffer_ratios: Decimal[] = [];
-    const safety_buffer_months_decimal = new Decimal(
-      this.profile.safety_buffer_months
-    );
     const twelve_decimal = new Decimal(12.0);
     const zero_decimal = new Decimal(0);
 
     for (const s of yearly_states) {
       const safety_buffer_amount = s.total_expense.mul(
-        safety_buffer_months_decimal.div(twelve_decimal)
+        this._getRequiredSafetyBufferMonths(s.age).div(twelve_decimal)
       );
       if (safety_buffer_amount.gt(zero_decimal)) {
         const ratio = s.net_worth.div(safety_buffer_amount); // Use net_worth instead of portfolio_value

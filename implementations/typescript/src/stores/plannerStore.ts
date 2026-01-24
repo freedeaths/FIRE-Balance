@@ -26,6 +26,62 @@ import type {
   AnnualProjectionRow,
 } from '../types';
 
+const normalizePortfolioAssetClasses = (
+  assetClasses: unknown
+): UserProfile['portfolio']['asset_classes'] => {
+  const defaults = DEFAULT_USER_PROFILE.portfolio.asset_classes;
+  const existingArray = Array.isArray(assetClasses) ? assetClasses : [];
+
+  const byName = new Map<string, any>();
+  for (const asset of existingArray) {
+    const name = String((asset as any)?.name ?? '');
+    if (!name) continue;
+    byName.set(name, asset);
+  }
+
+  const normalized: any[] = [];
+  for (const d of defaults) {
+    const existing = byName.get(d.name);
+    if (existing) {
+      normalized.push({
+        ...d,
+        ...existing,
+        name: existing.name ?? d.name,
+        allocation_percentage: Number(
+          existing.allocation_percentage ?? d.allocation_percentage ?? 0
+        ),
+        expected_return: Number(
+          existing.expected_return ?? d.expected_return ?? 0
+        ),
+        volatility: Number(existing.volatility ?? d.volatility ?? 0),
+        liquidity_level: existing.liquidity_level ?? d.liquidity_level,
+        display_name: existing.display_name ?? d.display_name,
+      });
+      byName.delete(d.name);
+    } else {
+      normalized.push({
+        ...d,
+        allocation_percentage: 0,
+      });
+    }
+  }
+
+  // Keep any extra user-defined asset classes after the defaults
+  for (const [, extra] of byName.entries()) {
+    normalized.push({
+      ...extra,
+      name: String(extra?.name ?? ''),
+      allocation_percentage: Number(extra?.allocation_percentage ?? 0),
+      expected_return: Number(extra?.expected_return ?? 0),
+      volatility: Number(extra?.volatility ?? 0),
+      display_name: String(extra?.display_name ?? extra?.name ?? ''),
+      liquidity_level: extra?.liquidity_level ?? 'low',
+    });
+  }
+
+  return normalized as any;
+};
+
 // =============================================================================
 // Initial State
 // =============================================================================
@@ -506,11 +562,28 @@ export const createPlannerStore = (config?: StoreConfig) => {
 
     exportConfig: (title?: string) => {
       const state = get();
+      const normalizedProfile = state.data.user_profile
+        ? {
+            ...state.data.user_profile,
+            as_of_year:
+              state.data.user_profile.as_of_year ?? new Date().getFullYear(),
+            bridge_discount_rate:
+              state.data.user_profile.bridge_discount_rate ?? 1.0,
+            portfolio: state.data.user_profile.portfolio
+              ? {
+                  ...state.data.user_profile.portfolio,
+                  asset_classes: normalizePortfolioAssetClasses(
+                    state.data.user_profile.portfolio.asset_classes
+                  ),
+                }
+              : DEFAULT_USER_PROFILE.portfolio,
+          }
+        : state.data.user_profile;
       return {
         version: '1.0',
         title: title || `FIRE Plan - ${new Date().toISOString()}`,
         created_at: new Date().toISOString(),
-        user_profile: state.data.user_profile,
+        user_profile: normalizedProfile,
         income_items: state.data.income_items,
         expense_items: state.data.expense_items,
         overrides: state.data.overrides,
@@ -532,6 +605,38 @@ export const createPlannerStore = (config?: StoreConfig) => {
         }
 
         const currentStage = get().data.current_stage;
+        const nowYear = new Date().getFullYear();
+        const normalizedProfile =
+          config.user_profile || config.profile
+            ? {
+                ...(config.user_profile || config.profile),
+                as_of_year:
+                  (config.user_profile || config.profile).as_of_year ?? nowYear,
+                bridge_discount_rate:
+                  (config.user_profile || config.profile)
+                    .bridge_discount_rate ?? 1.0,
+                portfolio: {
+                  ...(config.user_profile || config.profile).portfolio,
+                  asset_classes: normalizePortfolioAssetClasses(
+                    (config.user_profile || config.profile).portfolio
+                      ?.asset_classes
+                  ),
+                },
+              }
+            : config.user_profile || config.profile;
+
+        // Block invalid age progression that would silently disable bridge logic
+        if (
+          normalizedProfile?.expected_fire_age !== undefined &&
+          normalizedProfile?.legal_retirement_age !== undefined &&
+          Number(normalizedProfile.legal_retirement_age) <=
+            Number(normalizedProfile.expected_fire_age)
+        ) {
+          console.error(
+            '❌ Invalid profile: legal_retirement_age must be greater than expected_fire_age'
+          );
+          return false;
+        }
 
         // 一次性重置并设置新数据，避免竞态条件
         set(
@@ -539,7 +644,7 @@ export const createPlannerStore = (config?: StoreConfig) => {
             ...initialPlannerState,
             data: {
               ...createInitialPlannerData(),
-              user_profile: config.user_profile || config.profile,
+              user_profile: normalizedProfile,
               income_items: config.income_items || [],
               expense_items: config.expense_items || [],
               overrides: config.overrides || [],

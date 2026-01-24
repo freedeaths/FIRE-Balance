@@ -20,6 +20,12 @@ export type {
   DetailedProjection,
 } from './engine';
 
+// Safety buffer utilities
+export {
+  getRequiredSafetyBufferMonths,
+  type RequiredSafetyBufferMonthsParams,
+} from './safety_buffer';
+
 // Portfolio management
 export {
   PortfolioSimulator,

@@ -87,8 +87,8 @@ const IncomeExpenseBreakdownChart = React.memo(
       if (!userProfile || !incomeItems || !expenseItems) return [];
 
       const birthYear = userProfile.birth_year || 1990;
-      const currentYear = new Date().getFullYear();
-      const currentAge = currentYear - birthYear;
+      const asOfYear = userProfile.as_of_year || new Date().getFullYear();
+      const currentAge = asOfYear - birthYear;
       const fireAge = userProfile.expected_fire_age || 50;
       const startAge = Math.max(currentAge, 25);
       const endAge = Math.max(fireAge + 10, 70);
@@ -347,8 +347,8 @@ const ChartContent = React.memo(function ChartContent({
     if (!userProfile || !incomeItems || !expenseItems) return [];
 
     const birthYear = userProfile.birth_year || 1990;
-    const currentYear = new Date().getFullYear();
-    const currentAge = currentYear - birthYear;
+    const asOfYear = userProfile.as_of_year || new Date().getFullYear();
+    const currentAge = asOfYear - birthYear;
     const fireAge = userProfile.expected_fire_age || 50;
     const startAge = Math.max(currentAge, 25);
     const endAge = Math.max(fireAge + 10, 70);

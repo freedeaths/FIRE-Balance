@@ -107,28 +107,56 @@ python cli/fire_planner.py --output results.json
 
 ## 📊 Data Structures
 
-### User Profile
+### Plan JSON (export/import)
 ```json
 {
-  "gender": "male",
-  "current_age": 30,
-  "target_fire_age": 50,
-  "current_assets": 100000,
-  "portfolio": {...},
-  "historical_data": [...]
+  "version": "1.0",
+  "title": "FIRE Plan - 2026-01-23T06:25:04.196Z",
+  "created_at": "2026-01-23T06:25:04.196Z",
+  "user_profile": {
+    "birth_year": 1985,
+    "as_of_year": 2026,
+    "expected_fire_age": 49,
+    "legal_retirement_age": 65,
+    "life_expectancy": 95,
+    "current_net_worth": 3500000,
+    "inflation_rate": 3,
+    "safety_buffer_months": 6,
+    "bridge_discount_rate": 1,
+    "portfolio": {
+      "asset_classes": [
+        { "name": "stocks", "allocation_percentage": 20, "expected_return": 7, "volatility": 15, "liquidity_level": "medium" },
+        { "name": "bonds", "allocation_percentage": 0, "expected_return": 3, "volatility": 5, "liquidity_level": "low" },
+        { "name": "savings", "allocation_percentage": 0, "expected_return": 1, "volatility": 5, "liquidity_level": "low" },
+        { "name": "cash", "allocation_percentage": 80, "expected_return": 1, "volatility": 1, "liquidity_level": "high" }
+      ],
+      "enable_rebalancing": true
+    }
+  },
+  "income_items": [],
+  "expense_items": [],
+  "overrides": []
 }
 ```
+
+Notes:
+- `as_of_year` is the base year for age calculations when reviewing/reloading plans.
+- Safety buffer requirement can ramp during the bridge period (FIRE age → legal retirement age) and is controlled by `bridge_discount_rate`.
 
 ### Income/Expense Items
 ```json
 {
   "id": "uuid4",
   "name": "Software Engineer Salary",
-  "type": "recurring",
-  "amount": 80000,
+  "after_tax_amount_per_period": 80000,
+  "time_unit": "annually",
+  "frequency": "recurring",
+  "interval_periods": 1,
   "start_age": 25,
   "end_age": 50,
-  "growth_rate": 0.05
+  "annual_growth_rate": 5,
+  "is_income": true,
+  "category": "Income"
 }
 ```
 
@@ -136,9 +164,9 @@ python cli/fire_planner.py --output results.json
 
 The application supports multiple languages with dedicated translation files:
 
-- `i18n/en.json` - English (default)
-- `i18n/zh-CN.json` - Simplified Chinese
-- `i18n/ja.json` - Japanese
+- `shared/i18n/en.json` - English (default)
+- `shared/i18n/zh-CN.json` - Simplified Chinese
+- `shared/i18n/ja.json` - Japanese
 
 Language switching is available in the sidebar with persistent user preferences.
 

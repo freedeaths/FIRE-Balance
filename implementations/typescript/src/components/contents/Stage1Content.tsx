@@ -64,21 +64,22 @@ export function Stage1Content() {
     value: number,
     currentProfile: UserProfile
   ): string | null => {
-    const currentYear = new Date().getFullYear();
+    const systemYear = new Date().getFullYear();
+    const asOfYear = currentProfile.as_of_year || systemYear;
 
     switch (field) {
       case 'birth_year': {
         if (value < 1900) {
           return t('validation.birth_year_too_old_min', { birthYear: value });
         }
-        if (value > currentYear) {
+        if (value > asOfYear) {
           return t('validation.birth_year_future', {
             birthYear: value,
-            currentYear,
+            currentYear: asOfYear,
           });
         }
         // 检查年龄范围
-        const age = currentYear - value;
+        const age = asOfYear - value;
         if (age < 18) {
           return t('validation.birth_year_too_recent', {
             birthYear: value,
@@ -94,9 +95,31 @@ export function Stage1Content() {
         break;
       }
 
+      case 'as_of_year': {
+        if (value < 1950) {
+          return t('validation.as_of_year_too_old', { year: value });
+        }
+        if (value > systemYear) {
+          return t('validation.as_of_year_future', {
+            year: value,
+            currentYear: systemYear,
+          });
+        }
+        if (currentProfile.birth_year) {
+          const age = value - currentProfile.birth_year;
+          if (age < 18) {
+            return t('validation.as_of_year_inconsistent', {
+              year: value,
+              birthYear: currentProfile.birth_year,
+            });
+          }
+        }
+        break;
+      }
+
       case 'expected_fire_age': {
         if (currentProfile.birth_year) {
-          const currentAge = currentYear - currentProfile.birth_year;
+          const currentAge = asOfYear - currentProfile.birth_year;
           if (value < currentAge) {
             return t('validation.fire_age_too_small', {
               fireAge: value,
@@ -149,7 +172,7 @@ export function Stage1Content() {
           });
         }
         if (currentProfile.birth_year) {
-          const currentAge = currentYear - currentProfile.birth_year;
+          const currentAge = asOfYear - currentProfile.birth_year;
           if (value - currentAge < 10) {
             return t('validation.life_span_too_short', {
               lifeExpectancy: value,
@@ -205,6 +228,18 @@ export function Stage1Content() {
             result.expected_fire_age = fireError;
           } else {
             delete result.expected_fire_age;
+          }
+        }
+        if (updatedProfile.as_of_year) {
+          const asOfError = validateProfileField(
+            'as_of_year',
+            updatedProfile.as_of_year,
+            updatedProfile
+          );
+          if (asOfError) {
+            result.as_of_year = asOfError;
+          } else {
+            delete result.as_of_year;
           }
         }
         if (updatedProfile.life_expectancy) {
@@ -281,6 +316,46 @@ export function Stage1Content() {
         }
       }
 
+      if (field === 'as_of_year') {
+        // 重新验证birth_year与FIRE年龄等与当前年龄相关的字段
+        if (updatedProfile.birth_year) {
+          const birthError = validateProfileField(
+            'birth_year',
+            updatedProfile.birth_year,
+            updatedProfile
+          );
+          if (birthError) {
+            result.birth_year = birthError;
+          } else {
+            delete result.birth_year;
+          }
+        }
+        if (updatedProfile.expected_fire_age) {
+          const fireError = validateProfileField(
+            'expected_fire_age',
+            updatedProfile.expected_fire_age,
+            updatedProfile
+          );
+          if (fireError) {
+            result.expected_fire_age = fireError;
+          } else {
+            delete result.expected_fire_age;
+          }
+        }
+        if (updatedProfile.life_expectancy) {
+          const lifeError = validateProfileField(
+            'life_expectancy',
+            updatedProfile.life_expectancy,
+            updatedProfile
+          );
+          if (lifeError) {
+            result.life_expectancy = lifeError;
+          } else {
+            delete result.life_expectancy;
+          }
+        }
+      }
+
       return result;
     });
   };
@@ -298,10 +373,10 @@ export function Stage1Content() {
 
       <Grid>
         {/*
-          第一行：年龄相关的四个字段
+          第一行：年龄相关的字段
           响应式布局：
           - 📱 移动端 (0-767px): span=6 (50%宽度，一行2个字段)
-          - 💻 桌面端 (768px+): span=3 (25%宽度，一行4个字段)
+          - 💻 桌面端 (768px+): span=3/2 (一行5个字段)
         */}
         <Grid.Col span={{ base: 6, md: 3 }}>
           <FormField
@@ -311,7 +386,7 @@ export function Stage1Content() {
             value={userProfile.birth_year}
             placeholder='1990'
             min={1900}
-            max={new Date().getFullYear()}
+            max={userProfile.as_of_year || new Date().getFullYear()}
             precision={0}
             error={validationErrors.birth_year}
             data-error={!!validationErrors.birth_year}
@@ -320,6 +395,23 @@ export function Stage1Content() {
         </Grid.Col>
 
         <Grid.Col span={{ base: 6, md: 3 }}>
+          <FormField
+            type='number'
+            name='as_of_year'
+            label={t('as_of_year')}
+            description={t('as_of_year_help')}
+            value={userProfile.as_of_year || new Date().getFullYear()}
+            placeholder={new Date().getFullYear().toString()}
+            min={1950}
+            max={new Date().getFullYear()}
+            precision={0}
+            error={validationErrors.as_of_year}
+            data-error={!!validationErrors.as_of_year}
+            onChange={value => handleFieldChange('as_of_year', value)}
+          />
+        </Grid.Col>
+
+        <Grid.Col span={{ base: 6, md: 2 }}>
           <FormField
             type='number'
             name='expected_fire_age'
@@ -335,7 +427,7 @@ export function Stage1Content() {
           />
         </Grid.Col>
 
-        <Grid.Col span={{ base: 6, md: 3 }}>
+        <Grid.Col span={{ base: 6, md: 2 }}>
           <FormField
             type='number'
             name='legal_retirement_age'
@@ -351,7 +443,7 @@ export function Stage1Content() {
           />
         </Grid.Col>
 
-        <Grid.Col span={{ base: 6, md: 3 }}>
+        <Grid.Col span={{ base: 6, md: 2 }}>
           <FormField
             type='number'
             name='life_expectancy'
@@ -371,9 +463,9 @@ export function Stage1Content() {
           第二行：其他三个字段
           响应式布局：
           - 📱 移动端 (0-767px): span=6 (50%宽度，一行2个字段)
-          - 💻 桌面端 (768px+): span=4 (33.33%宽度，一行3个字段)
+          - 💻 桌面端 (768px+): span=3 (25%宽度，一行4个字段)
         */}
-        <Grid.Col span={{ base: 6, md: 4 }}>
+        <Grid.Col span={{ base: 6, md: 3 }}>
           <FormField
             type='currency'
             name='current_net_worth'
@@ -385,7 +477,7 @@ export function Stage1Content() {
           />
         </Grid.Col>
 
-        <Grid.Col span={{ base: 6, md: 4 }}>
+        <Grid.Col span={{ base: 6, md: 3 }}>
           <FormField
             type='percentage'
             name='inflation_rate'
@@ -401,11 +493,12 @@ export function Stage1Content() {
           />
         </Grid.Col>
 
-        <Grid.Col span={{ base: 6, md: 4 }}>
+        <Grid.Col span={{ base: 6, md: 3 }}>
           <FormField
             type='number'
             name='safety_buffer_months'
             label={t('safety_buffer_months')}
+            description={t('safety_buffer_months_help')}
             value={userProfile.safety_buffer_months}
             placeholder='6'
             min={0}
@@ -414,6 +507,21 @@ export function Stage1Content() {
             error={validationErrors.safety_buffer_months}
             data-error={!!validationErrors.safety_buffer_months}
             onChange={value => handleFieldChange('safety_buffer_months', value)}
+          />
+        </Grid.Col>
+
+        <Grid.Col span={{ base: 6, md: 3 }}>
+          <FormField
+            type='percentage'
+            name='bridge_discount_rate'
+            label={t('bridge_discount_rate')}
+            description={t('bridge_discount_rate_help')}
+            value={userProfile.bridge_discount_rate}
+            placeholder='1.0'
+            min={0}
+            max={20}
+            precision={2}
+            onChange={value => handleFieldChange('bridge_discount_rate', value)}
           />
         </Grid.Col>
       </Grid>

@@ -653,17 +653,27 @@ def create_net_worth_plotly_chart(
 
     safety_buffer_values = []
     for _, row in chart_df.iterrows():
+        age = int(row["Age"])
         year = row["Year"]
         annual_expense = row["Total Expense"]
 
         years_from_base = year - base_year
         inflation_factor = (1 + user_profile.inflation_rate / 100.0) ** years_from_base
 
-        safety_buffer = (
-            (user_profile.safety_buffer_months / 12.0)
-            * annual_expense
-            * inflation_factor
-        )
+        required_months: float = float(user_profile.safety_buffer_months)
+        if user_profile.expected_fire_age <= age < user_profile.legal_retirement_age:
+            years_until_legal = user_profile.legal_retirement_age - age
+            discount_rate = float(user_profile.bridge_discount_rate) / 100.0
+
+            if discount_rate <= 0:
+                required_months += years_until_legal * 12
+            else:
+                annuity_years = (1 - (1 + discount_rate) ** (-years_until_legal)) / (
+                    discount_rate
+                )
+                required_months += annuity_years * 12
+
+        safety_buffer = (required_months / 12.0) * annual_expense * inflation_factor
         safety_buffer_values.append(safety_buffer)
 
     chart_df_with_buffer["Safety Buffer"] = safety_buffer_values

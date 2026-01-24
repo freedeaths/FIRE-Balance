@@ -41,12 +41,14 @@ describe('PlannerModels', () => {
   beforeEach(() => {
     mockUserProfile = {
       birth_year: 1990,
+      as_of_year: new Date().getFullYear(),
       expected_fire_age: 50,
       legal_retirement_age: 65,
       life_expectancy: 85,
       current_net_worth: new Decimal(50000),
       inflation_rate: new Decimal(3.0),
       safety_buffer_months: new Decimal(12.0),
+      bridge_discount_rate: new Decimal(1.0),
       portfolio: {
         asset_classes: [
           {

@@ -107,28 +107,56 @@ python cli/fire_planner.py --output results.json
 
 ## 📊 数据结构
 
-### 用户配置
+### 计划 JSON（导入/导出）
 ```json
 {
-  "gender": "male",
-  "current_age": 30,
-  "target_fire_age": 50,
-  "current_assets": 100000,
-  "portfolio": {...},
-  "historical_data": [...]
+  "version": "1.0",
+  "title": "FIRE Plan - 2026-01-23T06:25:04.196Z",
+  "created_at": "2026-01-23T06:25:04.196Z",
+  "user_profile": {
+    "birth_year": 1985,
+    "as_of_year": 2026,
+    "expected_fire_age": 49,
+    "legal_retirement_age": 65,
+    "life_expectancy": 95,
+    "current_net_worth": 3500000,
+    "inflation_rate": 3,
+    "safety_buffer_months": 6,
+    "bridge_discount_rate": 1,
+    "portfolio": {
+      "asset_classes": [
+        { "name": "stocks", "allocation_percentage": 20, "expected_return": 7, "volatility": 15, "liquidity_level": "medium" },
+        { "name": "bonds", "allocation_percentage": 0, "expected_return": 3, "volatility": 5, "liquidity_level": "low" },
+        { "name": "savings", "allocation_percentage": 0, "expected_return": 1, "volatility": 5, "liquidity_level": "low" },
+        { "name": "cash", "allocation_percentage": 80, "expected_return": 1, "volatility": 1, "liquidity_level": "high" }
+      ],
+      "enable_rebalancing": true
+    }
+  },
+  "income_items": [],
+  "expense_items": [],
+  "overrides": []
 }
 ```
+
+说明：
+- `as_of_year` 是回顾/重新加载计划时的年龄计算基准年。
+- 安全缓冲会在桥接期（FIRE 年龄→法定退休年龄）按剩余年数动态变化，并可通过 `bridge_discount_rate` 调整贴现（现值换算）的力度。
 
 ### 收支项目
 ```json
 {
   "id": "uuid4",
   "name": "软件工程师薪资",
-  "type": "recurring",
-  "amount": 80000,
+  "after_tax_amount_per_period": 80000,
+  "time_unit": "annually",
+  "frequency": "recurring",
+  "interval_periods": 1,
   "start_age": 25,
   "end_age": 50,
-  "growth_rate": 0.05
+  "annual_growth_rate": 5,
+  "is_income": true,
+  "category": "Income"
 }
 ```
 
@@ -136,9 +164,9 @@ python cli/fire_planner.py --output results.json
 
 应用支持多语言，配有专门的翻译文件：
 
-- `i18n/en.json` - 英文（默认）
-- `i18n/zh-CN.json` - 简体中文
-- `i18n/ja.json` - 日文
+- `shared/i18n/en.json` - 英文（默认）
+- `shared/i18n/zh-CN.json` - 简体中文
+- `shared/i18n/ja.json` - 日文
 
 侧边栏提供语言切换功能，支持持久化用户偏好。
 

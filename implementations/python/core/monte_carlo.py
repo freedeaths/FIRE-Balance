@@ -247,12 +247,13 @@ class MonteCarloSimulator:
         """
         num_years = len(self.base_df)
         variations = np.ones(num_years)
-
-        current_age = self.engine.profile.current_age
         fire_age = self.engine.profile.expected_fire_age
 
         for i in range(num_years):
-            age = current_age + i
+            if "age" in self.base_df.columns:
+                age = int(self.base_df.iloc[i]["age"])
+            else:
+                age = self.engine.profile.current_age + i
 
             # Only apply income volatility during working years (before FIRE)
             if age < fire_age:
@@ -314,7 +315,11 @@ class MonteCarloSimulator:
 
         num_years = len(df)
         for year_idx in range(num_years):
-            current_age = self.engine.profile.current_age + year_idx
+            current_age = (
+                int(modified_df.iloc[year_idx]["age"])
+                if "age" in modified_df.columns
+                else self.engine.profile.current_age + year_idx
+            )
 
             # Simulate new black swan events for this year
             new_events = self._simulate_black_swan_events(current_age)

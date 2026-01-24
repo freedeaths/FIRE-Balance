@@ -135,6 +135,9 @@ export interface UserProfile {
   /** User's birth year */
   birth_year: number;
 
+  /** Base year for age calculations (defaults to current year) */
+  as_of_year: number;
+
   /** User's expected FIRE (Financial Independence, Retire Early) age */
   expected_fire_age: number;
 
@@ -153,6 +156,12 @@ export interface UserProfile {
   /** Safety buffer in months of annual expenses (default: 6 months) */
   safety_buffer_months: number;
 
+  /**
+   * Nominal discount rate (%) used to convert remaining bridge-period expenses
+   * (from expected FIRE age to legal retirement age) into a present-value requirement.
+   */
+  bridge_discount_rate: number;
+
   /** Investment portfolio configuration */
   portfolio: PortfolioConfiguration;
 }
@@ -161,12 +170,14 @@ export interface UserProfile {
  * Default user profile matching Python defaults
  */
 export const DEFAULT_USER_PROFILE: Omit<UserProfile, 'birth_year'> = {
+  as_of_year: new Date().getFullYear(),
   expected_fire_age: 50,
   legal_retirement_age: 65,
   life_expectancy: 85,
   current_net_worth: 0.0,
   inflation_rate: 3.0,
   safety_buffer_months: 6,
+  bridge_discount_rate: 1.0,
   portfolio: DEFAULT_PORTFOLIO,
 };
 
@@ -466,6 +477,22 @@ export interface PlannerResults {
 
   /** Monte Carlo success rate (0-1) */
   monte_carlo_success_rate?: number;
+
+  /** Monte Carlo status distribution (0-1) */
+  monte_carlo_status_rates?: {
+    safe: number;
+    warning: number;
+    danger: number;
+  };
+
+  /** Per-year status distribution (0-1) */
+  monte_carlo_yearly_status_rates?: Array<{
+    age: number;
+    year: number;
+    safe: number;
+    warning: number;
+    danger: number;
+  }>;
 
   /** Advisor recommendations */
   recommendations: any[];

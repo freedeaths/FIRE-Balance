@@ -255,25 +255,32 @@ class TestPersonalizedEventCreation(unittest.TestCase):
     def test_age_range_customization(self) -> None:
         """Test that age ranges are properly customized for user profile."""
         events = create_black_swan_events(self.profile)
+        current_age = self.profile.current_age
 
         # Find career-related events (should be limited to working years)
         unemployment = next(e for e in events if e.event_id == "unemployment")
-        next(e for e in events if e.event_id == "unexpected_promotion")
+        unexpected_promotion = next(
+            e for e in events if e.event_id == "unexpected_promotion"
+        )
 
-        # Working period should be max(22, current_age=35)
-        # to min(fire_age=45, retirement=65) = 35 to 45
-        self.assertEqual(unemployment.age_range[0], 35)  # max(22, 35)
-        self.assertEqual(unemployment.age_range[1], 45)  # min(45, 65)
+        # Career-related events should be limited to current age -> expected FIRE age
+        career_start = current_age
+        career_end = self.profile.expected_fire_age
+        self.assertEqual(unemployment.age_range[0], career_start)
+        self.assertEqual(unemployment.age_range[1], career_end)
+        self.assertEqual(unexpected_promotion.age_range[0], career_start)
+        self.assertEqual(unexpected_promotion.age_range[1], career_end)
 
         # Long-term care should be limited to retirement period
         long_term_care = next(e for e in events if e.event_id == "long_term_care")
-        self.assertEqual(long_term_care.age_range[0], 65)  # legal_retirement_age
-        self.assertEqual(long_term_care.age_range[1], 85)  # life_expectancy
+        self.assertEqual(long_term_care.age_range[0], self.profile.legal_retirement_age)
+        self.assertEqual(long_term_care.age_range[1], self.profile.life_expectancy)
 
         # Financial crisis should affect entire adult life
         financial_crisis = next(e for e in events if e.event_id == "financial_crisis")
-        self.assertEqual(financial_crisis.age_range[0], 35)  # working_start
-        self.assertEqual(financial_crisis.age_range[1], 85)  # retirement_end
+        working_start = max(22, current_age)
+        self.assertEqual(financial_crisis.age_range[0], working_start)
+        self.assertEqual(financial_crisis.age_range[1], self.profile.life_expectancy)
 
     def test_different_user_profiles_create_different_ranges(self) -> None:
         """Test that different profiles create different age ranges."""
@@ -309,10 +316,8 @@ class TestPersonalizedEventCreation(unittest.TestCase):
 
         # Different age ranges
         self.assertNotEqual(young_unemployment.age_range, old_unemployment.age_range)
-        self.assertEqual(
-            young_unemployment.age_range[0], 25
-        )  # Young user's current age
-        self.assertEqual(old_unemployment.age_range[0], 55)  # Old user's current age
+        self.assertEqual(young_unemployment.age_range[0], young_profile.current_age)
+        self.assertEqual(old_unemployment.age_range[0], old_profile.current_age)
 
 
 class TestEventUniqueIds(unittest.TestCase):

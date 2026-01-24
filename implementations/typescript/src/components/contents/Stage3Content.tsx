@@ -10,7 +10,7 @@
  * Calculation logic handled by useFIRECalculation hook
  */
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useMediaQuery } from '@mantine/hooks';
 import {
   Container,
@@ -19,6 +19,7 @@ import {
   Text,
   Stack,
   Group,
+  Grid,
   Alert,
   Table,
   Button,
@@ -44,6 +45,8 @@ import { useFIRECalculation } from '../../hooks/useFIRECalculation';
 import { LoadingOverlay } from '../ui/LoadingOverlay';
 import { NetWorthTrajectoryChart } from '../charts/NetWorthTrajectoryChart';
 import { MonteCarloResultsChart } from '../charts/MonteCarloResultsChart';
+import { MonteCarloStatusTimelineChart } from '../charts/MonteCarloStatusTimelineChart';
+import { getRequiredSafetyBufferMonths } from '../../core';
 import { MonteCarloSimulator } from '../../core/monte_carlo';
 import { FIREEngine, createEngineInput } from '../../core/engine';
 import { createSimulationSettings } from '../../core/data_models';
@@ -62,6 +65,14 @@ const formatCurrency = (amount: number): string => {
 
 const formatPercentage = (rate: number): string => {
   return `${(rate * 100).toFixed(1)}%`;
+};
+
+type FeasibilityStatus = 'safe' | 'warning' | 'danger';
+
+const FEASIBILITY_EMOJI: Record<FeasibilityStatus, string> = {
+  safe: '🟢',
+  warning: '🟡',
+  danger: '🔴',
 };
 
 // =============================================================================
@@ -84,6 +95,14 @@ export function Stage3Content(): React.JSX.Element {
   });
   const [monteCarloResult, setMonteCarloResult] = useState<{
     success_rate: number;
+    plan_status_rates?: { safe: number; warning: number; danger: number };
+    yearly_status_rates?: Array<{
+      age: number;
+      year: number;
+      safe: number;
+      warning: number;
+      danger: number;
+    }>;
     mean_minimum_net_worth: number;
     percentile_5_minimum_net_worth: number;
     percentile_25_minimum_net_worth: number;
@@ -99,6 +118,7 @@ export function Stage3Content(): React.JSX.Element {
   } | null>(null);
   const [isRunningMonteCarlo, setIsRunningMonteCarlo] = useState(false);
   const [monteCarloProgress, setMonteCarloProgress] = useState(0);
+  const [monteCarloRunId, setMonteCarloRunId] = useState(0);
 
   // i18n
   const i18n = getI18n();
@@ -110,6 +130,7 @@ export function Stage3Content(): React.JSX.Element {
 
   // 移动端检测
   const isMobile = useMediaQuery('(max-width: 768px)');
+  const isDesktop = useMediaQuery('(min-width: 1024px)');
 
   // Monte Carlo 运行函数 - 使用现有的TypeScript核心模块
   const runInteractiveMonteCarlo = useCallback(async () => {
@@ -150,9 +171,10 @@ export function Stage3Content(): React.JSX.Element {
             year.year ||
             year.age -
               (userProfile.birth_year
-                ? new Date().getFullYear() - userProfile.birth_year
+                ? (userProfile.as_of_year || new Date().getFullYear()) -
+                  userProfile.birth_year
                 : 40) +
-              new Date().getFullYear(),
+              (userProfile.as_of_year || new Date().getFullYear()),
           total_income: new Decimal(
             typeof year.total_income === 'string'
               ? year.total_income
@@ -183,17 +205,21 @@ export function Stage3Content(): React.JSX.Element {
               ? year.net_worth
               : year.net_worth.toString()
           ),
-          is_sustainable: year.is_sustainable || true,
+          is_sustainable: year.is_sustainable ?? true,
         })
       );
 
       // 准备完整的UserProfile对象，确保portfolio配置完整
       const completeUserProfile = {
         ...userProfile,
+        as_of_year: userProfile.as_of_year || new Date().getFullYear(),
         current_net_worth: new Decimal(userProfile.current_net_worth || 0),
         inflation_rate: new Decimal(userProfile.inflation_rate || 3),
         safety_buffer_months: new Decimal(
           userProfile.safety_buffer_months || 12
+        ),
+        bridge_discount_rate: new Decimal(
+          userProfile.bridge_discount_rate || 1.0
         ),
         portfolio: userProfile.portfolio
           ? {
@@ -276,6 +302,22 @@ export function Stage3Content(): React.JSX.Element {
       // 转换结果格式
       const result = {
         success_rate: monteCarloResult.success_rate.toNumber(),
+        plan_status_rates: monteCarloResult.plan_status_rates
+          ? {
+              safe: monteCarloResult.plan_status_rates.safe.toNumber(),
+              warning: monteCarloResult.plan_status_rates.warning.toNumber(),
+              danger: monteCarloResult.plan_status_rates.danger.toNumber(),
+            }
+          : undefined,
+        yearly_status_rates: monteCarloResult.yearly_status_rates
+          ? monteCarloResult.yearly_status_rates.map(row => ({
+              age: row.age,
+              year: row.year,
+              safe: row.safe.toNumber(),
+              warning: row.warning.toNumber(),
+              danger: row.danger.toNumber(),
+            }))
+          : undefined,
         mean_minimum_net_worth:
           monteCarloResult.mean_minimum_net_worth?.toNumber() || 0,
         percentile_5_minimum_net_worth:
@@ -309,6 +351,7 @@ export function Stage3Content(): React.JSX.Element {
       // 短暂延迟显示完成状态
       await new Promise(resolve => setTimeout(resolve, 500));
 
+      setMonteCarloRunId(prev => prev + 1);
       setMonteCarloResult(result);
     } catch (error) {
       console.error('Monte Carlo simulation error:', error);
@@ -328,8 +371,80 @@ export function Stage3Content(): React.JSX.Element {
   // 准备数据，即使没有结果也要显示界面结构
   const fireCalculation = results?.fire_calculation;
   const yearlyStates = fireCalculation?.yearly_results || [];
-  const monteCarloSuccessRate = results?.monte_carlo_success_rate;
+  const monteCarloStatusRates = results?.monte_carlo_status_rates;
+  const monteCarloYearlyStatusRates = results?.monte_carlo_yearly_status_rates;
   const recommendations = results?.recommendations || [];
+
+  const feasibilityStatus = useMemo((): FeasibilityStatus => {
+    const profile = plannerStore.data.user_profile;
+    if (!profile || yearlyStates.length === 0) return 'danger';
+
+    let hasWarning = false;
+    let hasDanger = false;
+
+    for (const s of yearlyStates) {
+      if (s.net_worth == null || s.total_expense == null) {
+        hasDanger = true;
+        break;
+      }
+
+      const netWorth = s.net_worth;
+      const totalExpense = s.total_expense;
+
+      if (netWorth < 0) {
+        hasDanger = true;
+        break;
+      }
+
+      const requiredMonths = getRequiredSafetyBufferMonths({
+        age: s.age,
+        expectedFireAge: profile.expected_fire_age,
+        legalRetirementAge: profile.legal_retirement_age,
+        baseSafetyBufferMonths: profile.safety_buffer_months,
+        bridgeDiscountRatePercent: profile.bridge_discount_rate,
+      }).toNumber();
+      const safetyThreshold = (totalExpense * requiredMonths) / 12;
+
+      if (netWorth < safetyThreshold) {
+        hasWarning = true;
+      }
+    }
+
+    if (hasDanger) return 'danger';
+    if (hasWarning) return 'warning';
+    return 'safe';
+  }, [plannerStore.data.user_profile, yearlyStates]);
+
+  const feasibilityColor = useMemo(() => {
+    switch (feasibilityStatus) {
+      case 'safe':
+        return 'green';
+      case 'warning':
+        return 'orange';
+      case 'danger':
+        return 'red';
+    }
+  }, [feasibilityStatus]);
+
+  const feasibilityLabel = useMemo(() => {
+    switch (feasibilityStatus) {
+      case 'safe':
+        return t('stage3.fire_feasibility.achievable');
+      case 'warning':
+        return t('stage3.fire_feasibility.at_risk');
+      case 'danger':
+        return t('stage3.fire_feasibility.needs_adjustment');
+    }
+  }, [feasibilityStatus, t]);
+
+  const monteCarloStatusSummary = useMemo(() => {
+    if (!monteCarloStatusRates) return null;
+    return (
+      `${FEASIBILITY_EMOJI.safe} ${formatPercentage(monteCarloStatusRates.safe)}  ` +
+      `${FEASIBILITY_EMOJI.warning} ${formatPercentage(monteCarloStatusRates.warning)}  ` +
+      `${FEASIBILITY_EMOJI.danger} ${formatPercentage(monteCarloStatusRates.danger)}`
+    );
+  }, [monteCarloStatusRates]);
 
   return (
     <>
@@ -424,30 +539,15 @@ export function Stage3Content(): React.JSX.Element {
                       <Text size='sm' c='dimmed'>
                         {t('stage3.fire_feasibility.feasibility')}
                       </Text>
-                      <Text
-                        size='xl'
-                        fw={700}
-                        c={fireCalculation.is_fire_achievable ? 'green' : 'red'}
-                      >
-                        {/* 按照 Python 版本显示 Monte Carlo 成功率或简单 bool */}
-                        {monteCarloSuccessRate !== undefined ? (
-                          <>
-                            {fireCalculation.is_fire_achievable ? '✅' : '❌'}{' '}
-                            {formatPercentage(monteCarloSuccessRate)}
-                          </>
-                        ) : (
-                          <>
-                            {fireCalculation.is_fire_achievable ? (
-                              <>✅ {t('stage3.fire_feasibility.achievable')}</>
-                            ) : (
-                              <>
-                                ❌{' '}
-                                {t('stage3.fire_feasibility.needs_adjustment')}
-                              </>
-                            )}
-                          </>
-                        )}
+                      <Text size='xl' fw={700} c={feasibilityColor}>
+                        {FEASIBILITY_EMOJI[feasibilityStatus]}{' '}
+                        {feasibilityLabel}
                       </Text>
+                      {monteCarloStatusSummary && (
+                        <Text size='sm' c='dimmed'>
+                          {monteCarloStatusSummary}
+                        </Text>
+                      )}
                     </div>
                   </Stack>
                 ) : (
@@ -474,42 +574,37 @@ export function Stage3Content(): React.JSX.Element {
                       <Text size='sm' c='dimmed'>
                         {t('stage3.fire_feasibility.feasibility')}
                       </Text>
-                      <Text
-                        size='xl'
-                        fw={700}
-                        c={fireCalculation.is_fire_achievable ? 'green' : 'red'}
-                      >
-                        {/* 按照 Python 版本显示 Monte Carlo 成功率或简单 bool */}
-                        {monteCarloSuccessRate !== undefined ? (
-                          <>
-                            {fireCalculation.is_fire_achievable ? '✅' : '❌'}{' '}
-                            {formatPercentage(monteCarloSuccessRate)}
-                          </>
-                        ) : (
-                          <>
-                            {fireCalculation.is_fire_achievable ? (
-                              <>✅ {t('stage3.fire_feasibility.achievable')}</>
-                            ) : (
-                              <>
-                                ❌{' '}
-                                {t('stage3.fire_feasibility.needs_adjustment')}
-                              </>
-                            )}
-                          </>
-                        )}
+                      <Text size='xl' fw={700} c={feasibilityColor}>
+                        {FEASIBILITY_EMOJI[feasibilityStatus]}{' '}
+                        {feasibilityLabel}
                       </Text>
+                      {monteCarloStatusSummary && (
+                        <Text size='sm' c='dimmed'>
+                          {monteCarloStatusSummary}
+                        </Text>
+                      )}
                     </div>
                   </Group>
                 )}
 
                 {/* 结果说明 */}
-                {fireCalculation.is_fire_achievable ? (
+                {feasibilityStatus === 'safe' && (
                   <Alert color='green' icon={<IconCheck size={16} />} mb='md'>
                     {t('stage3.fire_feasibility.success_message')}
                   </Alert>
-                ) : (
+                )}
+                {feasibilityStatus === 'warning' && (
                   <Alert
-                    color='orange'
+                    color='yellow'
+                    icon={<IconAlertCircle size={16} />}
+                    mb='md'
+                  >
+                    {t('stage3.fire_feasibility.risk_message')}
+                  </Alert>
+                )}
+                {feasibilityStatus === 'danger' && (
+                  <Alert
+                    color='red'
                     icon={<IconAlertCircle size={16} />}
                     mb='md'
                   >
@@ -530,7 +625,8 @@ export function Stage3Content(): React.JSX.Element {
                   }
                   currentAge={
                     plannerStore.data.user_profile
-                      ? new Date().getFullYear() -
+                      ? (plannerStore.data.user_profile.as_of_year ||
+                          new Date().getFullYear()) -
                         plannerStore.data.user_profile.birth_year
                       : 30
                   }
@@ -540,6 +636,9 @@ export function Stage3Content(): React.JSX.Element {
                   fireNetWorth={fireCalculation.fire_net_worth}
                   safetyBufferMonths={
                     plannerStore.data.user_profile?.safety_buffer_months || 6
+                  }
+                  bridgeDiscountRate={
+                    plannerStore.data.user_profile?.bridge_discount_rate || 1.0
                   }
                   height={400}
                   showCashFlowArea={true}
@@ -564,6 +663,15 @@ export function Stage3Content(): React.JSX.Element {
                   data={yearlyStates}
                   safetyBufferMonths={
                     plannerStore.data.user_profile?.safety_buffer_months || 6
+                  }
+                  targetFireAge={
+                    plannerStore.data.user_profile?.expected_fire_age || 65
+                  }
+                  legalRetirementAge={
+                    plannerStore.data.user_profile?.legal_retirement_age || 65
+                  }
+                  bridgeDiscountRate={
+                    plannerStore.data.user_profile?.bridge_discount_rate || 1.0
                   }
                   t={t}
                 />
@@ -819,72 +927,159 @@ export function Stage3Content(): React.JSX.Element {
 
                 {/* 无结果时的提示 */}
                 {!monteCarloResult && (
-                  <Alert
-                    icon={<IconAlertCircle size={16} />}
-                    color='orange'
-                    mb='md'
-                  >
-                    {t('monte_carlo_instruction')}
-                  </Alert>
+                  <>
+                    <Alert
+                      icon={<IconAlertCircle size={16} />}
+                      color='orange'
+                      mb='md'
+                    >
+                      {t('monte_carlo_instruction')}
+                    </Alert>
+
+                    {monteCarloYearlyStatusRates &&
+                      monteCarloYearlyStatusRates.length > 0 && (
+                        <MonteCarloStatusTimelineChart
+                          data={monteCarloYearlyStatusRates}
+                          height={240}
+                        />
+                      )}
+                  </>
                 )}
 
                 {/* Monte Carlo 结果显示 */}
                 {monteCarloResult && (
                   <Stack gap='lg'>
                     {/* 关键指标 */}
-                    <Group grow>
-                      <div>
-                        <Text size='sm' c='dimmed'>
-                          {t('success_rate')}
-                        </Text>
-                        <Text
-                          size='xl'
-                          fw={700}
-                          c={
-                            monteCarloResult.success_rate >= 0.7
-                              ? 'green'
-                              : monteCarloResult.success_rate >= 0.5
-                                ? 'orange'
-                                : 'red'
-                          }
-                        >
-                          {(monteCarloResult.success_rate * 100).toFixed(1)}%
-                        </Text>
-                      </div>
-                      <div>
-                        <Text size='sm' c='dimmed'>
-                          {t('minimum_net_worth')}
-                        </Text>
-                        <Text
-                          size='xl'
-                          fw={700}
-                          c={
-                            monteCarloResult.mean_minimum_net_worth >= 0
-                              ? 'green'
-                              : 'red'
-                          }
-                        >
-                          {formatCurrency(
-                            monteCarloResult.mean_minimum_net_worth
+                    <Grid gutter='md'>
+                      <Grid.Col span={{ base: 12, sm: 12, md: 12, lg: 4 }}>
+                        <div>
+                          <Text size='sm' c='dimmed'>
+                            {t('success_rate')}
+                          </Text>
+                          {monteCarloResult.plan_status_rates ? (
+                            isDesktop ? (
+                              <Text
+                                size='xl'
+                                fw={700}
+                                style={{ whiteSpace: 'nowrap' }}
+                              >
+                                <Text span c='green'>
+                                  {FEASIBILITY_EMOJI.safe}{' '}
+                                  {formatPercentage(
+                                    monteCarloResult.plan_status_rates.safe
+                                  )}
+                                </Text>
+                                <Text span>{'  '}</Text>
+                                <Text span c='orange'>
+                                  {FEASIBILITY_EMOJI.warning}{' '}
+                                  {formatPercentage(
+                                    monteCarloResult.plan_status_rates.warning
+                                  )}
+                                </Text>
+                                <Text span>{'  '}</Text>
+                                <Text span c='red'>
+                                  {FEASIBILITY_EMOJI.danger}{' '}
+                                  {formatPercentage(
+                                    monteCarloResult.plan_status_rates.danger
+                                  )}
+                                </Text>
+                              </Text>
+                            ) : (
+                              <Group gap='md' wrap='wrap'>
+                                <Text
+                                  size='xl'
+                                  fw={700}
+                                  c='green'
+                                  style={{ whiteSpace: 'nowrap' }}
+                                >
+                                  {FEASIBILITY_EMOJI.safe}{' '}
+                                  {formatPercentage(
+                                    monteCarloResult.plan_status_rates.safe
+                                  )}
+                                </Text>
+                                <Text
+                                  size='xl'
+                                  fw={700}
+                                  c='orange'
+                                  style={{ whiteSpace: 'nowrap' }}
+                                >
+                                  {FEASIBILITY_EMOJI.warning}{' '}
+                                  {formatPercentage(
+                                    monteCarloResult.plan_status_rates.warning
+                                  )}
+                                </Text>
+                                <Text
+                                  size='xl'
+                                  fw={700}
+                                  c='red'
+                                  style={{ whiteSpace: 'nowrap' }}
+                                >
+                                  {FEASIBILITY_EMOJI.danger}{' '}
+                                  {formatPercentage(
+                                    monteCarloResult.plan_status_rates.danger
+                                  )}
+                                </Text>
+                              </Group>
+                            )
+                          ) : (
+                            <Text
+                              size='xl'
+                              fw={700}
+                              c={
+                                monteCarloResult.success_rate >= 0.7
+                                  ? 'green'
+                                  : monteCarloResult.success_rate >= 0.5
+                                    ? 'orange'
+                                    : 'red'
+                              }
+                            >
+                              {FEASIBILITY_EMOJI.safe}{' '}
+                              {(monteCarloResult.success_rate * 100).toFixed(1)}
+                              %
+                            </Text>
                           )}
-                        </Text>
-                      </div>
-                      <div>
-                        <Text size='sm' c='dimmed'>
-                          {t('result_volatility')}
-                        </Text>
-                        <Text size='xl' fw={700}>
-                          {(
-                            (monteCarloResult.standard_deviation_minimum_net_worth /
-                              Math.abs(
-                                monteCarloResult.mean_minimum_net_worth
-                              )) *
-                            100
-                          ).toFixed(1)}
-                          %
-                        </Text>
-                      </div>
-                    </Group>
+                        </div>
+                      </Grid.Col>
+
+                      <Grid.Col span={{ base: 12, sm: 6, md: 6, lg: 4 }}>
+                        <div>
+                          <Text size='sm' c='dimmed'>
+                            {t('minimum_net_worth')}
+                          </Text>
+                          <Text
+                            size='xl'
+                            fw={700}
+                            c={
+                              monteCarloResult.mean_minimum_net_worth >= 0
+                                ? 'green'
+                                : 'red'
+                            }
+                          >
+                            {formatCurrency(
+                              monteCarloResult.mean_minimum_net_worth
+                            )}
+                          </Text>
+                        </div>
+                      </Grid.Col>
+
+                      <Grid.Col span={{ base: 12, sm: 6, md: 6, lg: 4 }}>
+                        <div>
+                          <Text size='sm' c='dimmed'>
+                            {t('result_volatility')}
+                          </Text>
+                          <Text size='xl' fw={700}>
+                            {(
+                              (monteCarloResult.standard_deviation_minimum_net_worth /
+                                Math.abs(
+                                  monteCarloResult.mean_minimum_net_worth
+                                )) *
+                              100
+                            ).toFixed(1)}
+                            %
+                          </Text>
+                        </div>
+                      </Grid.Col>
+                    </Grid>
 
                     {/* FIRE 成功标准说明 */}
                     <Alert icon={<IconAlertCircle size={16} />} color='blue'>
@@ -900,6 +1095,16 @@ export function Stage3Content(): React.JSX.Element {
                       <Title order={5} mb='md'>
                         {t('result_distribution')}
                       </Title>
+                      {monteCarloResult.yearly_status_rates &&
+                        monteCarloResult.yearly_status_rates.length > 0 && (
+                          <div style={{ marginBottom: '16px' }}>
+                            <MonteCarloStatusTimelineChart
+                              key={`mc-status-${monteCarloRunId}`}
+                              data={monteCarloResult.yearly_status_rates}
+                              height={240}
+                            />
+                          </div>
+                        )}
                       {isMobile ? (
                         /* 移动端垂直布局 */
                         <Stack gap='lg'>
@@ -1165,32 +1370,56 @@ export function Stage3Content(): React.JSX.Element {
 interface YearlyDataTableSectionProps {
   data: any[];
   safetyBufferMonths: number;
+  targetFireAge: number;
+  legalRetirementAge?: number;
+  bridgeDiscountRate?: number;
   t: (key: string, variables?: Record<string, any>) => string;
 }
 
 function YearlyDataTableSection({
   data,
   safetyBufferMonths,
+  targetFireAge,
+  legalRetirementAge,
+  bridgeDiscountRate = 1.0,
   t,
 }: YearlyDataTableSectionProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   // 计算每年的风险状态 (safe/warning/danger)
   const getRiskStatus = (
+    age: number,
     netWorth: number,
     totalExpense: number
   ): 'safe' | 'warning' | 'danger' => {
-    const safetyBuffer = (totalExpense * safetyBufferMonths) / 12;
-    if (netWorth > safetyBuffer) return 'safe';
-    if (netWorth > 0) return 'warning';
-    return 'danger';
+    const requiredMonths = getRequiredSafetyBufferMonths({
+      age,
+      expectedFireAge: targetFireAge,
+      legalRetirementAge,
+      baseSafetyBufferMonths: safetyBufferMonths,
+      bridgeDiscountRatePercent: bridgeDiscountRate,
+    }).toNumber();
+    const safetyThreshold = (totalExpense * requiredMonths) / 12;
+
+    if (netWorth < 0) return 'danger';
+    if (netWorth < safetyThreshold) return 'warning';
+    return 'safe';
   };
 
   const getStatusBadge = (status: 'safe' | 'warning' | 'danger') => {
     const configs = {
-      safe: { color: 'green', text: t('feasible') },
-      warning: { color: 'yellow', text: t('risky') },
-      danger: { color: 'red', text: t('needs_adjustment') },
+      safe: {
+        color: 'green',
+        text: `${FEASIBILITY_EMOJI.safe} ${t('feasible')}`,
+      },
+      warning: {
+        color: 'yellow',
+        text: `${FEASIBILITY_EMOJI.warning} ${t('risky')}`,
+      },
+      danger: {
+        color: 'red',
+        text: `${FEASIBILITY_EMOJI.danger} ${t('needs_adjustment')}`,
+      },
     };
     const config = configs[status];
     return (
@@ -1312,7 +1541,11 @@ function YearlyDataTableSection({
                     ? yearlyState.portfolio_value.toNumber()
                     : yearlyState.portfolio_value;
 
-                const riskStatus = getRiskStatus(netWorth, totalExpense);
+                const riskStatus = getRiskStatus(
+                  yearlyState.age,
+                  netWorth,
+                  totalExpense
+                );
 
                 return (
                   <Table.Tr key={index}>

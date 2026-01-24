@@ -311,7 +311,9 @@ export function IncomeExpenseForm({
   const getCurrentAge = (): number | null => {
     const birthYear = plannerStore.data.user_profile?.birth_year;
     if (!birthYear) return null;
-    return new Date().getFullYear() - birthYear;
+    const asOfYear =
+      plannerStore.data.user_profile?.as_of_year || new Date().getFullYear();
+    return asOfYear - birthYear;
   };
 
   // 检查是否可以使用模板（用户是否已填写出生年份）

@@ -252,29 +252,31 @@ class TestBlackSwanEventApplication(unittest.TestCase):
 
     def test_black_swan_event_simulation(self) -> None:
         """Test black swan event simulation for specific age."""
+        base_age = self.profile.current_age
         # Mock random to ensure predictable testing
         with patch(
             "random.random", return_value=0.01
         ):  # Very low value, should trigger high probability events
-            events = self.simulator._simulate_black_swan_events(35)
+            events = self.simulator._simulate_black_swan_events(base_age)
 
             # Should find some events (multiple events have >1% probability)
             self.assertGreater(len(events), 0)
 
-            # All events should be applicable to age 35
+            # All events should be applicable to the requested age
             for event in events:
-                self.assertLessEqual(event.age_range[0], 35)
-                self.assertGreaterEqual(event.age_range[1], 35)
+                self.assertLessEqual(event.age_range[0], base_age)
+                self.assertGreaterEqual(event.age_range[1], base_age)
 
     def test_duplicate_event_filtering(self) -> None:
         """Test that duplicate events are properly filtered."""
         test_df = self.projection_df.copy()
+        base_age = self.profile.current_age
 
         # Mock event simulation to return same event twice
         def mock_simulate_events(age: int) -> list:
-            if age == 35:
+            if age == base_age:
                 return [FinancialCrisisEvent()]
-            elif age == 36:
+            elif age == base_age + 1:
                 return [FinancialCrisisEvent()]  # Same event
             return []
 
@@ -296,10 +298,11 @@ class TestBlackSwanEventApplication(unittest.TestCase):
     def test_event_recovery_logic(self) -> None:
         """Test that event recovery works correctly over multiple years."""
         test_df = self.projection_df.copy()
+        base_age = self.profile.current_age
 
         # Mock event simulation to return crisis in first year only
         def mock_simulate_events(age: int) -> list:
-            if age == 35:
+            if age == base_age:
                 return [FinancialCrisisEvent()]
             return []
 

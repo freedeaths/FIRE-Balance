@@ -12,10 +12,11 @@ import type {
   SimulationSettings,
   UserProfile,
 } from './data_models';
-import { createSimulationSettings, getCurrentAge } from './data_models';
+import { createSimulationSettings } from './data_models';
 import type { AnnualFinancialProjection, EngineInput } from './engine';
 import { FIREEngine, createEngineInput } from './engine';
 import { createBlackSwanEvents } from './black_swan_events';
+import { getRequiredSafetyBufferMonths } from './safety_buffer';
 
 // =============================================================================
 // Monte Carlo Result Data Structure
@@ -29,6 +30,32 @@ export interface MonteCarloResult {
   success_rate: Decimal; // Probability of FIRE success (0-1)
   total_simulations: number;
   successful_simulations: number;
+
+  // Status distribution (green/yellow/red)
+  plan_status_counts?: {
+    safe: number;
+    warning: number;
+    danger: number;
+  };
+  plan_status_rates?: {
+    safe: Decimal;
+    warning: Decimal;
+    danger: Decimal;
+  };
+  yearly_status_counts?: Array<{
+    age: number;
+    year: number;
+    safe: number;
+    warning: number;
+    danger: number;
+  }>;
+  yearly_status_rates?: Array<{
+    age: number;
+    year: number;
+    safe: Decimal;
+    warning: Decimal;
+    danger: Decimal;
+  }>;
 
   // Statistical analysis
   mean_final_net_worth: Decimal;
@@ -141,6 +168,14 @@ export class MonteCarloSimulator {
     const final_net_worths: Decimal[] = [];
     const minimum_net_worths: Decimal[] = [];
     let successful_runs = 0;
+    const planStatusCounts = { safe: 0, warning: 0, danger: 0 };
+    const yearlyStatusCounts = this.base_df.map(row => ({
+      age: row.age,
+      year: row.year,
+      safe: 0,
+      warning: 0,
+      danger: 0,
+    }));
     const simulation_data: {
       run_id: number;
       final_net_worth: Decimal;
@@ -192,10 +227,37 @@ export class MonteCarloSimulator {
           );
       }
       minimum_net_worths.push(minimum_net_worth);
-      const is_successful = result.is_fire_achievable;
-      if (is_successful) {
-        successful_runs++;
+
+      // Classify year-by-year statuses using net worth vs safety threshold and zero.
+      let hasWarning = false;
+      let hasDanger = false;
+      for (let i = 0; i < result.yearly_results.length; i++) {
+        const s = result.yearly_results[i];
+        const requiredMonths = getRequiredSafetyBufferMonths({
+          age: s.age,
+          expectedFireAge: temp_engine.profile.expected_fire_age,
+          legalRetirementAge: temp_engine.profile.legal_retirement_age,
+          baseSafetyBufferMonths: temp_engine.profile.safety_buffer_months,
+          bridgeDiscountRatePercent: temp_engine.profile.bridge_discount_rate,
+        });
+        const safetyThreshold = s.total_expense.mul(requiredMonths).div(12);
+        const netWorth = s.net_worth;
+
+        if (netWorth.lt(0)) {
+          yearlyStatusCounts[i].danger++;
+          hasDanger = true;
+        } else if (netWorth.lt(safetyThreshold)) {
+          yearlyStatusCounts[i].warning++;
+          hasWarning = true;
+        } else {
+          yearlyStatusCounts[i].safe++;
+        }
       }
+
+      const planStatus = hasDanger ? 'danger' : hasWarning ? 'warning' : 'safe';
+      planStatusCounts[planStatus]++;
+      const is_successful = planStatus === 'safe';
+      if (is_successful) successful_runs++;
 
       // Store simulation data for black swan analysis
       simulation_data.push({
@@ -232,12 +294,30 @@ export class MonteCarloSimulator {
       emergency_fund = this._recommend_emergency_fund(simulation_data);
     }
 
+    const total = new Decimal(this.settings.num_simulations);
+    const plan_status_rates = {
+      safe: new Decimal(planStatusCounts.safe).div(total),
+      warning: new Decimal(planStatusCounts.warning).div(total),
+      danger: new Decimal(planStatusCounts.danger).div(total),
+    };
+    const yearly_status_rates = yearlyStatusCounts.map(row => ({
+      age: row.age,
+      year: row.year,
+      safe: new Decimal(row.safe).div(total),
+      warning: new Decimal(row.warning).div(total),
+      danger: new Decimal(row.danger).div(total),
+    }));
+
     return {
       success_rate: new Decimal(successful_runs).div(
         this.settings.num_simulations
       ),
       total_simulations: this.settings.num_simulations,
       successful_simulations: successful_runs,
+      plan_status_counts: planStatusCounts,
+      plan_status_rates,
+      yearly_status_counts: yearlyStatusCounts,
+      yearly_status_rates,
       mean_final_net_worth: this._mean(final_net_worths_array),
       median_final_net_worth: this._median(final_net_worths_array),
       percentile_5_net_worth: this._percentile(final_net_worths_array, 5),
@@ -306,11 +386,10 @@ export class MonteCarloSimulator {
     const num_years = this.base_df.length;
     const variations = new Array(num_years).fill(new Decimal(1));
 
-    const current_age = getCurrentAge(this.engine.profile.birth_year);
     const fire_age = this.engine.profile.expected_fire_age;
 
     for (let i = 0; i < num_years; i++) {
-      const age = current_age + i;
+      const age = this.base_df[i].age;
 
       // Only apply income volatility during working years (before FIRE)
       if (age < fire_age) {
@@ -371,8 +450,7 @@ export class MonteCarloSimulator {
 
     const num_years = df.length;
     for (let year_idx = 0; year_idx < num_years; year_idx++) {
-      const current_age =
-        getCurrentAge(this.engine.profile.birth_year) + year_idx;
+      const current_age = df[year_idx].age;
 
       // Simulate new black swan events for this year
       const new_events = this._simulate_black_swan_events(current_age);
@@ -848,6 +926,10 @@ export function createMonteCarloResult(
     success_rate: data.success_rate || new Decimal(0),
     total_simulations: data.total_simulations || 0,
     successful_simulations: data.successful_simulations || 0,
+    plan_status_counts: data.plan_status_counts,
+    plan_status_rates: data.plan_status_rates,
+    yearly_status_counts: data.yearly_status_counts,
+    yearly_status_rates: data.yearly_status_rates,
     mean_final_net_worth: data.mean_final_net_worth || new Decimal(0),
     median_final_net_worth: data.median_final_net_worth || new Decimal(0),
     percentile_5_net_worth: data.percentile_5_net_worth || new Decimal(0),

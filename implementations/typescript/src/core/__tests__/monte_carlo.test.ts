@@ -267,15 +267,16 @@ describe('BlackSwanEventApplication', () => {
     Math.random = jest.fn(() => 0.01); // Very low value, should trigger high probability events
 
     try {
-      const events = (simulator as any)._simulate_black_swan_events(35);
+      const baseAge = getCurrentAge(profile.birth_year);
+      const events = (simulator as any)._simulate_black_swan_events(baseAge);
 
       // Should find some events (multiple events have >1% probability)
       expect(events.length).toBeGreaterThan(0);
 
-      // All events should be applicable to age 35
+      // All events should be applicable to the requested age
       for (const event of events) {
-        expect(event.age_range[0]).toBeLessThanOrEqual(35);
-        expect(event.age_range[1]).toBeGreaterThanOrEqual(35);
+        expect(event.age_range[0]).toBeLessThanOrEqual(baseAge);
+        expect(event.age_range[1]).toBeGreaterThanOrEqual(baseAge);
       }
     } finally {
       Math.random = originalRandom;
@@ -288,9 +289,10 @@ describe('BlackSwanEventApplication', () => {
     // Mock event simulation to return same event twice
     const original_simulate = (simulator as any)._simulate_black_swan_events;
     (simulator as any)._simulate_black_swan_events = jest.fn((age: number) => {
-      if (age === 35) {
+      const baseAge = getCurrentAge(profile.birth_year);
+      if (age === baseAge) {
         return [new FinancialCrisisEvent()];
-      } else if (age === 36) {
+      } else if (age === baseAge + 1) {
         return [new FinancialCrisisEvent()]; // Same event
       }
       return [];
@@ -315,7 +317,8 @@ describe('BlackSwanEventApplication', () => {
     // Mock event simulation to return crisis in first year only
     const original_simulate = (simulator as any)._simulate_black_swan_events;
     (simulator as any)._simulate_black_swan_events = jest.fn((age: number) => {
-      if (age === 35) {
+      const baseAge = getCurrentAge(profile.birth_year);
+      if (age === baseAge) {
         return [new FinancialCrisisEvent()];
       }
       return [];
