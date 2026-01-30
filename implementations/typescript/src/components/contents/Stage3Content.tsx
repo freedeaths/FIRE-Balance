@@ -36,6 +36,7 @@ import {
   IconChartBar,
   IconRocket,
   IconRefresh,
+  IconDownload,
   IconChevronDown,
   IconChevronUp,
 } from '@tabler/icons-react';
@@ -51,6 +52,7 @@ import { MonteCarloSimulator } from '../../core/monte_carlo';
 import { FIREEngine, createEngineInput } from '../../core/engine';
 import { createSimulationSettings } from '../../core/data_models';
 import Decimal from 'decimal.js';
+import { downloadCsv, toCsv } from '../../utils/csv';
 
 // =============================================================================
 // Helper Functions
@@ -74,6 +76,8 @@ const FEASIBILITY_EMOJI: Record<FeasibilityStatus, string> = {
   warning: '🟡',
   danger: '🔴',
 };
+
+const getFilenameDate = (): string => new Date().toISOString().split('T')[0];
 
 // =============================================================================
 // Main Component
@@ -446,6 +450,199 @@ export function Stage3Content(): React.JSX.Element {
     );
   }, [monteCarloStatusRates]);
 
+  const exportNetWorthTrajectoryCsv = useCallback(() => {
+    const profile = plannerStore.data.user_profile;
+    if (!profile || yearlyStates.length === 0) return;
+
+    const asOfYear = profile.as_of_year || new Date().getFullYear();
+    const currentAge = asOfYear - profile.birth_year;
+    const minAge = currentAge || yearlyStates[0]?.age || 25;
+    const maxAge = profile.life_expectancy || 85;
+
+    const rows = yearlyStates
+      .filter(state => state.age >= minAge && state.age <= maxAge)
+      .map(state => {
+        const netWorth =
+          typeof state.net_worth === 'object'
+            ? state.net_worth.toNumber()
+            : (state.net_worth ?? 0);
+        const totalExpense =
+          typeof state.total_expense === 'object'
+            ? state.total_expense.toNumber()
+            : (state.total_expense ?? 0);
+        const netCashFlow =
+          typeof state.net_cash_flow === 'object'
+            ? state.net_cash_flow.toNumber()
+            : (state.net_cash_flow ?? 0);
+        const fireProgress =
+          typeof state.fire_progress === 'object'
+            ? state.fire_progress.toNumber()
+            : (state.fire_progress ?? 0);
+
+        const requiredSafetyBufferMonths = getRequiredSafetyBufferMonths({
+          age: state.age,
+          expectedFireAge: profile.expected_fire_age,
+          legalRetirementAge: profile.legal_retirement_age,
+          baseSafetyBufferMonths: profile.safety_buffer_months,
+          bridgeDiscountRatePercent: profile.bridge_discount_rate,
+        }).toNumber();
+
+        const safetyBuffer = (totalExpense * requiredSafetyBufferMonths) / 12;
+        const status =
+          netWorth < 0
+            ? 'danger'
+            : netWorth < safetyBuffer
+              ? 'warning'
+              : 'safe';
+
+        return {
+          age: state.age,
+          year: state.year,
+          net_worth: netWorth,
+          total_expense: totalExpense,
+          required_safety_buffer_months: requiredSafetyBufferMonths,
+          safety_buffer: safetyBuffer,
+          net_cash_flow: netCashFlow,
+          fire_progress: fireProgress,
+          is_sustainable: state.is_sustainable,
+          status,
+        };
+      });
+
+    downloadCsv(
+      `net-worth-trajectory-${getFilenameDate()}.csv`,
+      toCsv(rows, {
+        headers: [
+          'age',
+          'year',
+          'net_worth',
+          'total_expense',
+          'required_safety_buffer_months',
+          'safety_buffer',
+          'net_cash_flow',
+          'fire_progress',
+          'is_sustainable',
+          'status',
+        ],
+      })
+    );
+  }, [plannerStore.data.user_profile, yearlyStates]);
+
+  const exportMonteCarloRiskDistributionCsv = useCallback(() => {
+    if (!monteCarloResult) return;
+
+    const distributionRows: Array<{
+      percentile: number;
+      minimum_net_worth: number;
+      density: number;
+    }> = [];
+
+    for (let percentile = 0; percentile <= 100; percentile += 5) {
+      let value: number;
+      let density = 0.02;
+
+      if (percentile <= 5) {
+        value = monteCarloResult.percentile_5_minimum_net_worth;
+        density = 0.05;
+      } else if (percentile <= 25) {
+        const ratio = (percentile - 5) / 20;
+        value =
+          monteCarloResult.percentile_5_minimum_net_worth +
+          ratio *
+            (monteCarloResult.percentile_25_minimum_net_worth -
+              monteCarloResult.percentile_5_minimum_net_worth);
+        density = 0.02;
+      } else if (percentile <= 50) {
+        const ratio = (percentile - 25) / 25;
+        value =
+          monteCarloResult.percentile_25_minimum_net_worth +
+          ratio *
+            (monteCarloResult.median_minimum_net_worth -
+              monteCarloResult.percentile_25_minimum_net_worth);
+        density = 0.025;
+      } else if (percentile <= 75) {
+        const ratio = (percentile - 50) / 25;
+        value =
+          monteCarloResult.median_minimum_net_worth +
+          ratio *
+            (monteCarloResult.percentile_75_minimum_net_worth -
+              monteCarloResult.median_minimum_net_worth);
+        density = 0.025;
+      } else if (percentile <= 95) {
+        const ratio = (percentile - 75) / 20;
+        value =
+          monteCarloResult.percentile_75_minimum_net_worth +
+          ratio *
+            (monteCarloResult.percentile_95_minimum_net_worth -
+              monteCarloResult.percentile_75_minimum_net_worth);
+        density = 0.02;
+      } else {
+        value =
+          monteCarloResult.percentile_95_minimum_net_worth *
+          (1 + (percentile - 95) * 0.05);
+        density = 0.05;
+      }
+
+      distributionRows.push({
+        percentile,
+        minimum_net_worth: value,
+        density,
+      });
+    }
+
+    downloadCsv(
+      `monte-carlo-risk-distribution-${getFilenameDate()}.csv`,
+      toCsv(distributionRows, {
+        headers: ['percentile', 'minimum_net_worth', 'density'],
+      })
+    );
+  }, [monteCarloResult]);
+
+  const exportMonteCarloStatusTimelineCsv = useCallback(
+    (
+      rows:
+        | Array<{
+            age: number;
+            year: number;
+            safe: number;
+            warning: number;
+            danger: number;
+          }>
+        | undefined,
+      filenamePrefix = 'monte-carlo-status-timeline'
+    ) => {
+      if (!rows || rows.length === 0) return;
+
+      const csvRows = rows.map(r => ({
+        age: r.age,
+        year: r.year,
+        safe_rate: r.safe,
+        warning_rate: r.warning,
+        danger_rate: r.danger,
+        safe_pct: r.safe * 100,
+        warning_pct: r.warning * 100,
+        danger_pct: r.danger * 100,
+      }));
+
+      downloadCsv(
+        `${filenamePrefix}-${getFilenameDate()}.csv`,
+        toCsv(csvRows, {
+          headers: [
+            'age',
+            'year',
+            'safe_rate',
+            'warning_rate',
+            'danger_rate',
+            'safe_pct',
+            'warning_pct',
+            'danger_pct',
+          ],
+        })
+      );
+    },
+    []
+  );
+
   return (
     <>
       {/* FIRE 计算进度覆盖层 */}
@@ -615,6 +812,17 @@ export function Stage3Content(): React.JSX.Element {
                 <Divider mb='md' />
 
                 {/* 净值轨迹图表 */}
+                <Group justify='flex-end' mb='xs'>
+                  <Button
+                    variant='light'
+                    size='xs'
+                    leftSection={<IconDownload size={14} />}
+                    onClick={exportNetWorthTrajectoryCsv}
+                    disabled={yearlyStates.length === 0}
+                  >
+                    {t('export_net_worth_trajectory_csv')}
+                  </Button>
+                </Group>
                 <NetWorthTrajectoryChart
                   yearlyStates={yearlyStates}
                   targetFireAge={
@@ -938,10 +1146,27 @@ export function Stage3Content(): React.JSX.Element {
 
                     {monteCarloYearlyStatusRates &&
                       monteCarloYearlyStatusRates.length > 0 && (
-                        <MonteCarloStatusTimelineChart
-                          data={monteCarloYearlyStatusRates}
-                          height={240}
-                        />
+                        <>
+                          <Group justify='flex-end' mb='xs'>
+                            <Button
+                              variant='light'
+                              size='xs'
+                              leftSection={<IconDownload size={14} />}
+                              onClick={() =>
+                                exportMonteCarloStatusTimelineCsv(
+                                  monteCarloYearlyStatusRates,
+                                  'monte-carlo-status-timeline'
+                                )
+                              }
+                            >
+                              {t('export_monte_carlo_status_timeline_csv')}
+                            </Button>
+                          </Group>
+                          <MonteCarloStatusTimelineChart
+                            data={monteCarloYearlyStatusRates}
+                            height={240}
+                          />
+                        </>
                       )}
                   </>
                 )}
@@ -1092,9 +1317,35 @@ export function Stage3Content(): React.JSX.Element {
 
                     {/* 结果分布 */}
                     <div>
-                      <Title order={5} mb='md'>
-                        {t('result_distribution')}
-                      </Title>
+                      <Group justify='space-between' align='center' mb='md'>
+                        <Title order={5}>{t('result_distribution')}</Title>
+                        <Group gap='xs'>
+                          <Button
+                            variant='light'
+                            size='xs'
+                            leftSection={<IconDownload size={14} />}
+                            onClick={() =>
+                              exportMonteCarloStatusTimelineCsv(
+                                monteCarloResult.yearly_status_rates,
+                                'monte-carlo-status-timeline-interactive'
+                              )
+                            }
+                            disabled={
+                              !monteCarloResult.yearly_status_rates?.length
+                            }
+                          >
+                            {t('export_monte_carlo_status_timeline_csv')}
+                          </Button>
+                          <Button
+                            variant='light'
+                            size='xs'
+                            leftSection={<IconDownload size={14} />}
+                            onClick={exportMonteCarloRiskDistributionCsv}
+                          >
+                            {t('export_risk_distribution_csv')}
+                          </Button>
+                        </Group>
+                      </Group>
                       {monteCarloResult.yearly_status_rates &&
                         monteCarloResult.yearly_status_rates.length > 0 && (
                           <div style={{ marginBottom: '16px' }}>
@@ -1406,6 +1657,81 @@ function YearlyDataTableSection({
     return 'safe';
   };
 
+  const exportFullCalculationTableCsv = () => {
+    if (!data?.length) return;
+
+    const rows = data.map(yearlyState => {
+      const age = yearlyState.age as number;
+      const year = yearlyState.year as number;
+      const netWorth =
+        typeof yearlyState.net_worth === 'object'
+          ? yearlyState.net_worth.toNumber()
+          : (yearlyState.net_worth ?? 0);
+      const totalIncome =
+        typeof yearlyState.total_income === 'object'
+          ? yearlyState.total_income.toNumber()
+          : (yearlyState.total_income ?? 0);
+      const totalExpense =
+        typeof yearlyState.total_expense === 'object'
+          ? yearlyState.total_expense.toNumber()
+          : (yearlyState.total_expense ?? 0);
+      const netCashFlow =
+        typeof yearlyState.net_cash_flow === 'object'
+          ? yearlyState.net_cash_flow.toNumber()
+          : (yearlyState.net_cash_flow ?? 0);
+      const investmentReturn =
+        typeof yearlyState.investment_return === 'object'
+          ? yearlyState.investment_return.toNumber()
+          : (yearlyState.investment_return ?? 0);
+      const portfolioValue =
+        typeof yearlyState.portfolio_value === 'object'
+          ? yearlyState.portfolio_value.toNumber()
+          : (yearlyState.portfolio_value ?? 0);
+
+      const requiredSafetyBufferMonths = getRequiredSafetyBufferMonths({
+        age,
+        expectedFireAge: targetFireAge,
+        legalRetirementAge,
+        baseSafetyBufferMonths: safetyBufferMonths,
+        bridgeDiscountRatePercent: bridgeDiscountRate,
+      }).toNumber();
+      const safetyThreshold = (totalExpense * requiredSafetyBufferMonths) / 12;
+
+      return {
+        age,
+        year,
+        total_income: totalIncome,
+        total_expense: totalExpense,
+        net_cash_flow: netCashFlow,
+        investment_return: investmentReturn,
+        portfolio_value: portfolioValue,
+        net_worth: netWorth,
+        required_safety_buffer_months: requiredSafetyBufferMonths,
+        safety_threshold: safetyThreshold,
+        status: getRiskStatus(age, netWorth, totalExpense),
+      };
+    });
+
+    downloadCsv(
+      `full-calculation-data-${getFilenameDate()}.csv`,
+      toCsv(rows, {
+        headers: [
+          'age',
+          'year',
+          'total_income',
+          'total_expense',
+          'net_cash_flow',
+          'investment_return',
+          'portfolio_value',
+          'net_worth',
+          'required_safety_buffer_months',
+          'safety_threshold',
+          'status',
+        ],
+      })
+    );
+  };
+
   const getStatusBadge = (status: 'safe' | 'warning' | 'danger') => {
     const configs = {
       safe: {
@@ -1431,20 +1757,30 @@ function YearlyDataTableSection({
 
   return (
     <div>
-      <Button
-        variant='light'
-        leftSection={
-          isExpanded ? (
-            <IconChevronUp size={16} />
-          ) : (
-            <IconChevronDown size={16} />
-          )
-        }
-        onClick={() => setIsExpanded(!isExpanded)}
-        mb='md'
-      >
-        {isExpanded ? t('hide_detailed_data') : t('show_detailed_data')}
-      </Button>
+      <Group justify='space-between' align='center' mb='md' wrap='wrap'>
+        <Button
+          variant='light'
+          leftSection={
+            isExpanded ? (
+              <IconChevronUp size={16} />
+            ) : (
+              <IconChevronDown size={16} />
+            )
+          }
+          onClick={() => setIsExpanded(!isExpanded)}
+        >
+          {isExpanded ? t('hide_detailed_data') : t('show_detailed_data')}
+        </Button>
+
+        <Button
+          variant='light'
+          leftSection={<IconDownload size={16} />}
+          onClick={exportFullCalculationTableCsv}
+          disabled={!data?.length}
+        >
+          {t('export_full_calculation_table_csv')}
+        </Button>
+      </Group>
 
       <Collapse in={isExpanded}>
         <div
