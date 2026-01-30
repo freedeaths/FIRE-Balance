@@ -463,20 +463,20 @@ export function Stage3Content(): React.JSX.Element {
       .filter(state => state.age >= minAge && state.age <= maxAge)
       .map(state => {
         const netWorth =
-          typeof state.net_worth === 'object'
-            ? state.net_worth.toNumber()
+          state.net_worth != null && typeof state.net_worth === 'object'
+            ? (state.net_worth as any).toNumber()
             : (state.net_worth ?? 0);
         const totalExpense =
-          typeof state.total_expense === 'object'
-            ? state.total_expense.toNumber()
+          state.total_expense != null && typeof state.total_expense === 'object'
+            ? (state.total_expense as any).toNumber()
             : (state.total_expense ?? 0);
         const netCashFlow =
-          typeof state.net_cash_flow === 'object'
-            ? state.net_cash_flow.toNumber()
+          state.net_cash_flow != null && typeof state.net_cash_flow === 'object'
+            ? (state.net_cash_flow as any).toNumber()
             : (state.net_cash_flow ?? 0);
         const fireProgress =
-          typeof state.fire_progress === 'object'
-            ? state.fire_progress.toNumber()
+          state.fire_progress != null && typeof state.fire_progress === 'object'
+            ? (state.fire_progress as any).toNumber()
             : (state.fire_progress ?? 0);
 
         const requiredSafetyBufferMonths = getRequiredSafetyBufferMonths({
