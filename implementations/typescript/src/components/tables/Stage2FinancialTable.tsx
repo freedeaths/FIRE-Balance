@@ -419,10 +419,10 @@ export function Stage2FinancialTable({
     if (finalProjectionData.length === 0) return [];
 
     const allItems = [...incomeItems, ...expenseItems];
-    const tableData = [];
+    const tableData: Array<Array<string | number>> = [];
 
     // 表头
-    const headers = [t('table.headers.year_age')];
+    const headers: Array<string | number> = [t('table.headers.year_age')];
     incomeItems.forEach((item: any) => {
       headers.push(`💰 ${item.name}`);
     });
@@ -433,14 +433,15 @@ export function Stage2FinancialTable({
 
     // 数据行
     finalProjectionData.forEach(rowData => {
-      const row = [
+      const row: Array<string | number> = [
         t('table.row.year_age_format', {
           year: rowData.year,
           age: rowData.age,
         }),
       ];
       allItems.forEach((item: any) => {
-        row.push(String(rowData[item.id] || 0));
+        const value = rowData[item.id as string];
+        row.push(typeof value === 'number' ? value : 0);
       });
       tableData.push(row);
     });
@@ -453,10 +454,10 @@ export function Stage2FinancialTable({
     if (baseProjectionData.length === 0) return [];
 
     const allItems = [...incomeItems, ...expenseItems];
-    const tableData = [];
+    const tableData: Array<Array<string | number>> = [];
 
     // 表头
-    const headers = [t('table.headers.year_age')];
+    const headers: Array<string | number> = [t('table.headers.year_age')];
     incomeItems.forEach(item => {
       headers.push(`💰 ${item.name}`);
     });
@@ -467,14 +468,15 @@ export function Stage2FinancialTable({
 
     // 数据行
     baseProjectionData.forEach(rowData => {
-      const row = [
+      const row: Array<string | number> = [
         t('table.row.year_age_format', {
           year: rowData.year,
           age: rowData.age,
         }),
       ];
       allItems.forEach((item: any) => {
-        row.push(String(rowData[item.id] || 0));
+        const value = rowData[item.id as string];
+        row.push(typeof value === 'number' ? value : 0);
       });
       tableData.push(row);
     });
@@ -563,6 +565,7 @@ export function Stage2FinancialTable({
       rowHeaders: false,
       colHeaders: false,
       fixedRowsTop: 1, // 冻结首行作为表头
+      fixedColumnsLeft: 1, // 冻结首列（年份/年龄）
       contextMenu: {
         items: {
           undo_override: {
@@ -709,6 +712,11 @@ export function Stage2FinancialTable({
             const cellValue = hotInstance.current?.getDataAtCell(row, startCol);
             if (typeof cellValue === 'number') {
               selectedData.push(cellValue);
+            } else if (typeof cellValue === 'string' && cellValue.trim()) {
+              const parsed = parseFloat(cellValue.replace(/,/g, ''));
+              if (!isNaN(parsed)) {
+                selectedData.push(parsed);
+              }
             }
           }
 
@@ -769,7 +777,18 @@ export function Stage2FinancialTable({
             const originalValue = baseTableData[row]?.[col];
 
             if (age && itemId && originalValue !== undefined) {
-              if (newValue !== originalValue) {
+              const normalizedNewValue =
+                typeof newValue === 'number'
+                  ? newValue
+                  : typeof newValue === 'string' && newValue.trim() !== ''
+                    ? parseFloat(newValue.replace(/,/g, ''))
+                    : newValue;
+
+              if (
+                typeof normalizedNewValue === 'number' &&
+                !isNaN(normalizedNewValue) &&
+                normalizedNewValue !== originalValue
+              ) {
                 // 添加或更新 override - 动态获取最新状态
                 const currentOverrides =
                   usePlannerStore.getState().data.overrides || [];
@@ -782,10 +801,14 @@ export function Stage2FinancialTable({
                   updateOverride(existingIndex, {
                     age,
                     item_id: itemId,
-                    value: newValue,
+                    value: normalizedNewValue,
                   });
                 } else {
-                  addOverride({ age, item_id: itemId, value: newValue });
+                  addOverride({
+                    age,
+                    item_id: itemId,
+                    value: normalizedNewValue,
+                  });
                 }
               } else {
                 // 值等于原始值，删除 override - 动态获取最新状态

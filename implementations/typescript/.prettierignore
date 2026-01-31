@@ -8,6 +8,9 @@ build/
 # Coverage reports
 coverage/
 
+# Python test cache (generated)
+.pytest_cache/
+
 # Environment files
 .env*
 
