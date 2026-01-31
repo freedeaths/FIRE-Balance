@@ -125,6 +125,10 @@ export class FIRECalculationService {
     let convertedData: CorePlannerData;
 
     try {
+      const hasFinalProjectionTable =
+        Array.isArray(plannerData.projection_data) &&
+        plannerData.projection_data.length > 0;
+
       // 转换 simulation_settings
       const convertedSimulationSettings = {
         ...plannerData.simulation_settings,
@@ -170,12 +174,17 @@ export class FIRECalculationService {
       });
 
       // 转换 overrides
-      const convertedOverrides = plannerData.overrides.map(override => {
-        return {
-          ...override,
-          value: new Decimal(override.value ?? 0),
-        };
-      });
+      // Note: When `projection_data` exists, Stage2 already baked overrides into
+      // the final yearly totals. Core planner would otherwise apply overrides
+      // again inside `runCalculations()`, causing double-adjustment.
+      const convertedOverrides = hasFinalProjectionTable
+        ? []
+        : plannerData.overrides.map(override => {
+            return {
+              ...override,
+              value: new Decimal(override.value ?? 0),
+            };
+          });
 
       // 转换 user_profile
       const convertedAssetClasses =
@@ -198,7 +207,7 @@ export class FIRECalculationService {
           plannerData.user_profile.current_net_worth ?? 0
         ),
         inflation_rate: new Decimal(
-          plannerData.user_profile.inflation_rate ?? 0.03
+          plannerData.user_profile.inflation_rate ?? 3.0
         ),
         safety_buffer_months: new Decimal(
           plannerData.user_profile.safety_buffer_months ?? 6
@@ -248,6 +257,11 @@ export class FIRECalculationService {
 
     // 设置转换后的数据
     planner.data = convertedData;
+
+    // If Stage2 didn't provide a final table, fall back to generating one from items.
+    if (!planner.data.projection_df) {
+      planner.generateProjectionTable();
+    }
 
     // 进度回调函数，带延迟以确保UI能看到进度变化
     const internalProgressCallback = (progress: number): void => {

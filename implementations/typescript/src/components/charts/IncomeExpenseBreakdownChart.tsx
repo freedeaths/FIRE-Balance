@@ -6,13 +6,14 @@
  * 用于 Stage 2 财务投影可视化
  */
 
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useEffect } from 'react';
 import { getI18n } from '../../core/i18n';
 import { usePlannerStore } from '../../stores/plannerStore';
 import { useAppStore } from '../../stores/appStore';
 import {
-  BarChart,
+  ComposedChart,
   Bar,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -218,10 +219,83 @@ const IncomeExpenseBreakdownChart = React.memo(
 
     const uniqueNames = generateUniqueDisplayNames();
 
+    // 估算 legend 需要的高度：项目多时不滚动，改为增高图表范围
+    const [windowWidth, setWindowWidth] = React.useState(() =>
+      typeof window !== 'undefined' ? window.innerWidth : 1200
+    );
+
+    useEffect(() => {
+      const handleResize = () => setWindowWidth(window.innerWidth);
+      window.addEventListener('resize', handleResize);
+      return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    const legendHeight = useMemo(() => {
+      if (windowWidth <= 768) return 0;
+      // +2 for Σ total_income / Σ total_expense lines
+      const legendItemCount = allItems.length + 2;
+      // Rough estimate: each legend item takes ~170px including spacing
+      const itemsPerRow = Math.max(1, Math.floor((windowWidth - 120) / 170));
+      const rows = Math.max(1, Math.ceil(legendItemCount / itemsPerRow));
+      // Row height ~18px + padding
+      return rows * 18 + 18;
+    }, [allItems.length, windowWidth]);
+
     // 自定义 Tooltip - 显示所有非零项目
     const CustomTooltip = ({ active, payload, label }: any) => {
       if (active && payload && payload.length) {
-        const data = payload[0]?.payload;
+        const row = payload[0]?.payload;
+
+        const entries = payload
+          .map((entry: any) => {
+            const value = typeof entry.value === 'number' ? entry.value : 0;
+            const itemId = String(entry.dataKey);
+            return {
+              itemId,
+              displayName: uniqueNames.get(itemId) || itemId,
+              value,
+              absValue: Math.abs(value),
+              isIncome: value >= 0,
+            };
+          })
+          .filter(e => e.absValue >= 0.01);
+
+        const incomeTotal = entries
+          .filter(e => e.isIncome)
+          .reduce((sum, e) => sum + e.absValue, 0);
+        const expenseTotal = entries
+          .filter(e => !e.isIncome)
+          .reduce((sum, e) => sum + e.absValue, 0);
+        const netTotal = incomeTotal - expenseTotal;
+
+        const topK = 6;
+        const buildTopWithOthers = (
+          list: typeof entries,
+          isIncome: boolean
+        ) => {
+          const sorted = list
+            .filter(e => e.isIncome === isIncome)
+            .sort((a, b) => b.absValue - a.absValue);
+          const top = sorted.slice(0, topK);
+          const rest = sorted.slice(topK);
+          const othersSum = rest.reduce((sum, e) => sum + e.absValue, 0);
+          return othersSum > 0.01
+            ? [
+                ...top,
+                {
+                  itemId: isIncome ? '__other_income__' : '__other_expense__',
+                  displayName: t('chart_other_label'),
+                  value: isIncome ? othersSum : -othersSum,
+                  absValue: othersSum,
+                  isIncome,
+                },
+              ]
+            : top;
+        };
+
+        const incomeTop = buildTopWithOthers(entries, true);
+        const expenseTop = buildTopWithOthers(entries, false);
+
         return (
           <div
             style={{
@@ -230,33 +304,89 @@ const IncomeExpenseBreakdownChart = React.memo(
               border: '1px solid #ccc',
               borderRadius: '8px',
               boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+              maxWidth: '360px',
             }}
           >
             <div style={{ fontWeight: 600, marginBottom: '8px' }}>
-              {t('chart_age_label')} {label} ({data?.year})
+              {t('chart_age_label')} {label} ({row?.year})
             </div>
-            {payload.map((entry: any, index: number) => {
-              const value = entry.value;
-              if (Math.abs(value) < 0.01) return null; // 跳过接近0的值
 
-              // 找到对应的项目信息，显示唯一名称而不是ID
-              const itemId = entry.dataKey;
-              const displayName = uniqueNames.get(itemId) || itemId;
+            <div style={{ fontSize: '13px', marginBottom: '8px' }}>
+              <div style={{ color: '#16a34a' }}>
+                {t('chart_total_income_label')}: {formatCurrency(incomeTotal)}
+              </div>
+              <div style={{ color: '#dc2626' }}>
+                {t('chart_total_expense_label')}: {formatCurrency(expenseTotal)}
+              </div>
+              <div style={{ color: netTotal >= 0 ? '#16a34a' : '#dc2626' }}>
+                {t('chart_net_cash_flow_label')}:{' '}
+                {netTotal >= 0
+                  ? formatCurrency(netTotal)
+                  : `-${formatCurrency(-netTotal)}`}
+              </div>
+            </div>
 
-              return (
-                <div
-                  key={index}
-                  style={{
-                    fontSize: '14px',
-                    color: value >= 0 ? '#16a34a' : '#dc2626',
-                    marginBottom: '4px',
-                  }}
-                >
-                  {value >= 0 ? '📈' : '📉'} {displayName}:{' '}
-                  {formatCurrency(Math.abs(value))}
+            <div
+              style={{
+                maxHeight: '220px',
+                overflowY: 'auto',
+                paddingRight: '4px',
+              }}
+            >
+              {incomeTop.length > 0 && (
+                <div style={{ marginBottom: '6px' }}>
+                  <div
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      color: '#14532d',
+                      marginBottom: '4px',
+                    }}
+                  >
+                    {t('chart_income_breakdown_label')}
+                  </div>
+                  {incomeTop.map(e => (
+                    <div
+                      key={e.itemId}
+                      style={{
+                        fontSize: '13px',
+                        color: '#16a34a',
+                        marginBottom: '3px',
+                      }}
+                    >
+                      📈 {e.displayName}: {formatCurrency(e.absValue)}
+                    </div>
+                  ))}
                 </div>
-              );
-            })}
+              )}
+
+              {expenseTop.length > 0 && (
+                <div>
+                  <div
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      color: '#7f1d1d',
+                      marginBottom: '4px',
+                    }}
+                  >
+                    {t('chart_expense_breakdown_label')}
+                  </div>
+                  {expenseTop.map(e => (
+                    <div
+                      key={e.itemId}
+                      style={{
+                        fontSize: '13px',
+                        color: '#dc2626',
+                        marginBottom: '3px',
+                      }}
+                    >
+                      📉 {e.displayName}: {formatCurrency(e.absValue)}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         );
       }
@@ -305,13 +435,17 @@ const IncomeExpenseBreakdownChart = React.memo(
     return (
       <ResponsiveFullscreenChartWrapper
         targetAspectRatio={2.5} // 柱状图不宜过扁
-        baseHeight={height}
+        baseHeight={height + legendHeight}
         chartType='bar'
         enableFullscreen={true}
         enableMobileScaling={true}
       >
         {({ height: adjustedHeight }) => (
-          <ChartContent adjustedHeight={adjustedHeight} title={title} />
+          <ChartContent
+            adjustedHeight={adjustedHeight}
+            title={title}
+            legendHeight={legendHeight}
+          />
         )}
       </ResponsiveFullscreenChartWrapper>
     );
@@ -322,9 +456,11 @@ const IncomeExpenseBreakdownChart = React.memo(
 const ChartContent = React.memo(function ChartContent({
   adjustedHeight,
   title,
+  legendHeight,
 }: {
   adjustedHeight: number;
   title?: string;
+  legendHeight: number;
 }) {
   const { isMobilePortrait } = useMobileDisplay();
 
@@ -440,10 +576,29 @@ const ChartContent = React.memo(function ChartContent({
     });
   }, [baseProjectionData, overrides, incomeItems]);
 
-  // 使用最终数据
-  const data = finalProjectionData;
-
   const allItems = [...incomeItems, ...expenseItems];
+
+  // 使用最终数据，并补充每年的总收入/总支出（用于 sum line）
+  const data = useMemo(() => {
+    const itemIds = new Set(allItems.map(item => item.id));
+    return finalProjectionData.map(row => {
+      let totalIncome = 0;
+      let totalExpense = 0; // keep negative
+
+      for (const itemId of itemIds) {
+        const v = row[itemId] ?? 0;
+        if (typeof v !== 'number') continue;
+        if (v >= 0) totalIncome += v;
+        else totalExpense += v;
+      }
+
+      return {
+        ...row,
+        total_income: totalIncome,
+        total_expense: totalExpense,
+      };
+    });
+  }, [finalProjectionData, allItems]);
 
   // Legend交互状态：控制哪些数据系列被隐藏（参考代码模式）
   const [hiddenSeries, setHiddenSeries] = React.useState<string[]>([]);
@@ -478,10 +633,66 @@ const ChartContent = React.memo(function ChartContent({
 
   const uniqueNames = generateUniqueDisplayNames();
 
-  // 自定义 Tooltip - 显示所有非零项目
+  // 自定义 Tooltip - 先显示 sum，再显示细分（Top N + Others，字号更小）
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
-      const data = payload[0]?.payload;
+      const row = payload[0]?.payload;
+      const itemIds = new Set(allItems.map(item => item.id));
+
+      const entries = payload
+        .map((entry: any) => {
+          const itemId = String(entry.dataKey);
+          if (!itemIds.has(itemId)) return null;
+          const value = typeof entry.value === 'number' ? entry.value : 0;
+          return {
+            itemId,
+            displayName: uniqueNames.get(itemId) || itemId,
+            value,
+            absValue: Math.abs(value),
+            isIncome: value >= 0,
+          };
+        })
+        .filter((e: any) => e && e.absValue >= 0.01);
+
+      const incomeTotal =
+        typeof row?.total_income === 'number'
+          ? row.total_income
+          : entries
+              .filter(e => e.isIncome)
+              .reduce((sum, e) => sum + e.absValue, 0);
+      const expenseTotalAbs =
+        typeof row?.total_expense === 'number'
+          ? Math.abs(row.total_expense)
+          : entries
+              .filter(e => !e.isIncome)
+              .reduce((sum, e) => sum + e.absValue, 0);
+      const netTotal = incomeTotal - expenseTotalAbs;
+
+      const topK = 6;
+      const buildTopWithOthers = (list: typeof entries, isIncome: boolean) => {
+        const sorted = list
+          .filter(e => e.isIncome === isIncome)
+          .sort((a, b) => b.absValue - a.absValue);
+        const top = sorted.slice(0, topK);
+        const rest = sorted.slice(topK);
+        const othersSum = rest.reduce((sum, e) => sum + e.absValue, 0);
+        return othersSum > 0.01
+          ? [
+              ...top,
+              {
+                itemId: isIncome ? '__other_income__' : '__other_expense__',
+                displayName: t('chart_other_label'),
+                value: isIncome ? othersSum : -othersSum,
+                absValue: othersSum,
+                isIncome,
+              },
+            ]
+          : top;
+      };
+
+      const incomeTop = buildTopWithOthers(entries, true);
+      const expenseTop = buildTopWithOthers(entries, false);
+
       return (
         <div
           style={{
@@ -490,33 +701,90 @@ const ChartContent = React.memo(function ChartContent({
             border: '1px solid #ccc',
             borderRadius: '8px',
             boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            maxWidth: '360px',
           }}
         >
-          <div style={{ fontWeight: 600, marginBottom: '8px' }}>
-            {t('chart_age_label')} {label} ({data?.year})
+          <div style={{ fontWeight: 600, marginBottom: '8px', fontSize: 12 }}>
+            {t('chart_age_label')} {label} ({row?.year})
           </div>
-          {payload.map((entry: any, index: number) => {
-            const value = entry.value;
-            if (Math.abs(value) < 0.01) return null; // 跳过接近0的值
 
-            // 找到对应的项目信息，显示唯一名称而不是ID
-            const itemId = entry.dataKey;
-            const displayName = uniqueNames.get(itemId) || itemId;
+          <div style={{ fontSize: 12, marginBottom: '8px' }}>
+            <div style={{ color: '#16a34a', fontWeight: 600 }}>
+              Σ {t('chart_total_income_label')}: {formatCurrency(incomeTotal)}
+            </div>
+            <div style={{ color: '#dc2626', fontWeight: 600 }}>
+              Σ {t('chart_total_expense_label')}:{' '}
+              {formatCurrency(expenseTotalAbs)}
+            </div>
+            <div style={{ color: netTotal >= 0 ? '#16a34a' : '#dc2626' }}>
+              {t('chart_net_cash_flow_label')}:{' '}
+              {netTotal >= 0
+                ? formatCurrency(netTotal)
+                : `-${formatCurrency(-netTotal)}`}
+            </div>
+          </div>
 
-            return (
-              <div
-                key={index}
-                style={{
-                  fontSize: '14px',
-                  color: value >= 0 ? '#16a34a' : '#dc2626',
-                  marginBottom: '4px',
-                }}
-              >
-                {value >= 0 ? '📈' : '📉'} {displayName}:{' '}
-                {formatCurrency(Math.abs(value))}
+          <div
+            style={{
+              maxHeight: '220px',
+              overflowY: 'auto',
+              paddingRight: '4px',
+            }}
+          >
+            {incomeTop.length > 0 && (
+              <div style={{ marginBottom: '6px' }}>
+                <div
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: '#14532d',
+                    marginBottom: '4px',
+                  }}
+                >
+                  {t('chart_income_breakdown_label')}
+                </div>
+                {incomeTop.map(e => (
+                  <div
+                    key={e.itemId}
+                    style={{
+                      fontSize: 11,
+                      color: '#16a34a',
+                      marginBottom: '3px',
+                    }}
+                  >
+                    📈 {e.displayName}: {formatCurrency(e.absValue)}
+                  </div>
+                ))}
               </div>
-            );
-          })}
+            )}
+
+            {expenseTop.length > 0 && (
+              <div>
+                <div
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: '#7f1d1d',
+                    marginBottom: '4px',
+                  }}
+                >
+                  {t('chart_expense_breakdown_label')}
+                </div>
+                {expenseTop.map(e => (
+                  <div
+                    key={e.itemId}
+                    style={{
+                      fontSize: 11,
+                      color: '#dc2626',
+                      marginBottom: '3px',
+                    }}
+                  >
+                    📉 {e.displayName}: {formatCurrency(e.absValue)}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       );
     }
@@ -578,14 +846,14 @@ const ChartContent = React.memo(function ChartContent({
       )}
 
       <ResponsiveContainer width='100%' height={adjustedHeight}>
-        <BarChart
+        <ComposedChart
           data={data}
           stackOffset='sign'
           margin={{
             top: 20,
             right: 30,
             left: 20,
-            bottom: 60,
+            bottom: Math.max(60, legendHeight + 20),
           }}
         >
           <CartesianGrid strokeDasharray='3 3' opacity={0.3} />
@@ -614,11 +882,44 @@ const ChartContent = React.memo(function ChartContent({
           {/* Legend - 移动端竖屏时隐藏或简化 */}
           {!isMobilePortrait && (
             <Legend
-              height={36}
+              height={legendHeight}
               iconType='circle'
-              wrapperStyle={{ paddingTop: '20px' }}
+              wrapperStyle={{
+                paddingTop: '20px',
+                fontSize: 11,
+              }}
               onClick={props => handleLegendClick(String(props.dataKey))}
               formatter={value => {
+                if (value === 'total_income') {
+                  const isHidden = hiddenSeries.includes(value);
+                  return (
+                    <span
+                      style={{
+                        opacity: isHidden ? 0.3 : 1,
+                        textDecoration: isHidden ? 'line-through' : 'none',
+                        fontSize: 11,
+                        fontWeight: 600,
+                      }}
+                    >
+                      Σ {t('chart_total_income_label')}
+                    </span>
+                  );
+                }
+                if (value === 'total_expense') {
+                  const isHidden = hiddenSeries.includes(value);
+                  return (
+                    <span
+                      style={{
+                        opacity: isHidden ? 0.3 : 1,
+                        textDecoration: isHidden ? 'line-through' : 'none',
+                        fontSize: 11,
+                        fontWeight: 600,
+                      }}
+                    >
+                      Σ {t('chart_total_expense_label')}
+                    </span>
+                  );
+                }
                 const item = allItems.find(item => item.id === value);
                 if (item) {
                   const isIncome = incomeItems.some(inc => inc.id === value);
@@ -629,6 +930,7 @@ const ChartContent = React.memo(function ChartContent({
                       style={{
                         opacity: isHidden ? 0.3 : 1,
                         textDecoration: isHidden ? 'line-through' : 'none',
+                        fontSize: 11,
                       }}
                     >
                       {isIncome ? '📈' : '📉'} {displayName}
@@ -643,6 +945,28 @@ const ChartContent = React.memo(function ChartContent({
           {/* 零线参考 */}
           <ReferenceLine y={0} stroke='#374151' strokeWidth={1} />
 
+          {/* Sum lines */}
+          <Line
+            hide={hiddenSeries.includes('total_income')}
+            type='monotone'
+            dataKey='total_income'
+            stroke='#16a34a'
+            strokeWidth={2}
+            dot={false}
+            name='total_income'
+            isAnimationActive={false}
+          />
+          <Line
+            hide={hiddenSeries.includes('total_expense')}
+            type='monotone'
+            dataKey='total_expense'
+            stroke='#dc2626'
+            strokeWidth={2}
+            dot={false}
+            name='total_expense'
+            isAnimationActive={false}
+          />
+
           {/* 为每个收支项目生成Bar，使用hide属性控制显示（参考代码模式） */}
           {allItems.map(item => (
             <Bar
@@ -654,7 +978,7 @@ const ChartContent = React.memo(function ChartContent({
               name={uniqueNames.get(item.id) || item.name}
             />
           ))}
-        </BarChart>
+        </ComposedChart>
       </ResponsiveContainer>
 
       {/* 图例说明 - 移动端竖屏时隐藏 */}

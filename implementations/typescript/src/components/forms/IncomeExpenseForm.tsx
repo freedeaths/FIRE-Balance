@@ -40,6 +40,7 @@ import { FormField } from './FormField';
 import { usePlannerStore } from '../../stores/plannerStore';
 import { useAppStore } from '../../stores/appStore';
 import { getI18n } from '../../core/i18n';
+import { formatCurrency } from '../../utils/helpers';
 import type { UIIncomeExpenseItem, UIItemFrequency } from '../../types/ui';
 import { convertUIToCore, convertCoreToUI } from '../../types/ui';
 
@@ -129,6 +130,20 @@ export function IncomeExpenseForm({
   const i18n = getI18n();
   const t = (key: string, variables?: Record<string, any>) =>
     i18n.t(key, variables);
+
+  const formatAmount = (amount: number): string => {
+    // Stage 1: 不展示任何货币符号（默认按本国货币理解）
+    // 使用当前语言作为 locale，保证千分位风格更符合用户习惯
+    try {
+      return amount.toLocaleString(currentLanguage, {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      });
+    } catch {
+      // Fallback: en-US separators
+      return formatCurrency(amount);
+    }
+  };
 
   // Get items from store and convert to UI format
   const coreItems =
@@ -354,11 +369,8 @@ export function IncomeExpenseForm({
 
                 <Group gap='md' wrap='wrap'>
                   <Text size='xs' c='dimmed'>
-                    {new Intl.NumberFormat('en-US', {
-                      style: 'currency',
-                      currency: 'USD',
-                    }).format(item.after_tax_amount_per_period || 0)}
-                    /{item.frequency === 'annual' ? 'year' : 'month'}
+                    {formatAmount(item.after_tax_amount_per_period || 0)}/
+                    {item.frequency === 'annual' ? 'year' : 'month'}
                   </Text>
 
                   <Text size='xs' c='dimmed'>
@@ -439,11 +451,7 @@ export function IncomeExpenseForm({
                     </Table.Td>
                     <Table.Td>
                       <Text>
-                        {new Intl.NumberFormat('en-US', {
-                          style: 'currency',
-                          currency: 'USD',
-                          minimumFractionDigits: 0,
-                        }).format(item.after_tax_amount_per_period || 0)}
+                        {formatAmount(item.after_tax_amount_per_period || 0)}
                       </Text>
                     </Table.Td>
                     <Table.Td>
