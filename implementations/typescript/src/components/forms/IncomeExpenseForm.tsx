@@ -129,7 +129,10 @@ export function IncomeExpenseForm({
   const [editingItem, setEditingItem] = useState<UIIncomeExpenseItem | null>(
     null
   );
-  const [formData, setFormData] = useState<Partial<UIIncomeExpenseItem>>({});
+  type IncomeExpenseFormData = Partial<UIIncomeExpenseItem> & {
+    phase_selection?: Array<'1' | '2' | '3' | '4'>;
+  };
+  const [formData, setFormData] = useState<IncomeExpenseFormData>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // i18n
@@ -228,20 +231,74 @@ export function IncomeExpenseForm({
       }
     }
 
-    if (!formData.start_age || formData.start_age < 0) {
-      newErrors.start_age = t('validation.invalid_age');
+    const selectedPhases = formData.phase_selection ?? [];
+    const phaseNumbers = selectedPhases
+      .map(v => Number(v))
+      .filter(
+        (n): n is 1 | 2 | 3 | 4 => n === 1 || n === 2 || n === 3 || n === 4
+      )
+      .sort((a, b) => a - b);
+    const isContinuous =
+      phaseNumbers.length <= 1 ||
+      (phaseNumbers[phaseNumbers.length - 1] - phaseNumbers[0] + 1 ===
+        phaseNumbers.length &&
+        phaseNumbers.every((p, idx) =>
+          idx === 0 ? true : p === phaseNumbers[idx - 1] + 1
+        ));
+
+    const phaseRange =
+      formData.frequency !== 'one_time' &&
+      phaseNumbers.length > 0 &&
+      isContinuous
+        ? getPhaseAgeRange(
+            phaseNumbers[0],
+            phaseNumbers[phaseNumbers.length - 1]
+          )
+        : null;
+
+    if (formData.frequency !== 'one_time' && phaseNumbers.length > 0) {
+      if (!canUsePhase) {
+        newErrors.phase = t('validation.phase_requires_profile');
+      } else if (!isContinuous) {
+        newErrors.phase = t('validation.phase_must_be_continuous');
+      } else if (phaseNumbers.includes(4) && !canUsePhase4) {
+        newErrors.phase = t('validation.phase_requires_healthy_age');
+      } else if (!phaseRange) {
+        newErrors.phase = t('validation.phase_requires_profile');
+      }
+    }
+
+    if (
+      formData.start_age === undefined ||
+      formData.start_age === null ||
+      formData.start_age < 0
+    ) {
+      // For phase-bound recurring items, start/end will be materialized from profile.
+      if (!(formData.frequency !== 'one_time' && phaseNumbers.length > 0)) {
+        newErrors.start_age = t('validation.invalid_age');
+      }
     }
 
     // 一次性事件不需要验证结束年龄
     if (formData.frequency !== 'one_time') {
-      if (!formData.end_age || formData.end_age < 0) {
-        newErrors.end_age = t('validation.invalid_age');
+      if (
+        formData.end_age === undefined ||
+        formData.end_age === null ||
+        formData.end_age < 0
+      ) {
+        if (!(formData.frequency !== 'one_time' && phaseNumbers.length > 0)) {
+          newErrors.end_age = t('validation.invalid_age');
+        }
       }
 
+      const startAgeValue = formData.start_age;
+      const endAgeValue = formData.end_age;
       if (
-        formData.start_age &&
-        formData.end_age &&
-        formData.start_age >= formData.end_age
+        typeof startAgeValue === 'number' &&
+        Number.isFinite(startAgeValue) &&
+        typeof endAgeValue === 'number' &&
+        Number.isFinite(endAgeValue) &&
+        startAgeValue > endAgeValue
       ) {
         newErrors.end_age = t('validation.end_age_must_be_greater');
       }
@@ -260,14 +317,27 @@ export function IncomeExpenseForm({
     setFormData({
       frequency: 'annual', // 保留频率默认值，因为这是必选项
       interval_periods: 1,
+      phase_selection: [],
     });
     setErrors({});
     setModalOpen(true);
   };
 
   const handleEdit = (item: UIIncomeExpenseItem) => {
+    const selection: Array<'1' | '2' | '3' | '4'> = (() => {
+      if (!item.phase) return [];
+      const start = item.phase;
+      const end =
+        item.phase_end && item.phase_end > start ? item.phase_end : start;
+      const result: Array<'1' | '2' | '3' | '4'> = [];
+      for (let p = start; p <= end; p++) {
+        if (p === 1 || p === 2 || p === 3 || p === 4)
+          result.push(String(p) as any);
+      }
+      return result;
+    })();
     setEditingItem(item);
-    setFormData(item);
+    setFormData({ ...item, phase_selection: selection });
     setErrors({});
     setModalOpen(true);
   };
@@ -291,6 +361,24 @@ export function IncomeExpenseForm({
       return normalized;
     };
 
+    const selectedPhases = formData.phase_selection ?? [];
+    const phaseNumbers = selectedPhases
+      .map(v => Number(v))
+      .filter(
+        (n): n is 1 | 2 | 3 | 4 => n === 1 || n === 2 || n === 3 || n === 4
+      )
+      .sort((a, b) => a - b);
+    const phaseStart = phaseNumbers.length > 0 ? phaseNumbers[0] : undefined;
+    const phaseEnd =
+      phaseNumbers.length > 0
+        ? phaseNumbers[phaseNumbers.length - 1]
+        : undefined;
+
+    const materializedPhaseRange =
+      formData.frequency !== 'one_time' && phaseStart && phaseEnd
+        ? getPhaseAgeRange(phaseStart, phaseEnd)
+        : null;
+
     const completeItem: UIIncomeExpenseItem = {
       id: editingItem?.id || uuidv4(),
       name: formData.name!,
@@ -299,8 +387,15 @@ export function IncomeExpenseForm({
       interval_periods:
         formData.frequency === 'one_time' ? 1 : normalizeIntervalPeriods(),
       growth_rate: formData.growth_rate!,
-      start_age: formData.start_age!,
-      end_age: formData.end_age!,
+      phase: formData.frequency === 'one_time' ? undefined : phaseStart,
+      phase_end:
+        formData.frequency === 'one_time'
+          ? undefined
+          : phaseStart && phaseEnd && phaseEnd > phaseStart
+            ? phaseEnd
+            : undefined,
+      start_age: materializedPhaseRange?.start_age ?? formData.start_age!,
+      end_age: materializedPhaseRange?.end_age ?? formData.end_age!,
       tags: formData.tags || [],
     };
 
@@ -353,6 +448,7 @@ export function IncomeExpenseForm({
       ...template,
       id: uuidv4(),
       interval_periods: template.interval_periods ?? 1,
+      phase_selection: [],
       start_age: dynamicStartAge,
       end_age: dynamicEndAge,
     });
@@ -381,7 +477,12 @@ export function IncomeExpenseForm({
       const nextFrequency = value as UIItemFrequency | undefined;
 
       if (nextFrequency === 'one_time') {
-        return { ...prev, frequency: nextFrequency, interval_periods: 1 };
+        return {
+          ...prev,
+          frequency: nextFrequency,
+          interval_periods: 1,
+          phase_selection: [],
+        };
       }
 
       if (nextFrequency === 'monthly') {
@@ -418,6 +519,126 @@ export function IncomeExpenseForm({
     }
   };
 
+  const getPhaseAgeRange = (
+    phaseStart: 1 | 2 | 3 | 4,
+    phaseEnd: 1 | 2 | 3 | 4
+  ): { start_age: number; end_age: number } | null => {
+    const currentAge = getCurrentAge();
+    if (currentAge === null) return null;
+
+    const userProfile = plannerStore.data.user_profile;
+    if (!userProfile) return null;
+
+    const fireAge = userProfile.expected_fire_age;
+    const retirementAge = userProfile.legal_retirement_age;
+    const lifeExpectancy = userProfile.life_expectancy;
+    const healthyAge = Number(userProfile.expected_healthy_age);
+    if (
+      !Number.isFinite(fireAge) ||
+      !Number.isFinite(retirementAge) ||
+      !Number.isFinite(lifeExpectancy)
+    ) {
+      return null;
+    }
+
+    const hasHealthyAge =
+      Number.isFinite(healthyAge) &&
+      healthyAge > retirementAge &&
+      healthyAge < lifeExpectancy;
+
+    const getStart = (p: 1 | 2 | 3 | 4): number | null => {
+      if (p === 1) return currentAge;
+      if (p === 2) return fireAge + 1;
+      if (p === 3) return retirementAge + 1;
+      if (!hasHealthyAge) return null;
+      return healthyAge + 1;
+    };
+
+    const getEnd = (p: 1 | 2 | 3 | 4): number | null => {
+      if (p === 1) return fireAge;
+      if (p === 2) return retirementAge;
+      if (p === 3) return hasHealthyAge ? healthyAge : lifeExpectancy;
+      if (!hasHealthyAge) return null;
+      return lifeExpectancy;
+    };
+
+    const normalizedEnd = phaseEnd >= phaseStart ? phaseEnd : phaseStart;
+    const start = getStart(phaseStart);
+    const end = getEnd(normalizedEnd);
+    if (start === null || end === null) return null;
+    return { start_age: start, end_age: end };
+  };
+
+  const canUsePhase =
+    getCurrentAge() !== null &&
+    !!plannerStore.data.user_profile?.expected_fire_age &&
+    !!plannerStore.data.user_profile?.legal_retirement_age &&
+    !!plannerStore.data.user_profile?.life_expectancy;
+
+  const canUsePhase4 = (() => {
+    const profile = plannerStore.data.user_profile;
+    if (!profile) return false;
+    const healthy = Number(profile.expected_healthy_age);
+    const retirement = Number(profile.legal_retirement_age);
+    const life = Number(profile.life_expectancy);
+    return (
+      Number.isFinite(healthy) &&
+      Number.isFinite(retirement) &&
+      Number.isFinite(life) &&
+      healthy > retirement &&
+      healthy < life
+    );
+  })();
+
+  const handlePhaseSelectionChange = (values: string[]) => {
+    const normalized = values
+      .filter(v => v === '1' || v === '2' || v === '3' || v === '4')
+      .sort((a, b) => Number(a) - Number(b)) as Array<'1' | '2' | '3' | '4'>;
+
+    setFormData(prev => {
+      if (normalized.length === 0) {
+        return { ...prev, phase_selection: [] };
+      }
+
+      const nums = normalized.map(v => Number(v) as 1 | 2 | 3 | 4);
+      const isContinuous =
+        nums.length <= 1 ||
+        (nums[nums.length - 1] - nums[0] + 1 === nums.length &&
+          nums.every((p, idx) => (idx === 0 ? true : p === nums[idx - 1] + 1)));
+
+      if (!isContinuous) {
+        return { ...prev, phase_selection: normalized };
+      }
+
+      const start = nums[0];
+      const end = nums[nums.length - 1];
+      const range = getPhaseAgeRange(start, end);
+      if (!range) {
+        return { ...prev, phase_selection: normalized };
+      }
+
+      return {
+        ...prev,
+        phase_selection: normalized,
+        start_age: range.start_age,
+        end_age: range.end_age,
+      };
+    });
+
+    if (errors.phase) {
+      setErrors(prev => ({ ...prev, phase: '' }));
+    }
+  };
+
+  const formatItemPhase = (
+    phase?: 1 | 2 | 3 | 4,
+    phaseEnd?: 1 | 2 | 3 | 4
+  ): string => {
+    if (!phase) return '-';
+    const end = phaseEnd && phaseEnd > phase ? phaseEnd : phase;
+    return end > phase ? `${phase}-${end}` : String(phase);
+  };
+
   // =============================================================================
   // 渲染移动端友好的项目列表
   // =============================================================================
@@ -450,6 +671,11 @@ export function IncomeExpenseForm({
 
                   <Text size='xs' c='dimmed'>
                     {item.growth_rate}% growth
+                  </Text>
+
+                  <Text size='xs' c='dimmed'>
+                    {t('item_phase')}:{' '}
+                    {formatItemPhase(item.phase, item.phase_end)}
                   </Text>
 
                   <Text size='xs' c='dimmed'>
@@ -522,6 +748,7 @@ export function IncomeExpenseForm({
                   <Table.Th>{t('item_frequency')}</Table.Th>
                   <Table.Th>{t('item_interval')}</Table.Th>
                   <Table.Th>{t('item_growth_rate')}</Table.Th>
+                  <Table.Th>{t('item_phase')}</Table.Th>
                   <Table.Th>{t('item_start_age')}</Table.Th>
                   <Table.Th>{t('item_end_age')}</Table.Th>
                   <Table.Th>Actions</Table.Th>
@@ -557,6 +784,9 @@ export function IncomeExpenseForm({
                     </Table.Td>
                     <Table.Td>
                       <Text>{item.growth_rate}%</Text>
+                    </Table.Td>
+                    <Table.Td>
+                      <Text>{formatItemPhase(item.phase, item.phase_end)}</Text>
                     </Table.Td>
                     <Table.Td>
                       <Text>{item.start_age}</Text>
@@ -730,6 +960,29 @@ export function IncomeExpenseForm({
               <>
                 <Grid.Col span={{ base: 12, sm: 6 }}>
                   <FormField
+                    type='multi-select'
+                    name='phase'
+                    label={t('item_phase')}
+                    description={
+                      !canUsePhase ? t('ui.phase_disabled_hint') : undefined
+                    }
+                    value={formData.phase_selection ?? []}
+                    options={[
+                      { value: '1', label: t('phase_1') },
+                      { value: '2', label: t('phase_2') },
+                      { value: '3', label: t('phase_3') },
+                      ...(canUsePhase4
+                        ? [{ value: '4', label: t('phase_4') }]
+                        : []),
+                    ]}
+                    disabled={!canUsePhase}
+                    error={errors.phase}
+                    onChange={handlePhaseSelectionChange}
+                  />
+                </Grid.Col>
+
+                <Grid.Col span={{ base: 12, sm: 6 }}>
+                  <FormField
                     type='number'
                     name='start_age'
                     label={t('item_start_age')}
@@ -739,6 +992,7 @@ export function IncomeExpenseForm({
                     precision={0}
                     required
                     error={errors.start_age}
+                    disabled={(formData.phase_selection?.length ?? 0) > 0}
                     onChange={value => handleFieldChange('start_age', value)}
                   />
                 </Grid.Col>
@@ -754,6 +1008,7 @@ export function IncomeExpenseForm({
                     precision={0}
                     required
                     error={errors.end_age}
+                    disabled={(formData.phase_selection?.length ?? 0) > 0}
                     onChange={value => handleFieldChange('end_age', value)}
                   />
                 </Grid.Col>

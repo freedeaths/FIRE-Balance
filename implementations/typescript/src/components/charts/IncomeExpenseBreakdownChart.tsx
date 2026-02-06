@@ -9,7 +9,6 @@
 import React, { useMemo, useCallback, useEffect } from 'react';
 import { getI18n } from '../../core/i18n';
 import { usePlannerStore } from '../../stores/plannerStore';
-import { useAppStore } from '../../stores/appStore';
 import {
   ComposedChart,
   Bar,
@@ -59,6 +58,22 @@ const formatCurrency = (value: number): string => {
   return `${value.toLocaleString()}`;
 };
 
+const getChartAgeRange = (userProfile: any) => {
+  const birthYear = userProfile?.birth_year || 1990;
+  const asOfYear = userProfile?.as_of_year || new Date().getFullYear();
+  const currentAge = asOfYear - birthYear;
+  const lifeExpectancy =
+    typeof userProfile?.life_expectancy === 'number' &&
+    Number.isFinite(userProfile.life_expectancy)
+      ? userProfile.life_expectancy
+      : 85;
+
+  const startAge = Math.max(0, currentAge);
+  const endAge = Math.max(startAge, Math.floor(lifeExpectancy));
+
+  return { birthYear, currentAge, startAge, endAge };
+};
+
 // =============================================================================
 // 主组件
 // =============================================================================
@@ -75,7 +90,6 @@ const IncomeExpenseBreakdownChart = React.memo(
     const incomeItems = usePlannerStore(state => state.data.income_items);
     const expenseItems = usePlannerStore(state => state.data.expense_items);
     const overrides = usePlannerStore(state => state.data.overrides);
-    const currentLanguage = useAppStore(state => state.currentLanguage);
 
     // i18n
     const i18n = getI18n();
@@ -88,12 +102,7 @@ const IncomeExpenseBreakdownChart = React.memo(
     const baseProjectionData = useMemo((): IncomeExpenseBreakdownData[] => {
       if (!userProfile || !incomeItems || !expenseItems) return [];
 
-      const birthYear = userProfile.birth_year || 1990;
-      const asOfYear = userProfile.as_of_year || new Date().getFullYear();
-      const currentAge = asOfYear - birthYear;
-      const fireAge = userProfile.expected_fire_age || 50;
-      const startAge = Math.max(currentAge, 25);
-      const endAge = Math.max(fireAge + 10, 70);
+      const { birthYear, startAge, endAge } = getChartAgeRange(userProfile);
 
       let inflationRatePct = userProfile.inflation_rate;
       if (inflationRatePct === undefined || inflationRatePct === null) {
@@ -439,7 +448,6 @@ const ChartContent = React.memo(function ChartContent({
   const incomeItems = usePlannerStore(state => state.data.income_items);
   const expenseItems = usePlannerStore(state => state.data.expense_items);
   const overrides = usePlannerStore(state => state.data.overrides);
-  const currentLanguage = useAppStore(state => state.currentLanguage);
 
   // i18n
   const i18n = getI18n();
@@ -452,18 +460,12 @@ const ChartContent = React.memo(function ChartContent({
   const baseProjectionData = useMemo((): IncomeExpenseBreakdownData[] => {
     if (!userProfile || !incomeItems || !expenseItems) return [];
 
-    const birthYear = userProfile.birth_year || 1990;
-    const asOfYear = userProfile.as_of_year || new Date().getFullYear();
-    const currentAge = asOfYear - birthYear;
-    const fireAge = userProfile.expected_fire_age || 50;
-    const startAge = Math.max(currentAge, 25);
-    const endAge = Math.max(fireAge + 10, 70);
+    const { birthYear, startAge, endAge } = getChartAgeRange(userProfile);
 
-    let rawInflationRate = userProfile.inflation_rate;
-    if (rawInflationRate === undefined || rawInflationRate === null) {
-      rawInflationRate = 3.0;
+    let inflationRatePct = userProfile.inflation_rate;
+    if (inflationRatePct === undefined || inflationRatePct === null) {
+      inflationRatePct = 3.0;
     }
-    const inflationRate = rawInflationRate / 100;
 
     const data: IncomeExpenseBreakdownData[] = [];
     const allItems = [...incomeItems, ...expenseItems];
@@ -473,42 +475,12 @@ const ChartContent = React.memo(function ChartContent({
       const row: IncomeExpenseBreakdownData = { age, year };
 
       allItems.forEach(item => {
-        if (age >= item.start_age && age <= (item.end_age || 999)) {
-          const yearsFromStart = age - item.start_age;
-          let baseAmount = item.after_tax_amount_per_period;
-
-          if (item.frequency === 'recurring') {
-            if (item.time_unit === 'monthly') {
-              baseAmount = baseAmount * 12;
-            }
-          } else if (item.frequency === 'one-time') {
-            if (yearsFromStart !== 0) {
-              row[item.id] = 0;
-              return;
-            }
-          }
-
-          const isIncomeItem = incomeItems.some(inc => inc.id === item.id);
-          let currentAmount: number;
-
-          if (isIncomeItem) {
-            const itemGrowthRate = (item.annual_growth_rate || 0) / 100;
-            currentAmount =
-              baseAmount * Math.pow(1 + itemGrowthRate, yearsFromStart);
-          } else {
-            const itemGrowthRate = (item.annual_growth_rate || 0) / 100;
-            const totalGrowthRate = inflationRate + itemGrowthRate;
-            currentAmount =
-              baseAmount * Math.pow(1 + totalGrowthRate, yearsFromStart);
-          }
-
-          // 支出项目设为负值，收入项目保持正值
-          row[item.id] = isIncomeItem
-            ? Math.round(currentAmount)
-            : -Math.round(currentAmount);
-        } else {
-          row[item.id] = 0;
-        }
+        row[item.id] = computeAnnualItemAmountAtAge(
+          item,
+          age,
+          inflationRatePct,
+          'negative'
+        );
       });
 
       data.push(row);

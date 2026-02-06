@@ -12,6 +12,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import { Group, Button, ActionIcon, Text } from '@mantine/core';
 import { IconDownload, IconUpload, IconTrash } from '@tabler/icons-react';
 import { usePlannerStore, usePlannerData } from '../../stores/plannerStore';
+import { useAppStore } from '../../stores/appStore';
 import { getI18n } from '../../core/i18n';
 import { notifications } from '@mantine/notifications';
 import { PlannerStage } from '../../types';
@@ -21,6 +22,7 @@ export function ImportExportControls() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const plannerStore = usePlannerStore();
   const data = usePlannerData(); // 使用 selector 订阅数据
+  const { currentLanguage, setLanguage } = useAppStore();
 
   // 确认弹窗状态
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
@@ -29,6 +31,17 @@ export function ImportExportControls() {
   const i18n = getI18n();
   const t = (key: string, variables?: Record<string, any>) =>
     i18n.t(key, variables);
+
+  const normalizeLanguage = (raw: unknown): 'en' | 'zh-CN' | 'ja' | null => {
+    const value = String(raw ?? '')
+      .trim()
+      .toLowerCase();
+    if (value === 'en') return 'en';
+    if (value === 'ja') return 'ja';
+    if (value === 'zh' || value === 'zh-cn' || value === 'zh_cn')
+      return 'zh-CN';
+    return null;
+  };
 
   // 处理文件导入
   const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -253,6 +266,11 @@ export function ImportExportControls() {
           throw new Error('Import failed');
         }
 
+        const importedLanguage = normalizeLanguage(jsonData?.language);
+        if (importedLanguage && importedLanguage !== currentLanguage) {
+          setLanguage(importedLanguage);
+        }
+
         notifications.show({
           title: t('import_export.success'),
           message: t('import_export.import_success'),
@@ -280,6 +298,7 @@ export function ImportExportControls() {
   const handleExport = () => {
     try {
       const exportData = plannerStore.exportConfig();
+      exportData.language = normalizeLanguage(currentLanguage) ?? 'en';
       const blob = new Blob([JSON.stringify(exportData, null, 2)], {
         type: 'application/json',
       });

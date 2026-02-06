@@ -86,10 +86,11 @@ See `implementations/typescript/README.md` for details.
 ## 🎨 User Interface
 
 ### Stage 1: Basic Data Input
-- Personal information (age, FIRE target, current assets, etc.)
+- Personal information (age, FIRE target, current assets, etc.; includes optional expected healthy age for phase segmentation)
 - Projected income and expenses based on current time
 - Historical net worth data upload (optional)
 - Investment portfolio preferences (optional)
+- Optional phase-based age ranges for income/expense items (helps maintain start/end ages in Stage 1; Stage 2/3 still uses materialized ages)
 
 ### Stage 2: Interactive Planning Board
 - Real-time income/expense chart visualization
@@ -125,6 +126,7 @@ See `implementations/typescript/README.md` for details.
     "as_of_year": 2026,
     "expected_fire_age": 49,
     "legal_retirement_age": 65,
+    "expected_healthy_age": 78,
     "life_expectancy": 95,
     "current_net_worth": 3500000,
     "inflation_rate": 3,
@@ -149,6 +151,7 @@ See `implementations/typescript/README.md` for details.
 Notes:
 - `as_of_year` is the base year for age calculations when reviewing/reloading plans.
 - Safety buffer requirement can ramp during the bridge period (FIRE age → legal retirement age) and is controlled by `bridge_discount_rate`.
+- `expected_healthy_age` is optional and only used to help manage phase-based item ranges in Stage 1.
 
 ### Income/Expense Items
 ```json
@@ -159,6 +162,8 @@ Notes:
   "time_unit": "annually",
   "frequency": "recurring",
   "interval_periods": 1,
+  "phase": 1,
+  "phase_end": 2,
   "start_age": 25,
   "end_age": 50,
   "annual_growth_rate": 5,

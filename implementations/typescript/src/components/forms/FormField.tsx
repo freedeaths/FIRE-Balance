@@ -11,8 +11,8 @@
 import React from 'react';
 import {
   TextInput,
-  NumberInput,
   Select,
+  MultiSelect,
   Checkbox,
   Textarea,
   Text,
@@ -33,6 +33,7 @@ export interface FormFieldProps {
   type:
     | 'text'
     | 'number'
+    | 'multi-select'
     | 'select'
     | 'checkbox'
     | 'textarea'
@@ -112,7 +113,6 @@ export function FormField({
   const renderField = () => {
     const commonProps = {
       name,
-      value: value || '',
       placeholder,
       disabled,
       readOnly: readonly,
@@ -127,6 +127,7 @@ export function FormField({
         return (
           <TextInput
             {...commonProps}
+            value={value || ''}
             onChange={event => onChange?.(event.target.value)}
           />
         );
@@ -138,6 +139,13 @@ export function FormField({
             value={value !== undefined ? value.toString() : ''}
             type='number'
             inputMode='numeric' // 移动端优化
+            min={min}
+            max={max}
+            step={
+              precision !== undefined && precision > 0
+                ? Math.pow(10, -precision)
+                : 1
+            }
             onChange={event => {
               const stringValue = event.target.value;
 
@@ -167,6 +175,13 @@ export function FormField({
             value={value !== undefined ? value.toString() : ''}
             type='number'
             inputMode='decimal' // 移动端优化，支持小数
+            min={min}
+            max={max}
+            step={
+              precision !== undefined && precision > 0
+                ? Math.pow(10, -precision)
+                : 'any'
+            }
             leftSection={
               currencySymbol ? (
                 <span style={{ color: 'var(--mantine-color-dimmed)' }}>
@@ -198,10 +213,12 @@ export function FormField({
             {...commonProps}
             value={value !== undefined ? value.toString() : ''}
             type='number'
+            min={min}
+            max={max}
             step={
               precision !== undefined && precision > 0
                 ? Math.pow(10, -precision)
-                : 'any'
+                : 1
             }
             inputMode='decimal' // 移动端优化，支持小数
             rightSection={
@@ -228,11 +245,24 @@ export function FormField({
           />
         );
 
+      case 'multi-select':
+        return (
+          <MultiSelect
+            {...commonProps}
+            data={options}
+            value={Array.isArray(value) ? value : []}
+            onChange={val => onChange?.(val)}
+          />
+        );
+
       case 'select':
         return (
           <Select
             {...commonProps}
             data={options}
+            value={
+              typeof value === 'string' ? value : value ? String(value) : ''
+            }
             onChange={val => onChange?.(val)}
           />
         );
@@ -252,6 +282,7 @@ export function FormField({
           <Textarea
             {...commonProps}
             rows={4}
+            value={value || ''}
             onChange={event => onChange?.(event.target.value)}
           />
         );
@@ -270,6 +301,7 @@ export function FormField({
         return (
           <TextInput
             {...commonProps}
+            value={value || ''}
             onChange={event => onChange?.(event.target.value)}
           />
         );

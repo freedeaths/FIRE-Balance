@@ -66,6 +66,36 @@ export function StageNavigation({
         errors.push(t('validation.retirement_age_required'));
       if (!profile.life_expectancy)
         errors.push(t('validation.life_expectancy_required'));
+      if (
+        profile.expected_healthy_age !== undefined &&
+        profile.expected_healthy_age !== null
+      ) {
+        const healthyAge = Number(profile.expected_healthy_age);
+        if (
+          Number.isFinite(healthyAge) &&
+          profile.legal_retirement_age &&
+          healthyAge <= Number(profile.legal_retirement_age)
+        ) {
+          errors.push(
+            t('validation.expected_healthy_age_too_small', {
+              healthyAge,
+              retirementAge: profile.legal_retirement_age,
+            })
+          );
+        }
+        if (
+          Number.isFinite(healthyAge) &&
+          profile.life_expectancy &&
+          healthyAge >= Number(profile.life_expectancy)
+        ) {
+          errors.push(
+            t('validation.expected_healthy_age_too_large', {
+              healthyAge,
+              lifeExpectancy: profile.life_expectancy,
+            })
+          );
+        }
+      }
       if (profile.current_net_worth === undefined)
         errors.push(t('validation.net_worth_required'));
       if (
@@ -168,7 +198,7 @@ export function StageNavigation({
               })
             );
           }
-          if (item.start_age >= item.end_age) {
+          if (item.start_age > item.end_age) {
             errors.push(
               t('validation.income_age_range_invalid', {
                 index: index + 1,
@@ -201,7 +231,7 @@ export function StageNavigation({
               })
             );
           }
-          if (item.start_age >= item.end_age) {
+          if (item.start_age > item.end_age) {
             errors.push(
               t('validation.expense_age_range_invalid', {
                 index: index + 1,

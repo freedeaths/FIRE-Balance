@@ -235,6 +235,13 @@ export interface UserProfile {
   /** Legal retirement age (when eligible for government pension) */
   legal_retirement_age: number;
 
+  /**
+   * Optional expected healthy age.
+   * Used only to help manage Stage 1 income/expense age ranges.
+   * Not used by the Stage 3 calculation engine.
+   */
+  expected_healthy_age?: number;
+
   /** User's life expectancy */
   life_expectancy: number;
 
@@ -353,6 +360,13 @@ export interface IncomeExpenseItem {
   /** Item name */
   name: string;
 
+  /**
+   * Optional Stage-1 phase (age band) to simplify editing in the UI.
+   * Core calculations use `start_age`/`end_age`; phase is metadata.
+   */
+  phase?: 1 | 2 | 3 | 4;
+  phase_end?: 1 | 2 | 3 | 4;
+
   /** After-tax amount per time period */
   after_tax_amount_per_period: Decimal;
 
@@ -394,6 +408,8 @@ export function createIncomeExpenseItem(
   const item: IncomeExpenseItem = {
     id: data.id || uuidv4(),
     name: data.name || '',
+    phase: data.phase,
+    phase_end: data.phase_end,
     after_tax_amount_per_period: new Decimal(
       data.after_tax_amount_per_period || 0
     ),

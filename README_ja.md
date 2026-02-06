@@ -86,10 +86,11 @@ npm run dev
 ## 🎨 ユーザーインターフェース
 
 ### ステージ1：基本データ入力
-- 個人情報（年齢、FIRE目標、現在の資産など）
+- 個人情報（年齢、FIRE目標、現在の資産など；フェーズ分割のための健康寿命（任意）を含む）
 - 現在時点に基づく収入と支出の予測
 - 履歴純資産データアップロード（オプション）
 - 投資ポートフォリオ設定（オプション）
+- 収支項目はフェーズで年齢範囲を補助的に管理可能（ステージ1の入力を楽にするため。ステージ2/3は物化された開始/終了年齢で計算）
 
 ### ステージ2：インタラクティブプランニングボード
 - リアルタイム収支チャート可視化
@@ -125,6 +126,7 @@ npm run dev
     "as_of_year": 2026,
     "expected_fire_age": 49,
     "legal_retirement_age": 65,
+    "expected_healthy_age": 78,
     "life_expectancy": 95,
     "current_net_worth": 3500000,
     "inflation_rate": 3,
@@ -149,6 +151,7 @@ npm run dev
 メモ：
 - `as_of_year` は保存済みプランを見直す/再読み込みする際の年齢計算の基準年です。
 - 安全バッファはブリッジ期間（FIRE年齢→法定退職年齢）で増減し、`bridge_discount_rate` で割引（現価換算）の強さを調整できます。
+- `expected_healthy_age` は任意で、ステージ1のフェーズ分割のためだけに使用されます。
 
 ### 収支項目
 ```json
@@ -159,6 +162,8 @@ npm run dev
   "time_unit": "annually",
   "frequency": "recurring",
   "interval_periods": 1,
+  "phase": 1,
+  "phase_end": 2,
   "start_age": 25,
   "end_age": 50,
   "annual_growth_rate": 5,
