@@ -88,6 +88,13 @@ repos:
         files: ^implementations/typescript/src/.*\.(ts|tsx)$
         pass_filenames: false
 
+      - id: typescript-build-type-check
+        name: TypeScript Build Type Check (tsc -b)
+        entry: bash -c 'cd implementations/typescript && npm run type-check:build'
+        language: system
+        files: ^implementations/typescript/.*\.(ts|tsx)$
+        pass_filenames: false
+
       # TypeScript Tests are disabled in pre-commit due to async Jest hanging issues
       # Tests are handled by GitHub Actions instead
       # - id: typescript-test

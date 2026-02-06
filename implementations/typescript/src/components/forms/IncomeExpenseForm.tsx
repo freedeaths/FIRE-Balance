@@ -286,7 +286,7 @@ export function IncomeExpenseForm({
         formData.end_age === null ||
         formData.end_age < 0
       ) {
-        if (!(formData.frequency !== 'one_time' && phaseNumbers.length > 0)) {
+        if (phaseNumbers.length === 0) {
           newErrors.end_age = t('validation.invalid_age');
         }
       }
