@@ -26,6 +26,7 @@ import {
   ResponsiveFullscreenChartWrapper,
   useMobileDisplay,
 } from './ResponsiveFullscreenChartWrapper';
+import { computeAnnualItemAmountAtAge } from '../../utils/projection';
 // 移除 Override 导入，因为我们不再在这里处理override
 
 // =============================================================================
@@ -94,11 +95,10 @@ const IncomeExpenseBreakdownChart = React.memo(
       const startAge = Math.max(currentAge, 25);
       const endAge = Math.max(fireAge + 10, 70);
 
-      let rawInflationRate = userProfile.inflation_rate;
-      if (rawInflationRate === undefined || rawInflationRate === null) {
-        rawInflationRate = 3.0;
+      let inflationRatePct = userProfile.inflation_rate;
+      if (inflationRatePct === undefined || inflationRatePct === null) {
+        inflationRatePct = 3.0;
       }
-      const inflationRate = rawInflationRate / 100;
 
       const data: IncomeExpenseBreakdownData[] = [];
       const allItems = [...incomeItems, ...expenseItems];
@@ -108,42 +108,12 @@ const IncomeExpenseBreakdownChart = React.memo(
         const row: IncomeExpenseBreakdownData = { age, year };
 
         allItems.forEach(item => {
-          if (age >= item.start_age && age <= (item.end_age || 999)) {
-            const yearsFromStart = age - item.start_age;
-            let baseAmount = item.after_tax_amount_per_period;
-
-            if (item.frequency === 'recurring') {
-              if (item.time_unit === 'monthly') {
-                baseAmount = baseAmount * 12;
-              }
-            } else if (item.frequency === 'one-time') {
-              if (yearsFromStart !== 0) {
-                row[item.id] = 0;
-                return;
-              }
-            }
-
-            const isIncomeItem = incomeItems.some(inc => inc.id === item.id);
-            let currentAmount: number;
-
-            if (isIncomeItem) {
-              const itemGrowthRate = (item.annual_growth_rate || 0) / 100;
-              currentAmount =
-                baseAmount * Math.pow(1 + itemGrowthRate, yearsFromStart);
-            } else {
-              const itemGrowthRate = (item.annual_growth_rate || 0) / 100;
-              const totalGrowthRate = inflationRate + itemGrowthRate;
-              currentAmount =
-                baseAmount * Math.pow(1 + totalGrowthRate, yearsFromStart);
-            }
-
-            // 支出项目设为负值，收入项目保持正值
-            row[item.id] = isIncomeItem
-              ? Math.round(currentAmount)
-              : -Math.round(currentAmount);
-          } else {
-            row[item.id] = 0;
-          }
+          row[item.id] = computeAnnualItemAmountAtAge(
+            item,
+            age,
+            inflationRatePct,
+            'negative'
+          );
         });
 
         data.push(row);

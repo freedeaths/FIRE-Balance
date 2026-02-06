@@ -54,6 +54,7 @@
   "portfolio_expected_return": "Portfolio Expected Return",
   "weighted_average_return": "Weighted Average Expected Return",
   "weighted_average_return_help": "Overall portfolio expected return calculated based on asset class allocations and expected returns",
+  "portfolio_return_below_inflation_warning": "Portfolio expected return ({portfolioReturn}%) is below inflation ({inflationRate}%).",
   "liquidity_volatility": "Liquidity: {liquidity}, Volatility: {volatility}%",
   "income_items_header": "Income Items",
   "expense_items_header": "Expense Items",
@@ -61,6 +62,9 @@
   "item_name": "Name",
   "item_amount": "Amount",
   "item_frequency": "Frequency",
+  "item_interval": "Interval",
+  "interval_years": "years",
+  "interval_months": "months",
   "item_start_age": "Start Age",
   "item_end_age": "End Age",
   "item_growth_rate": "Growth Rate (%)",
@@ -336,6 +340,8 @@
   "validation": {
     "required": "This field is required",
     "must_be_positive": "Value must be positive",
+    "must_be_integer": "Value must be an integer",
+    "invalid_monthly_interval": "For monthly items, interval must be one of 1, 2, 3, 4, 6",
     "invalid_age": "Invalid age",
     "end_age_must_be_greater": "End age must be greater than start age",
     "please_fix_following_issues": "Please fix the following issues:",
@@ -416,6 +422,7 @@
     },
     "context_menu": {
       "undo_override": "🔄 Undo Override",
+      "reset_column_overrides": "♻️ Reset Column Overrides",
       "undo": "↶ Undo",
       "redo": "↷ Redo",
       "copy": "📋 Copy"

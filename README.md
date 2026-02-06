@@ -25,13 +25,14 @@ FIRE Balance Calculator provides a scientific approach to FIRE planning by break
 
 This project implements the FIRE calculator in multiple programming languages:
 
-- **Python Implementation**: Streamlit-based web application with comprehensive calculation engine
-- **React + TypeScript Implementation**: Modern web application with Tailwind CSS
+- **Python Implementation (legacy)**: `implementations/python/` is no longer actively maintained; it may fall behind the latest plan schema and UI behavior.
+- **React + TypeScript Implementation (maintained)**: Primary implementation going forward (`implementations/typescript/`).
 - **Rust WASM Implementation**: Not currently planned, calculations are not complex enough
 
 ## 🚀 Quick Start
 
 ### Python Version
+Note: `implementations/python/` is legacy and will not receive new features. Prefer the React + TypeScript version unless you specifically need the Python CLI.
 
 #### Command Line Interface (CLI)
 
@@ -62,7 +63,13 @@ python cli/fire_planner.py --output results.json
 
 ### React + TypeScript Version
 
-...
+```bash
+cd implementations/typescript
+npm install
+npm run dev
+```
+
+See `implementations/typescript/README.md` for details.
 
 ## 📖 Core Concepts
 

@@ -8,7 +8,7 @@
  * - 与Stage2的Handsontable集成
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Card,
   Title,
@@ -114,6 +114,12 @@ export function IncomeExpenseForm({
   showTemplates = true,
   templates,
 }: IncomeExpenseFormProps) {
+  const ALLOWED_MONTHLY_INTERVAL_PERIODS = [1, 2, 3, 4, 6] as const;
+  const allowedMonthlyIntervalSet = useMemo(
+    () => new Set<number>(ALLOWED_MONTHLY_INTERVAL_PERIODS),
+    []
+  );
+
   // Store hooks
   const plannerStore = usePlannerStore();
   const { currentLanguage } = useAppStore();
@@ -206,6 +212,22 @@ export function IncomeExpenseForm({
       newErrors.frequency = t('validation.required');
     }
 
+    if (formData.frequency !== 'one_time') {
+      const interval = formData.interval_periods;
+      if (interval === undefined || interval === null) {
+        newErrors.interval_periods = t('validation.required');
+      } else if (!Number.isFinite(interval) || interval <= 0) {
+        newErrors.interval_periods = t('validation.must_be_positive');
+      } else if (Math.floor(interval) !== interval) {
+        newErrors.interval_periods = t('validation.must_be_integer');
+      } else if (
+        formData.frequency === 'monthly' &&
+        !allowedMonthlyIntervalSet.has(interval)
+      ) {
+        newErrors.interval_periods = t('validation.invalid_monthly_interval');
+      }
+    }
+
     if (!formData.start_age || formData.start_age < 0) {
       newErrors.start_age = t('validation.invalid_age');
     }
@@ -237,6 +259,7 @@ export function IncomeExpenseForm({
     setEditingItem(null);
     setFormData({
       frequency: 'annual', // 保留频率默认值，因为这是必选项
+      interval_periods: 1,
     });
     setErrors({});
     setModalOpen(true);
@@ -256,11 +279,25 @@ export function IncomeExpenseForm({
   const handleSave = () => {
     if (!validateForm()) return;
 
+    const normalizeIntervalPeriods = (): number => {
+      const raw = formData.interval_periods;
+      const normalized =
+        raw === undefined || raw === null ? 1 : Math.max(1, Math.floor(raw));
+
+      if (formData.frequency === 'monthly') {
+        return allowedMonthlyIntervalSet.has(normalized) ? normalized : 1;
+      }
+
+      return normalized;
+    };
+
     const completeItem: UIIncomeExpenseItem = {
       id: editingItem?.id || uuidv4(),
       name: formData.name!,
       after_tax_amount_per_period: formData.after_tax_amount_per_period!,
       frequency: formData.frequency!,
+      interval_periods:
+        formData.frequency === 'one_time' ? 1 : normalizeIntervalPeriods(),
       growth_rate: formData.growth_rate!,
       start_age: formData.start_age!,
       end_age: formData.end_age!,
@@ -315,6 +352,7 @@ export function IncomeExpenseForm({
     setFormData({
       ...template,
       id: uuidv4(),
+      interval_periods: template.interval_periods ?? 1,
       start_age: dynamicStartAge,
       end_age: dynamicEndAge,
     });
@@ -335,7 +373,44 @@ export function IncomeExpenseForm({
   const canUseTemplates = getCurrentAge() !== null;
 
   const handleFieldChange = (field: keyof UIIncomeExpenseItem, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData(prev => {
+      if (field !== 'frequency') {
+        return { ...prev, [field]: value };
+      }
+
+      const nextFrequency = value as UIItemFrequency | undefined;
+
+      if (nextFrequency === 'one_time') {
+        return { ...prev, frequency: nextFrequency, interval_periods: 1 };
+      }
+
+      if (nextFrequency === 'monthly') {
+        const rawInterval = prev.interval_periods;
+        const normalizedInterval =
+          typeof rawInterval === 'number'
+            ? Math.max(1, Math.floor(rawInterval))
+            : 1;
+        const nextInterval = allowedMonthlyIntervalSet.has(normalizedInterval)
+          ? normalizedInterval
+          : 1;
+        return {
+          ...prev,
+          frequency: nextFrequency,
+          interval_periods: nextInterval,
+        };
+      }
+
+      const rawInterval = prev.interval_periods;
+      const normalizedInterval =
+        typeof rawInterval === 'number'
+          ? Math.max(1, Math.floor(rawInterval))
+          : 1;
+      return {
+        ...prev,
+        frequency: nextFrequency,
+        interval_periods: normalizedInterval,
+      };
+    });
 
     // Clear error when user starts typing
     if (errors[field as string]) {
@@ -380,6 +455,15 @@ export function IncomeExpenseForm({
                   <Text size='xs' c='dimmed'>
                     Age {item.start_age} - {item.end_age}
                   </Text>
+
+                  {item.frequency !== 'one_time' && (
+                    <Text size='xs' c='dimmed'>
+                      {t('item_interval')}: {item.interval_periods}{' '}
+                      {item.frequency === 'annual'
+                        ? t('interval_years')
+                        : t('interval_months')}
+                    </Text>
+                  )}
                 </Group>
               </Stack>
 
@@ -436,6 +520,7 @@ export function IncomeExpenseForm({
                   <Table.Th>{t('item_name')}</Table.Th>
                   <Table.Th>{t('item_amount')}</Table.Th>
                   <Table.Th>{t('item_frequency')}</Table.Th>
+                  <Table.Th>{t('item_interval')}</Table.Th>
                   <Table.Th>{t('item_growth_rate')}</Table.Th>
                   <Table.Th>{t('item_start_age')}</Table.Th>
                   <Table.Th>{t('item_end_age')}</Table.Th>
@@ -458,6 +543,17 @@ export function IncomeExpenseForm({
                       <Badge size='sm' variant='light'>
                         {t(item.frequency)}
                       </Badge>
+                    </Table.Td>
+                    <Table.Td>
+                      <Text>
+                        {item.frequency === 'one_time'
+                          ? '-'
+                          : `${item.interval_periods} ${
+                              item.frequency === 'annual'
+                                ? t('interval_years')
+                                : t('interval_months')
+                            }`}
+                      </Text>
                     </Table.Td>
                     <Table.Td>
                       <Text>{item.growth_rate}%</Text>
@@ -553,6 +649,47 @@ export function IncomeExpenseForm({
                 onChange={value => handleFieldChange('frequency', value)}
               />
             </Grid.Col>
+
+            {formData.frequency !== 'one_time' && (
+              <Grid.Col span={{ base: 12, sm: 6 }}>
+                <FormField
+                  type={formData.frequency === 'monthly' ? 'select' : 'number'}
+                  name='interval_periods'
+                  label={`${t('item_interval')} (${
+                    formData.frequency === 'annual'
+                      ? t('interval_years')
+                      : t('interval_months')
+                  })`}
+                  value={
+                    formData.frequency === 'monthly'
+                      ? formData.interval_periods?.toString()
+                      : formData.interval_periods
+                  }
+                  options={
+                    formData.frequency === 'monthly'
+                      ? ALLOWED_MONTHLY_INTERVAL_PERIODS.map(v => ({
+                          value: v.toString(),
+                          label: v.toString(),
+                        }))
+                      : undefined
+                  }
+                  min={formData.frequency === 'monthly' ? undefined : 1}
+                  precision={formData.frequency === 'monthly' ? undefined : 0}
+                  required
+                  error={errors.interval_periods}
+                  onChange={value =>
+                    handleFieldChange(
+                      'interval_periods',
+                      formData.frequency === 'monthly'
+                        ? value
+                          ? Number(value)
+                          : undefined
+                        : value
+                    )
+                  }
+                />
+              </Grid.Col>
+            )}
 
             <Grid.Col span={{ base: 12, sm: 6 }}>
               <FormField

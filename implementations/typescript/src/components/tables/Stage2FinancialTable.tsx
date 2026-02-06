@@ -19,6 +19,7 @@ import 'handsontable/dist/handsontable.full.min.css';
 import { usePlannerStore } from '../../stores/plannerStore';
 import { useAppStore } from '../../stores/appStore';
 import { getI18n } from '../../core/i18n';
+import { computeAnnualItemAmountAtAge } from '../../utils/projection';
 // 移除未使用的导入
 // import type { IncomeExpenseItem } from '../../types';
 
@@ -196,6 +197,9 @@ export function Stage2FinancialTable({
   const addOverride = usePlannerStore(state => state.addOverride);
   const updateOverride = usePlannerStore(state => state.updateOverride);
   const removeOverride = usePlannerStore(state => state.removeOverride);
+  const removeOverridesByItemId = usePlannerStore(
+    state => state.removeOverridesByItemId
+  );
   const updateProjectionData = usePlannerStore(
     state => state.updateProjectionData
   );
@@ -302,11 +306,10 @@ export function Stage2FinancialTable({
     const startAge = currentAge;
     const endAge = userProfile.life_expectancy || 85;
 
-    let rawInflationRate = userProfile.inflation_rate;
-    if (rawInflationRate === undefined || rawInflationRate === null) {
-      rawInflationRate = 3.0;
+    let inflationRatePct = userProfile.inflation_rate;
+    if (inflationRatePct === undefined || inflationRatePct === null) {
+      inflationRatePct = 3.0;
     }
-    const inflationRate = rawInflationRate / 100;
 
     const data: Stage2ProjectionRow[] = [];
     const allItems = [...incomeItems, ...expenseItems];
@@ -316,41 +319,12 @@ export function Stage2FinancialTable({
       const row: Stage2ProjectionRow = { year, age };
 
       allItems.forEach(item => {
-        if (age >= item.start_age && age <= (item.end_age || 999)) {
-          const yearsFromStart = age - item.start_age;
-          let baseAmount = item.after_tax_amount_per_period;
-
-          if (item.frequency === 'recurring') {
-            if (item.time_unit === 'monthly') {
-              baseAmount = baseAmount * 12;
-            }
-          } else if (item.frequency === 'one-time') {
-            if (yearsFromStart !== 0) {
-              row[item.id as string] = 0;
-              return;
-            }
-          }
-
-          const isIncomeItem = incomeItems.some(
-            (inc: any) => inc.id === item.id
-          );
-          let currentAmount: number;
-
-          if (isIncomeItem) {
-            const itemGrowthRate = (item.annual_growth_rate || 0) / 100;
-            currentAmount =
-              baseAmount * Math.pow(1 + itemGrowthRate, yearsFromStart);
-          } else {
-            const itemGrowthRate = (item.annual_growth_rate || 0) / 100;
-            const totalGrowthRate = inflationRate + itemGrowthRate;
-            currentAmount =
-              baseAmount * Math.pow(1 + totalGrowthRate, yearsFromStart);
-          }
-
-          row[item.id as string] = Math.round(currentAmount);
-        } else {
-          row[item.id as string] = 0;
-        }
+        row[item.id as string] = computeAnnualItemAmountAtAge(
+          item,
+          age,
+          inflationRatePct,
+          'positive'
+        );
       });
 
       data.push(row);
@@ -517,6 +491,17 @@ export function Stage2FinancialTable({
     [baseProjectionData, getItemIdFromColumn]
   );
 
+  const isColumnOverridden = useCallback(
+    (col: number): boolean => {
+      if (col < 1) return false;
+      const itemId = getItemIdFromColumn(col);
+      if (!itemId) return false;
+      const currentOverrides = usePlannerStore.getState().data.overrides || [];
+      return currentOverrides.some(override => override.item_id === itemId);
+    },
+    [getItemIdFromColumn]
+  );
+
   // 处理撤销 override
   const handleUndoOverride = useCallback(
     (row: number, col: number) => {
@@ -553,6 +538,19 @@ export function Stage2FinancialTable({
     ]
   );
 
+  const handleResetColumnOverrides = useCallback(
+    (col: number) => {
+      const itemId = getItemIdFromColumn(col);
+      if (!itemId) return;
+
+      removeOverridesByItemId(itemId);
+
+      // 重新渲染以更新样式，保持滚动位置
+      scheduleRender(true, 30);
+    },
+    [getItemIdFromColumn, removeOverridesByItemId, scheduleRender]
+  );
+
   // 创建 Handsontable
   useEffect(() => {
     if (!hotRef.current || tableData.length === 0) return;
@@ -568,6 +566,24 @@ export function Stage2FinancialTable({
       fixedColumnsLeft: 1, // 冻结首列（年份/年龄）
       contextMenu: {
         items: {
+          reset_column_overrides: {
+            name: t('table.context_menu.reset_column_overrides'),
+            callback: () => {
+              const selection = hotInstance.current?.getSelected();
+              if (selection) {
+                const [, col] = selection[0];
+                if (isColumnOverridden(col)) {
+                  handleResetColumnOverrides(col);
+                }
+              }
+            },
+            disabled: () => {
+              const selection = hotInstance.current?.getSelected();
+              if (!selection) return true;
+              const [, col] = selection[0];
+              return !isColumnOverridden(col);
+            },
+          },
           undo_override: {
             name: t('table.context_menu.undo_override'),
             callback: () => {
@@ -578,6 +594,12 @@ export function Stage2FinancialTable({
                   handleUndoOverride(row, col);
                 }
               }
+            },
+            disabled: () => {
+              const selection = hotInstance.current?.getSelected();
+              if (!selection) return true;
+              const [row, col] = selection[0];
+              return !isCellOverridden(row, col);
             },
           },
         },
@@ -875,11 +897,14 @@ export function Stage2FinancialTable({
     isColumnEditable,
     generateAutofillValues,
     isCellOverridden,
+    isColumnOverridden,
     handleUndoOverride,
+    handleResetColumnOverrides,
     getItemIdFromColumn,
     addOverride,
     updateOverride,
     removeOverride,
+    removeOverridesByItemId,
     scheduleRender,
   ]); // 包含所有必要的函数依赖
 

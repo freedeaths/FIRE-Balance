@@ -367,6 +367,18 @@ export const validateIncomeExpenseItem = (
     });
   }
 
+  if (
+    item.frequency !== 'one-time' &&
+    item.time_unit === 'monthly' &&
+    !new Set([1, 2, 3, 4, 6]).has(item.interval_periods)
+  ) {
+    errors.push({
+      field: 'interval_periods',
+      message: 'For monthly items, interval must be one of 1, 2, 3, 4, 6',
+      code: 'INVALID_INTERVAL',
+    });
+  }
+
   // Growth rate validation (reasonable bounds)
   if (item.annual_growth_rate < -50 || item.annual_growth_rate > 100) {
     errors.push({

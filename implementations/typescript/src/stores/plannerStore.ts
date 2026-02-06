@@ -82,6 +82,96 @@ const normalizePortfolioAssetClasses = (
   return normalized as any;
 };
 
+const normalizeIncomeExpenseItems = (
+  items: unknown,
+  isIncome: boolean
+): IncomeExpenseItem[] => {
+  const array = Array.isArray(items) ? items : [];
+
+  const toFiniteNumber = (raw: any, fallback = 0): number => {
+    const num = typeof raw === 'number' ? raw : Number(raw);
+    return Number.isFinite(num) ? num : fallback;
+  };
+
+  const toFiniteInt = (raw: any, fallback = 0): number => {
+    return Math.floor(toFiniteNumber(raw, fallback));
+  };
+
+  const normalizeTimeUnit = (raw: any): IncomeExpenseItem['time_unit'] => {
+    const value = String(raw ?? '');
+    if (value === 'monthly') return 'monthly';
+    if (value === 'quarterly') return 'quarterly';
+    if (value === 'annually') return 'annually';
+    if (value === 'annual' || value === 'yearly' || value === 'year')
+      return 'annually';
+    if (value === 'month') return 'monthly';
+    if (value === 'quarter') return 'quarterly';
+    return 'annually';
+  };
+
+  const normalizeFrequency = (raw: any): IncomeExpenseItem['frequency'] => {
+    const value = String(raw ?? '');
+    if (value === 'recurring') return 'recurring';
+    if (value === 'one-time' || value === 'one_time') return 'one-time';
+    if (value === 'annual' || value === 'monthly') return 'recurring';
+    return 'recurring';
+  };
+
+  const normalizeIntervalPeriods = (raw: any): number => {
+    const num = typeof raw === 'number' ? raw : Number(raw);
+    if (!Number.isFinite(num)) return 1;
+    return Math.max(1, Math.floor(num));
+  };
+
+  return array.filter(Boolean).map((raw: any): IncomeExpenseItem => {
+    const normalizedFrequency = normalizeFrequency(raw?.frequency);
+    const inferredTimeUnit =
+      raw?.frequency === 'monthly'
+        ? 'monthly'
+        : raw?.frequency === 'annual'
+          ? 'annually'
+          : raw?.time_unit;
+
+    const timeUnit = normalizeTimeUnit(inferredTimeUnit);
+    const interval =
+      normalizedFrequency === 'one-time'
+        ? 1
+        : normalizeIntervalPeriods(raw?.interval_periods ?? raw?.interval);
+
+    const startAge = Math.max(0, toFiniteInt(raw?.start_age, 0));
+    const endAge =
+      raw?.end_age === undefined || raw?.end_age === null
+        ? undefined
+        : (() => {
+            const parsed = toFiniteNumber(raw.end_age, NaN);
+            return Number.isFinite(parsed)
+              ? Math.max(0, Math.floor(parsed))
+              : undefined;
+          })();
+
+    return {
+      id: typeof raw?.id === 'string' && raw.id.length > 0 ? raw.id : uuidv4(),
+      name: typeof raw?.name === 'string' ? raw.name : '',
+      after_tax_amount_per_period: toFiniteNumber(
+        raw?.after_tax_amount_per_period ?? raw?.amount,
+        0
+      ),
+      time_unit: timeUnit,
+      frequency: normalizedFrequency,
+      interval_periods: interval,
+      start_age: startAge,
+      end_age: endAge,
+      annual_growth_rate: toFiniteNumber(
+        raw?.annual_growth_rate ?? raw?.growth_rate,
+        0
+      ),
+      is_income: typeof raw?.is_income === 'boolean' ? raw.is_income : isIncome,
+      category: raw?.category,
+      predefined_type: raw?.predefined_type,
+    };
+  });
+};
+
 // =============================================================================
 // Initial State
 // =============================================================================
@@ -328,6 +418,23 @@ export const createPlannerStore = (config?: StoreConfig) => {
         }),
         false,
         'removeOverride'
+      );
+    },
+
+    removeOverridesByItemId: (itemId: string) => {
+      set(
+        state => ({
+          data: {
+            ...state.data,
+            overrides: state.data.overrides.filter(
+              override => override.item_id !== itemId
+            ),
+            updated_at: new Date().toISOString(),
+          },
+          isDirty: true,
+        }),
+        false,
+        'removeOverridesByItemId'
       );
     },
 
@@ -645,8 +752,14 @@ export const createPlannerStore = (config?: StoreConfig) => {
             data: {
               ...createInitialPlannerData(),
               user_profile: normalizedProfile,
-              income_items: config.income_items || [],
-              expense_items: config.expense_items || [],
+              income_items: normalizeIncomeExpenseItems(
+                config.income_items,
+                true
+              ),
+              expense_items: normalizeIncomeExpenseItems(
+                config.expense_items,
+                false
+              ),
               overrides: config.overrides || [],
               simulation_settings:
                 config.simulation_settings || DEFAULT_SIMULATION_SETTINGS,
