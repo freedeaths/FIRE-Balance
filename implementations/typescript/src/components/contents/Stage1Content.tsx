@@ -38,8 +38,11 @@ import { useAppStore } from '../../stores/appStore';
 import { FormField } from '../forms/FormField';
 import { IncomeExpenseForm } from '../forms/IncomeExpenseForm';
 import { getI18n } from '../../core/i18n';
-import type { UserProfile } from '../../types';
-import { DEFAULT_PORTFOLIO } from '../../types';
+import {
+  DEFAULT_PORTFOLIO,
+  DEFAULT_USER_PROFILE,
+  type UserProfile,
+} from '../../types';
 
 export function Stage1Content() {
   // Store hooks
