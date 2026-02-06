@@ -83,6 +83,7 @@ export interface PlannerActions {
   // Data management
   loadData: (data: Partial<PlannerData>) => void;
   updateUserProfile: (profile: Partial<UserProfile>) => void;
+  syncLanguage: (language: LanguageCode) => void;
 
   // Income/Expense management
   addIncomeItem: (item: IncomeExpenseItem) => void;

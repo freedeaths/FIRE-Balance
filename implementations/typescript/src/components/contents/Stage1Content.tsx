@@ -67,11 +67,15 @@ export function Stage1Content() {
   // Profile字段验证函数
   const validateProfileField = (
     field: keyof UserProfile,
-    value: number,
+    value: number | undefined,
     currentProfile: UserProfile
   ): string | null => {
     const systemYear = new Date().getFullYear();
     const asOfYear = currentProfile.as_of_year || systemYear;
+
+    if (value === undefined || value === null || !Number.isFinite(value)) {
+      return null;
+    }
 
     switch (field) {
       case 'birth_year': {
@@ -167,6 +171,28 @@ export function Stage1Content() {
         break;
       }
 
+      case 'expected_healthy_age': {
+        if (
+          currentProfile.legal_retirement_age &&
+          value <= currentProfile.legal_retirement_age
+        ) {
+          return t('validation.expected_healthy_age_too_small', {
+            healthyAge: value,
+            retirementAge: currentProfile.legal_retirement_age,
+          });
+        }
+        if (
+          currentProfile.life_expectancy &&
+          value >= currentProfile.life_expectancy
+        ) {
+          return t('validation.expected_healthy_age_too_large', {
+            healthyAge: value,
+            lifeExpectancy: currentProfile.life_expectancy,
+          });
+        }
+        break;
+      }
+
       case 'life_expectancy': {
         if (
           currentProfile.legal_retirement_age &&
@@ -197,7 +223,10 @@ export function Stage1Content() {
   };
 
   // 字段更新处理
-  const handleFieldChange = (field: keyof UserProfile, value: number): void => {
+  const handleFieldChange = (
+    field: keyof UserProfile,
+    value: number | undefined
+  ): void => {
     const currentProfile = userProfile;
     const updatedProfile = { ...currentProfile, [field]: value };
 
@@ -292,6 +321,16 @@ export function Stage1Content() {
             delete result.expected_fire_age;
           }
         }
+        const healthyError = validateProfileField(
+          'expected_healthy_age',
+          updatedProfile.expected_healthy_age,
+          updatedProfile
+        );
+        if (healthyError) {
+          result.expected_healthy_age = healthyError;
+        } else {
+          delete result.expected_healthy_age;
+        }
         if (updatedProfile.life_expectancy) {
           const lifeError = validateProfileField(
             'life_expectancy',
@@ -318,6 +357,43 @@ export function Stage1Content() {
             result.legal_retirement_age = retirementError;
           } else {
             delete result.legal_retirement_age;
+          }
+        }
+        const healthyError = validateProfileField(
+          'expected_healthy_age',
+          updatedProfile.expected_healthy_age,
+          updatedProfile
+        );
+        if (healthyError) {
+          result.expected_healthy_age = healthyError;
+        } else {
+          delete result.expected_healthy_age;
+        }
+      }
+
+      if (field === 'expected_healthy_age') {
+        if (updatedProfile.legal_retirement_age) {
+          const retirementError = validateProfileField(
+            'legal_retirement_age',
+            updatedProfile.legal_retirement_age,
+            updatedProfile
+          );
+          if (retirementError) {
+            result.legal_retirement_age = retirementError;
+          } else {
+            delete result.legal_retirement_age;
+          }
+        }
+        if (updatedProfile.life_expectancy) {
+          const lifeError = validateProfileField(
+            'life_expectancy',
+            updatedProfile.life_expectancy,
+            updatedProfile
+          );
+          if (lifeError) {
+            result.life_expectancy = lifeError;
+          } else {
+            delete result.life_expectancy;
           }
         }
       }
@@ -377,6 +453,15 @@ export function Stage1Content() {
         <Title order={4}>{t('user_profile')}</Title>
       </Group>
 
+      <Alert
+        icon={<IconInfoCircle size={16} />}
+        color='blue'
+        variant='light'
+        mb='md'
+      >
+        {t('ui.phase_definition')}
+      </Alert>
+
       <Grid>
         {/*
           第一行：年龄相关的字段
@@ -384,7 +469,7 @@ export function Stage1Content() {
           - 📱 移动端 (0-767px): span=6 (50%宽度，一行2个字段)
           - 💻 桌面端 (768px+): span=3/2 (一行5个字段)
         */}
-        <Grid.Col span={{ base: 6, md: 3 }}>
+        <Grid.Col span={{ base: 6, md: 2 }}>
           <FormField
             type='number'
             name='birth_year'
@@ -400,7 +485,7 @@ export function Stage1Content() {
           />
         </Grid.Col>
 
-        <Grid.Col span={{ base: 6, md: 3 }}>
+        <Grid.Col span={{ base: 6, md: 2 }}>
           <FormField
             type='number'
             name='as_of_year'
@@ -446,6 +531,23 @@ export function Stage1Content() {
             error={validationErrors.legal_retirement_age}
             data-error={!!validationErrors.legal_retirement_age}
             onChange={value => handleFieldChange('legal_retirement_age', value)}
+          />
+        </Grid.Col>
+
+        <Grid.Col span={{ base: 6, md: 2 }}>
+          <FormField
+            type='number'
+            name='expected_healthy_age'
+            label={t('expected_healthy_age')}
+            description={t('expected_healthy_age_help')}
+            value={userProfile.expected_healthy_age}
+            placeholder='75'
+            min={userProfile.legal_retirement_age || 0}
+            max={userProfile.life_expectancy || 120}
+            precision={0}
+            error={validationErrors.expected_healthy_age}
+            data-error={!!validationErrors.expected_healthy_age}
+            onChange={value => handleFieldChange('expected_healthy_age', value)}
           />
         </Grid.Col>
 

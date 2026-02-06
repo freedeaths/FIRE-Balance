@@ -86,10 +86,11 @@ npm run dev
 ## 🎨 用户界面
 
 ### 第一阶段：基础数据输入
-- 个人信息（年龄、FIRE 目标、当前资产等）
+- 个人信息（年龄、FIRE 目标、当前资产等；包含可选的预期健康年龄，用于阶段分段）
 - 基于当前时间预计的收入和支出
 - 历史净资产数据上传（可选）
 - 投资组合偏好（可选）
+- 收支项可选“阶段”来辅助维护起止年龄（仅用于阶段一的收支管理便利；阶段二/三仍以物化后的起止年龄计算）
 
 ### 第二阶段：交互式规划面板
 - 实时收支图表可视化
@@ -125,6 +126,7 @@ npm run dev
     "as_of_year": 2026,
     "expected_fire_age": 49,
     "legal_retirement_age": 65,
+    "expected_healthy_age": 78,
     "life_expectancy": 95,
     "current_net_worth": 3500000,
     "inflation_rate": 3,
@@ -149,6 +151,7 @@ npm run dev
 说明：
 - `as_of_year` 是回顾/重新加载计划时的年龄计算基准年。
 - 安全缓冲会在桥接期（FIRE 年龄→法定退休年龄）按剩余年数动态变化，并可通过 `bridge_discount_rate` 调整贴现（现值换算）的力度。
+- `expected_healthy_age` 为可选字段，仅用于阶段一收支管理中的阶段分段。
 
 ### 收支项目
 ```json
@@ -159,6 +162,8 @@ npm run dev
   "time_unit": "annually",
   "frequency": "recurring",
   "interval_periods": 1,
+  "phase": 1,
+  "phase_end": 2,
   "start_age": 25,
   "end_age": 50,
   "annual_growth_rate": 5,

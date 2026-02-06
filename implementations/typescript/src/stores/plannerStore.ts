@@ -26,6 +26,16 @@ import type {
   AnnualProjectionRow,
 } from '../types';
 
+const normalizeLanguageCode = (raw: unknown): LanguageCode => {
+  const value = String(raw ?? '')
+    .trim()
+    .toLowerCase();
+  if (value === 'en') return 'en';
+  if (value === 'ja') return 'ja';
+  if (value === 'zh' || value === 'zh-cn' || value === 'zh_cn') return 'zh-CN';
+  return 'en';
+};
+
 const normalizePortfolioAssetClasses = (
   assetClasses: unknown
 ): UserProfile['portfolio']['asset_classes'] => {
@@ -123,6 +133,22 @@ const normalizeIncomeExpenseItems = (
     return Math.max(1, Math.floor(num));
   };
 
+  const normalizePhase = (raw: any): 1 | 2 | 3 | 4 | undefined => {
+    const num = typeof raw === 'number' ? raw : Number(raw);
+    if (num === 1 || num === 2 || num === 3 || num === 4) return num;
+    return undefined;
+  };
+
+  const normalizePhaseEnd = (
+    rawPhase: 1 | 2 | 3 | 4 | undefined,
+    rawEnd: any
+  ): 1 | 2 | 3 | 4 | undefined => {
+    if (!rawPhase) return undefined;
+    const end = normalizePhase(rawEnd);
+    if (!end) return undefined;
+    return end >= rawPhase ? end : rawPhase;
+  };
+
   return array.filter(Boolean).map((raw: any): IncomeExpenseItem => {
     const normalizedFrequency = normalizeFrequency(raw?.frequency);
     const inferredTimeUnit =
@@ -152,6 +178,17 @@ const normalizeIncomeExpenseItems = (
     return {
       id: typeof raw?.id === 'string' && raw.id.length > 0 ? raw.id : uuidv4(),
       name: typeof raw?.name === 'string' ? raw.name : '',
+      phase:
+        normalizedFrequency === 'one-time'
+          ? undefined
+          : normalizePhase(raw?.phase),
+      phase_end:
+        normalizedFrequency === 'one-time'
+          ? undefined
+          : normalizePhaseEnd(
+              normalizePhase(raw?.phase),
+              raw?.phase_end ?? raw?.phase_to
+            ),
       after_tax_amount_per_period: toFiniteNumber(
         raw?.after_tax_amount_per_period ?? raw?.amount,
         0
@@ -172,6 +209,89 @@ const normalizeIncomeExpenseItems = (
   });
 };
 
+const materializeAgeRangeFromPhase = (
+  phaseStart: 1 | 2 | 3 | 4,
+  phaseEnd: 1 | 2 | 3 | 4,
+  profile: Partial<UserProfile> | undefined
+): { startAge: number; endAge: number } | null => {
+  if (!profile) return null;
+
+  const birthYear = Number(profile.birth_year);
+  const asOfYear = Number(profile.as_of_year ?? new Date().getFullYear());
+  const expectedFireAge = Number(profile.expected_fire_age);
+  const legalRetirementAge = Number(profile.legal_retirement_age);
+  const expectedHealthyAgeRaw =
+    (profile as any)?.expected_healthy_age ??
+    (profile as any)?.expectedHealthyAge;
+  const lifeExpectancy = Number(profile.life_expectancy);
+
+  if (
+    !Number.isFinite(birthYear) ||
+    !Number.isFinite(asOfYear) ||
+    !Number.isFinite(expectedFireAge) ||
+    !Number.isFinite(legalRetirementAge) ||
+    !Number.isFinite(lifeExpectancy)
+  ) {
+    return null;
+  }
+
+  const currentAge = asOfYear - birthYear;
+
+  const expectedHealthyAge = Number(expectedHealthyAgeRaw);
+  const hasHealthyAge =
+    Number.isFinite(expectedHealthyAge) &&
+    expectedHealthyAge > legalRetirementAge &&
+    expectedHealthyAge < lifeExpectancy;
+
+  const getStartAgeForPhase = (p: 1 | 2 | 3 | 4): number | null => {
+    if (p === 1) return currentAge;
+    if (p === 2) return expectedFireAge + 1;
+    if (p === 3) return legalRetirementAge + 1;
+    if (!hasHealthyAge) return null;
+    return expectedHealthyAge + 1;
+  };
+
+  const getEndAgeForPhase = (p: 1 | 2 | 3 | 4): number | null => {
+    if (p === 1) return expectedFireAge;
+    if (p === 2) return legalRetirementAge;
+    if (p === 3) return hasHealthyAge ? expectedHealthyAge : lifeExpectancy;
+    if (!hasHealthyAge) return null;
+    return lifeExpectancy;
+  };
+
+  const normalizedEnd = phaseEnd >= phaseStart ? phaseEnd : phaseStart;
+  const startAge = getStartAgeForPhase(phaseStart);
+  const endAge = getEndAgeForPhase(normalizedEnd);
+  if (startAge === null || endAge === null) return null;
+
+  return { startAge, endAge };
+};
+
+const materializePhaseAgesForItem = (
+  item: IncomeExpenseItem,
+  profile: Partial<UserProfile> | undefined
+): IncomeExpenseItem => {
+  if (item.frequency === 'one-time') {
+    if (item.phase === undefined) return item;
+    return { ...item, phase: undefined, phase_end: undefined };
+  }
+
+  if (item.phase === undefined) return item;
+
+  const range = materializeAgeRangeFromPhase(
+    item.phase,
+    item.phase_end ?? item.phase,
+    profile
+  );
+  if (!range) return item;
+
+  return {
+    ...item,
+    start_age: Math.max(0, Math.floor(range.startAge)),
+    end_age: Math.max(0, Math.floor(range.endAge)),
+  };
+};
+
 // =============================================================================
 // Initial State
 // =============================================================================
@@ -189,7 +309,7 @@ const createInitialPlannerData = (
   session_id: uuidv4(),
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
-  language,
+  language: normalizeLanguageCode(language),
   simulation_settings: { ...DEFAULT_SIMULATION_SETTINGS },
 });
 
@@ -248,10 +368,19 @@ export const createPlannerStore = (config?: StoreConfig) => {
 
           const updatedProfile = { ...currentProfile, ...profile };
 
+          const updatedIncomeItems = state.data.income_items.map(item =>
+            materializePhaseAgesForItem(item, updatedProfile)
+          );
+          const updatedExpenseItems = state.data.expense_items.map(item =>
+            materializePhaseAgesForItem(item, updatedProfile)
+          );
+
           return {
             data: {
               ...state.data,
               user_profile: updatedProfile,
+              income_items: updatedIncomeItems,
+              expense_items: updatedExpenseItems,
               updated_at: new Date().toISOString(),
             },
             isDirty: true,
@@ -259,6 +388,21 @@ export const createPlannerStore = (config?: StoreConfig) => {
         },
         false,
         'updateUserProfile'
+      );
+    },
+
+    syncLanguage: (language: LanguageCode) => {
+      const normalizedLanguage = normalizeLanguageCode(language);
+      set(
+        state => ({
+          data: {
+            ...state.data,
+            language: normalizedLanguage,
+            updated_at: new Date().toISOString(),
+          },
+        }),
+        false,
+        'syncLanguage'
       );
     },
 
@@ -755,15 +899,19 @@ export const createPlannerStore = (config?: StoreConfig) => {
               income_items: normalizeIncomeExpenseItems(
                 config.income_items,
                 true
+              ).map(item =>
+                materializePhaseAgesForItem(item, normalizedProfile)
               ),
               expense_items: normalizeIncomeExpenseItems(
                 config.expense_items,
                 false
+              ).map(item =>
+                materializePhaseAgesForItem(item, normalizedProfile)
               ),
               overrides: config.overrides || [],
               simulation_settings:
                 config.simulation_settings || DEFAULT_SIMULATION_SETTINGS,
-              language: config.language || 'en',
+              language: normalizeLanguageCode(config.language || 'en'),
               current_stage: currentStage,
               updated_at: new Date().toISOString(),
             },

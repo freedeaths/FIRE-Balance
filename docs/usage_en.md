@@ -27,7 +27,11 @@ Net Worth = Total Assets - Total Liabilities, which is the core indicator for me
   - Safety Buffer Period: If set to zero, the core calculation simply compares whether net worth is greater than zero. If configured with a safety buffer period greater than zero, then net worth above the safety buffer value is considered safe, between safety buffer value and zero is warning, and below zero is dangerous.
 - **Investment Portfolio Settings**: Asset allocation percentages (stocks, bonds, cash, etc.) and expected returns
   - Here you get four unchangeable-name but freely configurable investment items - don't worry too much about the names. Note that there's a hidden "liquidity" attribute: "Cash" is high liquidity, "Stocks" is medium liquidity, and the other two are low liquidity. During rebalancing calculations, they are processed from high to low liquidity. High liquidity assets are prioritized when needed. So in use, you can treat cash and money market funds as high liquidity, for example by giving them positive returns.
-- **Income/Expense Items**: Detailed income and expense items including start age, end age, growth rates, etc.
+- **Income/Expense Items**: Detailed income and expense items including start/end ages, growth rates, etc. You can also bind an item to a “Phase” for easier maintenance (for convenience only; calculations still use ages).
+  - Phase 1: current age ~ target FIRE age
+  - Phase 2: target FIRE age + 1 ~ legal retirement age
+  - Phase 3: legal retirement age + 1 ~ life expectancy
+  - Notes: the system is calculated yearly, so phases do not overlap; items can select continuous phase ranges (e.g. Phase 1-2, 2-3, 1-3); use custom ages for one-time events
 
 #### Stage 2: Planning Adjustments
 

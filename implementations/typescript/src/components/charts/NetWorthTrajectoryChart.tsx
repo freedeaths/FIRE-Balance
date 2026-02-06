@@ -113,6 +113,45 @@ const formatCurrencyMobile = (value: number): string => {
   }
 };
 
+const ZeroLineEndOutsideLabels = (props: any): React.ReactElement | null => {
+  const viewBox = props?.viewBox;
+  if (!viewBox) return null;
+
+  const x = Number(viewBox.x);
+  const y = Number(viewBox.y);
+  const width = Number(viewBox.width);
+  if (![x, y, width].every(Number.isFinite)) return null;
+
+  const fill = '#111827';
+  const fontSize = 12;
+  const padding = 10;
+
+  return (
+    <g pointerEvents='none'>
+      <text
+        x={x - padding}
+        y={y}
+        fill={fill}
+        fontSize={fontSize}
+        dominantBaseline='middle'
+        textAnchor='end'
+      >
+        0
+      </text>
+      <text
+        x={x + width + padding}
+        y={y}
+        fill={fill}
+        fontSize={fontSize}
+        dominantBaseline='middle'
+        textAnchor='start'
+      >
+        0
+      </text>
+    </g>
+  );
+};
+
 const getZoneColor = (type: 'safe' | 'warning' | 'danger'): string => {
   switch (type) {
     case 'safe':
@@ -500,9 +539,9 @@ function NetWorthChartContent({
         {/* 零线参考 */}
         <ReferenceLine
           y={0}
-          stroke='#ef4444'
-          strokeWidth={1}
-          strokeDasharray='2 4'
+          stroke='#111827'
+          strokeWidth={1.5}
+          label={!isMobilePortrait ? <ZeroLineEndOutsideLabels /> : undefined}
         />
       </ComposedChart>
     </ResponsiveContainer>

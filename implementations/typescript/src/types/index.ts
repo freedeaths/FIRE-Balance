@@ -144,6 +144,13 @@ export interface UserProfile {
   /** Legal retirement age (when eligible for government pension) */
   legal_retirement_age: number;
 
+  /**
+   * Optional expected healthy age.
+   * Used only to help manage income/expense item age ranges in Stage 1.
+   * Not a Stage 3 calculation parameter.
+   */
+  expected_healthy_age?: number;
+
   /** User's life expectancy */
   life_expectancy: number;
 
@@ -192,6 +199,19 @@ export const DEFAULT_USER_PROFILE: Omit<UserProfile, 'birth_year'> = {
 export interface IncomeExpenseItem {
   /** Unique identifier */
   id: string;
+
+  /**
+   * Optional age band (phase) for Stage 1 convenience.
+   * - `1`: current age ~ expected_fire_age
+   * - `2`: expected_fire_age + 1 ~ legal_retirement_age
+   * - `3`: legal_retirement_age + 1 ~ life_expectancy
+   *
+   * Use `phase_end` to represent a continuous phase range (e.g. 1→2, 2→3, 1→3).
+   * When provided, Stage 1 may auto-materialize `start_age`/`end_age` based on
+   * the user profile. Stage 2+ calculations still use ages.
+   */
+  phase?: 1 | 2 | 3 | 4;
+  phase_end?: 1 | 2 | 3 | 4;
 
   /** Human-readable name */
   name: string;

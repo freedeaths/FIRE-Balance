@@ -52,6 +52,7 @@ export function Layout() {
   // Store hooks
   const { currentLanguage, setLanguage } = useAppStore();
   const currentStage = usePlannerStore(state => state.currentStage);
+  const syncPlannerLanguage = usePlannerStore(state => state.syncLanguage);
 
   // 全局跟踪上一次的 stage，避免组件卸载导致的状态丢失
   const prevStageRef = React.useRef<PlannerStage | undefined>(undefined);
@@ -69,6 +70,10 @@ export function Layout() {
 
     prevStageRef.current = currentStage;
   }, [currentStage]);
+
+  React.useEffect(() => {
+    syncPlannerLanguage(currentLanguage);
+  }, [currentLanguage, syncPlannerLanguage]);
 
   // i18n - 直接使用当前语言确保同步
   const t = (key: string, variables?: Record<string, any>) => {

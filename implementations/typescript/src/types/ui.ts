@@ -21,6 +21,10 @@ export interface UIIncomeExpenseItem {
    */
   interval_periods: number;
   growth_rate: number;
+  /** Optional Stage-1 phase (age band). */
+  phase?: 1 | 2 | 3 | 4;
+  /** Optional Stage-1 continuous phase end (>= phase). */
+  phase_end?: 1 | 2 | 3 | 4;
   start_age: number;
   end_age: number;
   tags?: string[];
@@ -60,6 +64,8 @@ export function convertUIToCore(
     time_unit,
     frequency,
     interval_periods: Math.max(1, Math.floor(interval_periods)),
+    phase: item.phase,
+    phase_end: item.phase_end,
     start_age: item.start_age,
     end_age: item.end_age,
     annual_growth_rate: item.growth_rate,
@@ -89,7 +95,10 @@ export function convertCoreToUI(item: IncomeExpenseItem): UIIncomeExpenseItem {
     interval_periods: Math.max(1, Math.floor(item.interval_periods ?? 1)),
     growth_rate: item.annual_growth_rate,
     start_age: item.start_age,
-    end_age: item.end_age || 100,
+    end_age:
+      item.frequency === 'one-time' ? item.start_age : (item.end_age ?? 100),
+    phase: item.phase,
+    phase_end: item.phase_end,
     tags: [],
   };
 }
