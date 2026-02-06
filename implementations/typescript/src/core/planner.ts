@@ -412,74 +412,16 @@ export class FIREPlanner {
       let totalIncome = new Decimal(0);
       let totalExpense = new Decimal(0);
 
-      // Calculate income for this age
       for (const item of this.data.income_items) {
-        if (this._isItemActiveAtAge(item, age)) {
-          const yearsSinceStart = age - item.start_age;
-          const growthRate = new Decimal(item.annual_growth_rate).div(100);
-          const growthFactor = new Decimal(1)
-            .add(growthRate)
-            .pow(yearsSinceStart);
-
-          if (item.frequency === 'one-time') {
-            // One-time items only appear at start age
-            if (age === item.start_age) {
-              const amount = new Decimal(item.after_tax_amount_per_period).mul(
-                growthFactor
-              );
-              totalIncome = totalIncome.add(amount);
-            }
-          } else {
-            // Recurring items with growth
-            const amount = new Decimal(item.after_tax_amount_per_period).mul(
-              growthFactor
-            );
-            totalIncome = totalIncome.add(amount);
-          }
-        }
+        totalIncome = totalIncome.add(
+          this._calculateItemContributionAtAge(item, age)
+        );
       }
 
-      // Calculate expenses for this age (with inflation)
-      const inflationRate = new Decimal(profile.inflation_rate).div(100);
       for (const item of this.data.expense_items) {
-        if (this._isItemActiveAtAge(item, age)) {
-          const yearsSinceStart = age - item.start_age;
-
-          if (item.frequency === 'one-time') {
-            // One-time expenses only appear at start age
-            if (age === item.start_age) {
-              // Apply both individual growth rate and inflation
-              const itemGrowthRate = new Decimal(item.annual_growth_rate).div(
-                100
-              );
-              const itemGrowthFactor = new Decimal(1)
-                .add(itemGrowthRate)
-                .pow(yearsSinceStart);
-              const inflationFactor = new Decimal(1)
-                .add(inflationRate)
-                .pow(yearsSinceStart);
-              const amount = new Decimal(item.after_tax_amount_per_period)
-                .mul(itemGrowthFactor)
-                .mul(inflationFactor);
-              totalExpense = totalExpense.add(amount);
-            }
-          } else {
-            // Recurring expenses with individual growth + inflation
-            const itemGrowthRate = new Decimal(item.annual_growth_rate).div(
-              100
-            );
-            const itemGrowthFactor = new Decimal(1)
-              .add(itemGrowthRate)
-              .pow(yearsSinceStart);
-            const inflationFactor = new Decimal(1)
-              .add(inflationRate)
-              .pow(yearsSinceStart);
-            const amount = new Decimal(item.after_tax_amount_per_period)
-              .mul(itemGrowthFactor)
-              .mul(inflationFactor);
-            totalExpense = totalExpense.add(amount);
-          }
-        }
+        totalExpense = totalExpense.add(
+          this._calculateItemContributionAtAge(item, age)
+        );
       }
 
       projectionData.push({
@@ -491,6 +433,26 @@ export class FIREPlanner {
     }
 
     return projectionData;
+  }
+
+  private _countOccurrencesInYearByMonthInterval(
+    yearsSinceStart: number,
+    intervalMonths: number
+  ): number {
+    const monthsFromStart = yearsSinceStart * 12;
+    let count = 0;
+    for (let monthIndex = 0; monthIndex < 12; monthIndex++) {
+      if ((monthsFromStart + monthIndex) % intervalMonths === 0) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  private _getTimeUnitMonths(timeUnit: IncomeExpenseItem['time_unit']): number {
+    if (timeUnit === 'monthly') return 1;
+    if (timeUnit === 'quarterly') return 3;
+    return 12;
   }
 
   /**
@@ -565,15 +527,27 @@ export class FIREPlanner {
     const growthFactor = new Decimal(1).add(growthRate).pow(yearsSinceStart);
 
     if (item.frequency === 'one-time') {
-      if (age === item.start_age) {
-        return new Decimal(item.after_tax_amount_per_period).mul(growthFactor);
-      } else {
-        return new Decimal(0);
-      }
+      if (age !== item.start_age) return new Decimal(0);
+
+      return new Decimal(item.after_tax_amount_per_period).mul(growthFactor);
     } else {
-      let contribution = new Decimal(item.after_tax_amount_per_period).mul(
-        growthFactor
+      const intervalPeriods = Math.max(
+        1,
+        Math.floor(item.interval_periods ?? 1)
       );
+
+      const intervalMonths =
+        intervalPeriods * this._getTimeUnitMonths(item.time_unit);
+      const periodsThisYear = this._countOccurrencesInYearByMonthInterval(
+        yearsSinceStart,
+        intervalMonths
+      );
+
+      if (periodsThisYear === 0) return new Decimal(0);
+
+      let contribution = new Decimal(item.after_tax_amount_per_period)
+        .mul(periodsThisYear)
+        .mul(growthFactor);
 
       // Apply inflation for expenses
       if (!item.is_income && this.data.user_profile) {

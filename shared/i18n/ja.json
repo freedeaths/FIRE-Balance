@@ -54,6 +54,7 @@
   "portfolio_expected_return": "ポートフォリオ期待リターン",
   "weighted_average_return": "加重平均期待リターン",
   "weighted_average_return_help": "資産クラスの配分と期待リターンに基づいて計算された全体的なポートフォリオ期待リターン",
+  "portfolio_return_below_inflation_warning": "ポートフォリオ期待リターン（{portfolioReturn}%）がインフレ率（{inflationRate}%）を下回っています。",
   "liquidity_volatility": "流動性：{liquidity}、ボラティリティ：{volatility}%",
   "income_items_header": "収入項目",
   "expense_items_header": "支出項目",
@@ -61,6 +62,9 @@
   "item_name": "名前",
   "item_amount": "金額",
   "item_frequency": "頻度",
+  "item_interval": "間隔",
+  "interval_years": "年",
+  "interval_months": "ヶ月",
   "item_start_age": "開始年齢",
   "item_end_age": "終了年齢",
   "item_growth_rate": "成長率 (%)",
@@ -329,6 +333,8 @@
   "validation": {
     "required": "このフィールドは必須です",
     "must_be_positive": "値は正の数である必要があります",
+    "must_be_integer": "値は整数である必要があります",
+    "invalid_monthly_interval": "月次項目の間隔は 1、2、3、4、6 のいずれかである必要があります",
     "invalid_age": "無効な年齢",
     "end_age_must_be_greater": "終了年齢は開始年齢より大きい必要があります",
     "please_fix_following_issues": "以下の問題を修正してください：",
@@ -409,6 +415,7 @@
     },
     "context_menu": {
       "undo_override": "🔄 Override取消",
+      "reset_column_overrides": "♻️ この列のOverrideをリセット",
       "undo": "↶ 元に戻す",
       "redo": "↷ やり直し",
       "copy": "📋 コピー"

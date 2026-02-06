@@ -25,13 +25,14 @@ FIRE Balance計算機は、複雑なプロセスを管理可能な段階に分�
 
 このプロジェクトは複数のプログラミング言語でFIRE計算機を実装します：
 
-- **Python実装**：包括的な計算エンジンを持つStreamlitベースのWebアプリケーション
-- **React + TypeScript実装**：Tailwind CSSを使用したモダンなWebアプリケーション
+- **Python実装（legacy）**：`implementations/python/` は今後更新しません。最新のプラン schema / UI 振る舞いに追従しない可能性があります。
+- **React + TypeScript実装（維持管理中）**：今後の主要実装（`implementations/typescript/`）。
 - **Rust WASM実装**：現在計画されていません、計算が十分複雑ではありません
 
 ## 🚀 クイックスタート
 
 ### Pythonバージョン
+注意：`implementations/python/` は legacy のため新機能追加は行いません。特に理由がなければ React + TypeScript 版を推奨します。
 
 #### コマンドラインインターフェース（CLI）
 
@@ -62,7 +63,13 @@ python cli/fire_planner.py --output results.json
 
 ### React + TypeScriptバージョン
 
-...
+```bash
+cd implementations/typescript
+npm install
+npm run dev
+```
+
+詳細は `implementations/typescript/README.md` を参照してください。
 
 ## 📖 核心概念
 

@@ -29,6 +29,9 @@ import {
   IconChartPie,
   IconWallet,
   IconInfoCircle,
+  IconAlertTriangle,
+  IconCircleCheck,
+  IconCircleX,
 } from '@tabler/icons-react';
 import { usePlannerStore } from '../../stores/plannerStore';
 import { useAppStore } from '../../stores/appStore';
@@ -587,6 +590,18 @@ export function Stage1Content() {
     );
 
     const isValidTotal = Math.abs(totalAllocation - 100) < 0.01;
+    const weightedReturn = calculateWeightedReturn();
+    const inflationRate =
+      userProfile.inflation_rate ?? DEFAULT_USER_PROFILE.inflation_rate;
+    const hasAnyReturnValue = portfolio.asset_classes.some(
+      asset =>
+        asset.expected_return !== undefined && asset.expected_return !== null
+    );
+    const shouldWarnBelowInflation =
+      totalAllocation > 0 &&
+      hasAnyReturnValue &&
+      Number.isFinite(inflationRate) &&
+      weightedReturn + 1e-9 < inflationRate;
 
     return (
       <Card shadow='sm' padding='lg' radius='md'>
@@ -696,45 +711,49 @@ export function Stage1Content() {
           ))}
         </Grid>
 
-        {/* 总计和验证 - 一行平衡布局 */}
-        <div
-          style={{
-            marginTop: '16px',
-            padding: '12px',
-            backgroundColor: isValidTotal ? '#e6f7e6' : '#ffe6e6',
-            borderRadius: '6px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: '12px',
-          }}
-        >
-          {/* 左侧：验证状态 */}
-          <div>
-            {isValidTotal ? (
-              <Text c='green' size='sm' fw={600}>
-                ✅{' '}
-                {t('allocation_total', { total: totalAllocation.toFixed(1) })}
-              </Text>
+        <Alert
+          icon={
+            isValidTotal ? (
+              <IconCircleCheck size={20} />
             ) : (
-              <Text c='red' size='sm' fw={600}>
-                ❌{' '}
-                {t('allocation_total', { total: totalAllocation.toFixed(1) })}
-              </Text>
-            )}
-          </div>
+              <IconCircleX size={20} />
+            )
+          }
+          color={isValidTotal ? 'green' : 'red'}
+          variant='light'
+          mt='md'
+        >
+          <Group justify='space-between' align='center' gap='sm' wrap='wrap'>
+            <Text size='sm' fw={600}>
+              {t('allocation_total', { total: totalAllocation.toFixed(1) })}
+            </Text>
 
-          {/* 右侧：加权收益率 */}
-          <Group gap='sm'>
-            <Text size='sm' c='dimmed'>
-              {t('portfolio_expected_return')}:
-            </Text>
-            <Text size='lg' fw={700}>
-              {calculateWeightedReturn().toFixed(2)}%
-            </Text>
+            <Group gap='sm'>
+              <Text size='sm' c='dimmed'>
+                {t('portfolio_expected_return')}:
+              </Text>
+              <Text size='lg' fw={700}>
+                {weightedReturn.toFixed(2)}%
+              </Text>
+            </Group>
           </Group>
-        </div>
+        </Alert>
+
+        {shouldWarnBelowInflation && (
+          <Alert
+            icon={<IconAlertTriangle size={20} />}
+            color='yellow'
+            variant='light'
+            mt='sm'
+          >
+            <Text size='sm'>
+              {t('portfolio_return_below_inflation_warning', {
+                portfolioReturn: weightedReturn.toFixed(2),
+                inflationRate: inflationRate.toFixed(2),
+              })}
+            </Text>
+          </Alert>
+        )}
       </Card>
     );
   };

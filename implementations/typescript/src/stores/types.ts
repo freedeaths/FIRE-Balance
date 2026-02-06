@@ -97,6 +97,7 @@ export interface PlannerActions {
   addOverride: (override: Override) => void;
   updateOverride: (index: number, override: Partial<Override>) => void;
   removeOverride: (index: number) => void;
+  removeOverridesByItemId: (itemId: string) => void;
   clearOverrides: () => void;
   cleanupOrphanedOverrides: () => void;
 

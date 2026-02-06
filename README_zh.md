@@ -25,13 +25,14 @@ FIRE Balance 计算器通过将复杂的财务规划过程分解为可管理的�
 
 本项目使用多种编程语言实现 FIRE 计算器：
 
-- **Python 实现**：基于 Streamlit 的 Web 应用，具有全面的计算引擎
-- **React + TypeScript 实现**：使用 Tailwind CSS 的现代 Web 应用
+- **Python 实现（legacy）**：`implementations/python/` 后续不再更新，可能会落后于最新的计划 schema 和 UI 行为。
+- **React + TypeScript 实现（持续维护）**：后续主要维护版本（`implementations/typescript/`）。
 - **Rust WASM 实现**：未在计划中，目前计算不复杂
 
 ## 🚀 快速开始
 
 ### Python 版本
+注意：`implementations/python/` 为 legacy，不会再新增功能。除非你明确需要 Python CLI，否则建议使用 React + TypeScript 版本。
 
 #### 命令行界面 (CLI)
 
@@ -62,7 +63,13 @@ python cli/fire_planner.py --output results.json
 
 ### React + TypeScript 版本
 
-...
+```bash
+cd implementations/typescript
+npm install
+npm run dev
+```
+
+更多说明见 `implementations/typescript/README.md`。
 
 ## 📖 核心概念
 

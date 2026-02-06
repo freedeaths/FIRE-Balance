@@ -54,6 +54,7 @@
   "portfolio_expected_return": "投资组合预期回报",
   "weighted_average_return": "加权平均预期回报",
   "weighted_average_return_help": "基于各资产类别配置比例和预期回报计算的整体组合预期回报",
+  "portfolio_return_below_inflation_warning": "投资组合预期回报（{portfolioReturn}%）低于通胀率（{inflationRate}%）。",
   "liquidity_volatility": "流动性：{liquidity}，波动性：{volatility}%",
   "income_items_header": "收入项目",
   "expense_items_header": "支出项目",
@@ -61,6 +62,9 @@
   "item_name": "名称",
   "item_amount": "金额",
   "item_frequency": "频率",
+  "item_interval": "间隔",
+  "interval_years": "年",
+  "interval_months": "个月",
   "item_start_age": "起始年龄",
   "item_end_age": "结束年龄",
   "item_growth_rate": "增长率 (%)",
@@ -329,6 +333,8 @@
   "validation": {
     "required": "此字段是必需的",
     "must_be_positive": "值必须为正数",
+    "must_be_integer": "值必须为整数",
+    "invalid_monthly_interval": "按月项目的间隔只能是 1、2、3、4、6",
     "invalid_age": "无效年龄",
     "end_age_must_be_greater": "结束年龄必须大于起始年龄",
     "please_fix_following_issues": "请修复以下问题：",
@@ -409,6 +415,7 @@
     },
     "context_menu": {
       "undo_override": "🔄 撤销Override",
+      "reset_column_overrides": "♻️ 重置本列Override",
       "undo": "↶ 撤销",
       "redo": "↷ 重做",
       "copy": "📋 复制"
