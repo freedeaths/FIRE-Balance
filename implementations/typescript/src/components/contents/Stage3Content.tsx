@@ -216,14 +216,18 @@ export function Stage3Content(): React.JSX.Element {
       // 准备完整的UserProfile对象，确保portfolio配置完整
       const completeUserProfile = {
         ...userProfile,
-        as_of_year: userProfile.as_of_year || new Date().getFullYear(),
-        current_net_worth: new Decimal(userProfile.current_net_worth || 0),
-        inflation_rate: new Decimal(userProfile.inflation_rate || 3),
+        birth_year: userProfile.birth_year ?? 1990,
+        as_of_year: userProfile.as_of_year ?? new Date().getFullYear(),
+        expected_fire_age: userProfile.expected_fire_age ?? 50,
+        legal_retirement_age: userProfile.legal_retirement_age ?? 65,
+        life_expectancy: userProfile.life_expectancy ?? 85,
+        current_net_worth: new Decimal(userProfile.current_net_worth ?? 0),
+        inflation_rate: new Decimal(userProfile.inflation_rate ?? 3),
         safety_buffer_months: new Decimal(
-          userProfile.safety_buffer_months || 12
+          userProfile.safety_buffer_months ?? 6
         ),
         bridge_discount_rate: new Decimal(
-          userProfile.bridge_discount_rate || 1.0
+          userProfile.bridge_discount_rate ?? 1.0
         ),
         portfolio: userProfile.portfolio
           ? {
@@ -826,10 +830,10 @@ export function Stage3Content(): React.JSX.Element {
                 <NetWorthTrajectoryChart
                   yearlyStates={yearlyStates}
                   targetFireAge={
-                    plannerStore.data.user_profile?.expected_fire_age || 65
+                    plannerStore.data.user_profile?.expected_fire_age ?? 50
                   }
                   legalRetirementAge={
-                    plannerStore.data.user_profile?.legal_retirement_age || 65
+                    plannerStore.data.user_profile?.legal_retirement_age ?? 65
                   }
                   currentAge={
                     plannerStore.data.user_profile
@@ -839,14 +843,14 @@ export function Stage3Content(): React.JSX.Element {
                       : 30
                   }
                   lifeExpectancy={
-                    plannerStore.data.user_profile?.life_expectancy || 85
+                    plannerStore.data.user_profile?.life_expectancy ?? 85
                   }
                   fireNetWorth={fireCalculation.fire_net_worth}
                   safetyBufferMonths={
-                    plannerStore.data.user_profile?.safety_buffer_months || 6
+                    plannerStore.data.user_profile?.safety_buffer_months ?? 6
                   }
                   bridgeDiscountRate={
-                    plannerStore.data.user_profile?.bridge_discount_rate || 1.0
+                    plannerStore.data.user_profile?.bridge_discount_rate ?? 1.0
                   }
                   height={400}
                   showCashFlowArea={true}
@@ -870,16 +874,16 @@ export function Stage3Content(): React.JSX.Element {
                 <YearlyDataTableSection
                   data={yearlyStates}
                   safetyBufferMonths={
-                    plannerStore.data.user_profile?.safety_buffer_months || 6
+                    plannerStore.data.user_profile?.safety_buffer_months ?? 6
                   }
                   targetFireAge={
-                    plannerStore.data.user_profile?.expected_fire_age || 65
+                    plannerStore.data.user_profile?.expected_fire_age ?? 50
                   }
                   legalRetirementAge={
-                    plannerStore.data.user_profile?.legal_retirement_age || 65
+                    plannerStore.data.user_profile?.legal_retirement_age ?? 65
                   }
                   bridgeDiscountRate={
-                    plannerStore.data.user_profile?.bridge_discount_rate || 1.0
+                    plannerStore.data.user_profile?.bridge_discount_rate ?? 1.0
                   }
                   t={t}
                 />
@@ -1311,7 +1315,7 @@ export function Stage3Content(): React.JSX.Element {
                       {t('fire_success_criteria', {
                         months:
                           plannerStore.data.user_profile
-                            ?.safety_buffer_months || 6,
+                            ?.safety_buffer_months ?? 6,
                       })}
                     </Alert>
 

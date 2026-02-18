@@ -103,7 +103,10 @@ export function StageNavigation({
         profile.inflation_rate === null
       )
         errors.push(t('validation.inflation_rate_required'));
-      if (!profile.safety_buffer_months)
+      if (
+        profile.safety_buffer_months === undefined ||
+        profile.safety_buffer_months === null
+      )
         errors.push(t('validation.safety_buffer_required'));
 
       // 拦截年龄进展不一致：current_age <= FIRE <= legal retirement <= life expectancy

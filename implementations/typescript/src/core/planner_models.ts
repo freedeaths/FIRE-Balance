@@ -315,7 +315,7 @@ export function configToPlannerData(config: PlannerConfigV1): PlannerData {
     current_net_worth: new Decimal(config.profile.current_net_worth ?? 0),
     inflation_rate: new Decimal(config.profile.inflation_rate ?? 3.0),
     safety_buffer_months: new Decimal(
-      config.profile.safety_buffer_months ?? 12.0
+      config.profile.safety_buffer_months ?? 6.0
     ),
     bridge_discount_rate: new Decimal(
       config.profile.bridge_discount_rate ?? 1.0
