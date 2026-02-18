@@ -854,9 +854,9 @@ $$
 
 $$
 \begin{aligned}
-\text{planStatusRates.safe} &= \frac{\#\lbrace\text{planStatus}=\texttt{safe}\rbrace}{M}\\
-\text{planStatusRates.warning} &= \frac{\#\lbrace\text{planStatus}=\texttt{warning}\rbrace}{M}\\
-\text{planStatusRates.danger} &= \frac{\#\lbrace\text{planStatus}=\texttt{danger}\rbrace}{M}
+\text{planStatusRates.safe} &= \frac{\left|\lbrace \text{planStatus}=\texttt{safe}\rbrace\right|}{M}\\
+\text{planStatusRates.warning} &= \frac{\left|\lbrace \text{planStatus}=\texttt{warning}\rbrace\right|}{M}\\
+\text{planStatusRates.danger} &= \frac{\left|\lbrace \text{planStatus}=\texttt{danger}\rbrace\right|}{M}
 \end{aligned}
 $$
 
