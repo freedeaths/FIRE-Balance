@@ -2,6 +2,8 @@
 
 本文档**只**描述 `implementations/typescript/` 里当前实现的数学含义与计算步骤；所有符号、边界条件、取整方式、阈值比较（`>` / `>=`）都以代码为准，不做“常识化”改写。
 
+为兼容 GitHub 的 KaTeX 渲染限制，公式中的字段名/变量名会用 **camelCase**（例如 `birthYear`）表示代码中的 **snake_case** 字段（例如 `birth_year`）；两者语义一一对应。
+
 > 主要对应：
 > - Stage 1：输入数据结构与“阶段(phase)→年龄(start_age/end_age)”落地逻辑（`implementations/typescript/src/stores/plannerStore.ts`）
 > - Stage 2：年度表格每个单元格的生成（`implementations/typescript/src/utils/projection.ts` + `implementations/typescript/src/components/tables/Stage2FinancialTable.tsx`）
@@ -16,13 +18,13 @@
 
 Stage 2 表格使用以下关系（见 `Stage2FinancialTable.tsx`）：
 
-设 $\text{birth\_year}=\texttt{user\_profile.birth\_year}$（缺省用 1990），$\text{as\_of\_year}=\texttt{user\_profile.as\_of\_year}$（缺省用当前系统年份），则：
+设 $\text{birthYear}=\texttt{userProfile.birthYear}$（缺省用 1990），$\text{asOfYear}=\texttt{userProfile.asOfYear}$（缺省用当前系统年份），则：
 
 $$
 \begin{aligned}
-\text{current\_age} &= \text{as\_of\_year} - \text{birth\_year} \\
-\text{age} &\in [\text{current\_age},\ \text{life\_expectancy}] \\
-\text{year} &= \text{birth\_year} + \text{age}
+\text{currentAge} &= \text{asOfYear} - \text{birthYear} \\
+\text{age} &\in [\text{currentAge},\ \text{lifeExpectancy}] \\
+\text{year} &= \text{birthYear} + \text{age}
 \end{aligned}
 $$
 
@@ -46,9 +48,9 @@ item.annual_growth_rate  (百分比，例如 3 表示 3%)
 Stage 2 使用：
 
 $$
-\text{inflation\_rate\_pct} =
+\text{inflationRatePct} =
 \begin{cases}
-\texttt{user\_profile.inflation\_rate} & \text{若其不为 null/undefined}\\
+\texttt{userProfile.inflationRate} & \text{若其不为 null/undefined}\\
 3.0 & \text{否则}
 \end{cases}
 $$
@@ -72,7 +74,7 @@ Stage 1 中条目允许用 `phase` / `phase_end` 表示年龄段，随后在 sto
 ### 1.1 current_age
 
 $$
-\text{current\_age}=\text{as\_of\_year}-\text{birth\_year}
+\text{currentAge}=\text{asOfYear}-\text{birthYear}
 $$
 
 ### 1.2 phase → start_age / end_age（只对 recurring 生效）
@@ -83,31 +85,31 @@ $$
 
 $$
 \begin{aligned}
-\text{start}(1)&=\text{current\_age}, & \text{end}(1)&=\text{expected\_fire\_age} \\
-\text{start}(2)&=\text{expected\_fire\_age}+1, & \text{end}(2)&=\text{legal\_retirement\_age} \\
-\text{start}(3)&=\text{legal\_retirement\_age}+1, & \text{end}(3)&=
+\text{start}(1)&=\text{currentAge}, & \text{end}(1)&=\text{expectedFireAge} \\
+\text{start}(2)&=\text{expectedFireAge}+1, & \text{end}(2)&=\text{legalRetirementAge} \\
+\text{start}(3)&=\text{legalRetirementAge}+1, & \text{end}(3)&=
 \begin{cases}
-\text{expected\_healthy\_age} & \text{若存在且 } \text{legal\_retirement\_age}<\text{expected\_healthy\_age}<\text{life\_expectancy}\\
-\text{life\_expectancy} & \text{否则}
+\text{expectedHealthyAge} & \text{若存在且 } \text{legalRetirementAge}<\text{expectedHealthyAge}<\text{lifeExpectancy}\\
+\text{lifeExpectancy} & \text{否则}
 \end{cases}\\
-\text{start}(4)&=\text{expected\_healthy\_age}+1, & \text{end}(4)&=\text{life\_expectancy}\quad
-\text{（仅当 expected\_healthy\_age 满足上式存在条件时定义）}
+\text{start}(4)&=\text{expectedHealthyAge}+1, & \text{end}(4)&=\text{lifeExpectancy}\quad
+\text{（仅当 expectedHealthyAge 满足上式存在条件时定义）}
 \end{aligned}
 $$
 
 若同时给了 `phase_end`，则使用：
 
 $$
-\text{normalized\_end}=\max(\text{phase},\text{phase\_end}),\quad
-\text{start\_age}=\text{start}(\text{phase}),\quad
-\text{end\_age}=\text{end}(\text{normalized\_end})
+\text{normalizedEnd}=\max(\text{phase},\text{phaseEnd}),\quad
+\text{startAge}=\text{start}(\text{phase}),\quad
+\text{endAge}=\text{end}(\text{normalizedEnd})
 $$
 
 最终写回条目：
 
 $$
-\text{start\_age}\gets \max\!\bigl(0,\ \lfloor \text{start\_age}\rfloor \bigr),\quad
-\text{end\_age}\gets \max\!\bigl(0,\ \lfloor \text{end\_age}\rfloor \bigr)
+\text{startAge}\gets \max\!\bigl(0,\ \lfloor \text{startAge}\rfloor \bigr),\quad
+\text{endAge}\gets \max\!\bigl(0,\ \lfloor \text{endAge}\rfloor \bigr)
 $$
 
 ---
@@ -119,10 +121,10 @@ Stage 2 的基础表格（不含 override）由 `computeAnnualItemAmountAtAge()`
 ### 2.1 是否激活（active）
 
 $$
-\text{cell\_value}(\text{age})=
+\text{cellValue}(\text{age})=
 \begin{cases}
-0 & \text{若 } \text{age}<\text{start\_age}\\
-0 & \text{若 } (\text{end\_age}\ \text{已定义})\land (\text{age}>\text{end\_age})\\
+0 & \text{若 } \text{age}<\text{startAge}\\
+0 & \text{若 } (\text{endAge}\ \text{已定义})\land (\text{age}>\text{endAge})\\
 \text{(后续公式)} & \text{否则}
 \end{cases}
 $$
@@ -130,13 +132,13 @@ $$
 令：
 
 $$
-\text{years\_since\_start}=\text{age}-\text{start\_age}
+\text{yearsSinceStart}=\text{age}-\text{startAge}
 $$
 
 ### 2.2 time_unit → 每期月数
 
 $$
-\text{months\_per\_period}(\text{time\_unit})=
+\text{monthsPerPeriod}(\text{timeUnit})=
 \begin{cases}
 1 & \texttt{monthly}\\
 3 & \texttt{quarterly}\\
@@ -149,7 +151,7 @@ $$
 代码会对 `interval_periods` 做：
 
 $$
-\text{interval\_periods}=\max\left(1,\ \left\lfloor \text{Number}(\text{interval\_periods})\right\rfloor\right)
+\text{intervalPeriods}=\max\left(1,\ \left\lfloor \text{Number}(\text{intervalPeriods})\right\rfloor\right)
 $$
 
 ### 2.4 该年龄这一年内发生了几次（periods_this_year）
@@ -157,16 +159,16 @@ $$
 设：
 
 $$
-\text{interval\_months}=\text{interval\_periods}\cdot \text{months\_per\_period}(\text{time\_unit}),\quad
-\text{months\_from\_start}=12\cdot \text{years\_since\_start}
+\text{intervalMonths}=\text{intervalPeriods}\cdot \text{monthsPerPeriod}(\text{timeUnit}),\quad
+\text{monthsFromStart}=12\cdot \text{yearsSinceStart}
 $$
 
 #### 2.4.1 one-time
 
 $$
-\text{periods\_this\_year}=
+\text{periodsThisYear}=
 \begin{cases}
-1 & \text{若 } \text{years\_since\_start}=0\\
+1 & \text{若 } \text{yearsSinceStart}=0\\
 0 & \text{否则}
 \end{cases}
 \qquad(\texttt{frequency}=\texttt{one-time})
@@ -175,8 +177,8 @@ $$
 #### 2.4.2 recurring
 
 $$
-\text{periods\_this\_year}=
-\left|\left\{m\in\{0,1,\dots,11\}:\ (\text{months\_from\_start}+m)\bmod \text{interval\_months}=0\right\}\right|
+\text{periodsThisYear}=
+\left|\left\lbrace m\in\lbrace0,1,\dots,11\rbrace:\ (\text{monthsFromStart}+m)\bmod \text{intervalMonths}=0\right\rbrace\right|
 \qquad(\texttt{frequency}=\texttt{recurring})
 $$
 
@@ -189,32 +191,32 @@ $$
 令：
 
 $$
-\text{growth\_rate}=\frac{\text{annual\_growth\_rate}\ \text{(缺省 0)}}{100},\quad
-\text{inflation\_rate}=\frac{\text{inflation\_rate\_pct}\ \text{(缺省 0)}}{100}
+\text{growthRate}=\frac{\text{annualGrowthRate}\ \text{(缺省 0)}}{100},\quad
+\text{inflationRate}=\frac{\text{inflationRatePct}\ \text{(缺省 0)}}{100}
 $$
 
 $$
-\text{total\_growth\_rate}=
+\text{totalGrowthRate}=
 \begin{cases}
-\text{growth\_rate} & (\texttt{is\_income}=\texttt{true})\\
-\text{growth\_rate}+\text{inflation\_rate} & (\texttt{is\_income}=\texttt{false})
+\text{growthRate} & (\texttt{isIncome}=\texttt{true})\\
+\text{growthRate}+\text{inflationRate} & (\texttt{isIncome}=\texttt{false})
 \end{cases}
 $$
 
 ### 2.6 本年“基础年化金额”
 
 $$
-\text{base\_annual\_amount}=\text{after\_tax\_amount\_per\_period}\cdot \text{periods\_this\_year}
+\text{baseAnnualAmount}=\text{afterTaxAmountPerPeriod}\cdot \text{periodsThisYear}
 $$
 
 ### 2.7 增长后的本年金额 + 四舍五入
 
 $$
-\text{grown\_amount}=\text{base\_annual\_amount}\cdot (1+\text{total\_growth\_rate})^{\text{years\_since\_start}}
+\text{grownAmount}=\text{baseAnnualAmount}\cdot (1+\text{totalGrowthRate})^{\text{yearsSinceStart}}
 $$
 
 $$
-\text{cell\_value}=\mathrm{round}(\text{grown\_amount})
+\text{cellValue}=\mathrm{round}(\text{grownAmount})
 $$
 
 其中 $\mathrm{round}$ 对应 JavaScript 的 `Math.round`（按最近整数取整；正数的 $x.5$ 向上取整）。
@@ -232,10 +234,10 @@ Stage 2 在 UI 里**默认把支出也显示为正数**（`expenseSign='positive
 对每一行 `row(age)`、每一列 `item_id`：
 
 $$
-\text{final\_cell\_value}(\text{age},\text{item\_id})=
+\text{finalCellValue}(\text{age},\text{itemId})=
 \begin{cases}
-\text{override.value} & \exists\ \text{override}: \text{override.age}=\text{age}\land \text{override.item\_id}=\text{item\_id}\\
-\text{base\_cell\_value}(\text{age},\text{item\_id}) & \text{否则}
+\text{override.value} & \exists\ \text{override}: \text{override.age}=\text{age}\land \text{override.itemId}=\text{itemId}\\
+\text{baseCellValue}(\text{age},\text{itemId}) & \text{否则}
 \end{cases}
 $$
 
@@ -246,11 +248,11 @@ $$
 Stage 2 会把最终表按“收入列求和 / 支出列求和”汇总为每年的 `total_income/total_expense`（见 `Stage2FinancialTable.tsx` 的 `useEffect()`）：
 
 $$
-\text{total\_income}(\text{age})=\sum_{i\in \text{income\_items}} \text{final\_cell\_value}(\text{age}, i.\text{id})
+\text{totalIncome}(\text{age})=\sum_{i\in \text{incomeItems}} \text{finalCellValue}(\text{age}, i.\text{id})
 $$
 
 $$
-\text{total\_expense}(\text{age})=\sum_{j\in \text{expense\_items}} \text{final\_cell\_value}(\text{age}, j.\text{id})
+\text{totalExpense}(\text{age})=\sum_{j\in \text{expenseItems}} \text{finalCellValue}(\text{age}, j.\text{id})
 $$
 
 并写入：
@@ -272,7 +274,7 @@ Stage 3 计算主入口：`implementations/typescript/src/core/engine.ts`。
 对每一年（每个 `AnnualFinancialProjection`）：
 
 $$
-\text{net\_cash\_flow}=\text{total\_income}-\text{total\_expense}
+\text{netCashFlow}=\text{totalIncome}-\text{totalExpense}
 $$
 
 ### 4.2 初始投资组合拆分
@@ -280,8 +282,8 @@ $$
 `implementations/typescript/src/core/portfolio.ts` 的 `PortfolioSimulator` 会在模拟开始前把 `current_net_worth` 按“目标配置比例”拆成各资产初始价值：
 
 $$
-\text{target\_ratio}_i=\frac{\text{allocation\_percentage}_i}{100},\quad
-\text{asset\_value}_i(0)=\text{current\_net\_worth}\cdot \text{target\_ratio}_i
+\text{targetRatio}_i=\frac{\text{allocationPercentage}_i}{100},\quad
+\text{assetValue}_i(0)=\text{currentNetWorth}\cdot \text{targetRatio}_i
 $$
 
 其中 `i` 遍历 `user_profile.portfolio.asset_classes`（默认资产名会被规范化为小写，例如 `cash/stocks/bonds/savings`）。
@@ -291,7 +293,7 @@ $$
 设本年开始时组合总值：
 
 $$
-V_0=\sum_i \text{asset\_value}_i
+V_0=\sum_i \text{assetValue}_i
 $$
 
 开始时的“实际占比”（`PortfolioState.getAllocation()`）：
@@ -300,14 +302,14 @@ $$
 w_i=
 \begin{cases}
 0 & V_0=0\\
-\dfrac{\text{asset\_value}_i}{V_0} & V_0>0
+\dfrac{\text{assetValue}_i}{V_0} & V_0>0
 \end{cases}
 $$
 
 每个资产的期望年化收益率（百分比转小数）：
 
 $$
-r_i=\frac{\text{expected\_return}_i}{100}
+r_i=\frac{\text{expectedReturn}_i}{100}
 $$
 
 组合的加权收益率：
@@ -319,13 +321,13 @@ $$
 本年投资收益金额：
 
 $$
-\text{investment\_return}=V_0\cdot R
+\text{investmentReturn}=V_0\cdot R
 $$
 
 然后按 `w_i` 将该收益“按比例”加回每个资产（注意：这里不是每个资产按自身 r_i 增长，而是把组合总收益按 w_i 分摊）：
 
 $$
-\text{asset\_value}_i \gets \text{asset\_value}_i + \text{investment\_return}\cdot w_i
+\text{assetValue}_i \gets \text{assetValue}_i + \text{investmentReturn}\cdot w_i
 $$
 
 ### 4.4 现金流注入/支出（LiquidityAwareFlowStrategy）
@@ -333,7 +335,7 @@ $$
 该策略使用用户资料里的安全缓冲月数作为现金缓冲月数：
 
 $$
-\text{cashBufferMonths}=\texttt{user\_profile.safety\_buffer\_months}
+\text{cashBufferMonths}=\texttt{userProfile.safetyBufferMonths}
 $$
 
 对应实现为 `new LiquidityAwareFlowStrategy(userProfile.safety_buffer_months.toNumber(), portfolioConfig)`（在 `PortfolioSimulator` 构造默认策略时传入）。
@@ -343,7 +345,7 @@ $$
 先计算“现金缓冲需求”：
 
 $$
-\text{required\_cash\_buffer}=\text{annual\_expenses}\cdot \frac{\text{cashBufferMonths}}{12}
+\text{requiredCashBuffer}=\text{annualExpenses}\cdot \frac{\text{cashBufferMonths}}{12}
 $$
 
 其中 `annual_expenses` 就是该年的 `total_expense`（年支出）。
@@ -351,31 +353,31 @@ $$
 策略会把高流动性资产视为名为 `'cash'` 的资产当前值：
 
 $$
-\text{current\_cash}=\texttt{portfolio.asset\_values['cash']}\ \ (\text{若不存在则视为 }0)
+\text{currentCash}=\texttt{portfolio.assetValues['cash']}\ \ (\text{若不存在则视为 }0)
 $$
 
 $$
-\text{shortfall}=\max(0,\ \text{required\_cash\_buffer}-\text{current\_cash})
+\text{shortfall}=\max(0,\ \text{requiredCashBuffer}-\text{currentCash})
 $$
 
 当 `net_cash_flow > 0` 时，令 `income = net_cash_flow`：
 
 $$
-\text{allocate\_to\_cash}=\min(\text{income},\text{shortfall}),\quad
-\text{remaining\_income}=\text{income}-\text{allocate\_to\_cash}
+\text{allocateToCash}=\min(\text{income},\text{shortfall}),\quad
+\text{remainingIncome}=\text{income}-\text{allocateToCash}
 $$
 
 然后把 `remaining_income` 分配给所有 **非 high 流动性** 且目标占比 > 0 的资产集合 `S`，按“目标占比在 S 内归一化后”的比例分配：
 
 $$
-S=\left\{i\mid \text{liquidity\_level}_i\ne \texttt{high}\ \land\ \text{target\_ratio}_i>0\right\},\quad
-\Sigma_S=\sum_{i\in S}\text{target\_ratio}_i
+S=\left\lbrace i\mid \text{liquidityLevel}_i\ne \texttt{high}\ \land\ \text{targetRatio}_i>0\right\rbrace,\quad
+\Sigma_S=\sum_{i\in S}\text{targetRatio}_i
 $$
 
 $$
 \text{allocate}_i=
 \begin{cases}
-\text{remaining\_income}\cdot \dfrac{\text{target\_ratio}_i}{\Sigma_S} & \Sigma_S>0\\
+\text{remainingIncome}\cdot \dfrac{\text{targetRatio}_i}{\Sigma_S} & \Sigma_S>0\\
 0 & \Sigma_S=0
 \end{cases}
 $$
@@ -385,7 +387,7 @@ $$
 当 `net_cash_flow < 0` 时，令：
 
 $$
-\text{expense}=-\text{net\_cash\_flow}\quad(\text{正数})
+\text{expense}=-\text{netCashFlow}\quad(\text{正数})
 $$
 
 按流动性层级依次提取：`HIGH → MEDIUM → LOW`。
@@ -395,8 +397,8 @@ $$
 1) 取出该层内当前为正的资产子集 `T`，并计算：
 
 $$
-\text{total}_T=\sum_{i\in T}\text{asset\_value}_i,\quad
-\text{withdraw\_tier}=\min(\text{needed},\ \text{total}_T)
+\text{total}_T=\sum_{i\in T}\text{assetValue}_i,\quad
+\text{withdrawTier}=\min(\text{needed},\ \text{total}_T)
 $$
 
 2) 若有 portfolio config，则在该层内按“expected_return 从低到高”排序，优先卖出低收益资产（`_withdrawByReturnOptimization()`）：
@@ -413,13 +415,13 @@ remaining = withdraw_tier
 3) 若没有 portfolio config，则在该层内按“当前价值占比”同比例提取（`_withdrawProportionally()`）：
 
 $$
-\text{flow}_i=-\text{withdraw\_tier}\cdot \frac{\text{asset\_value}_i}{\text{total}_T}
+\text{flow}_i=-\text{withdrawTier}\cdot \frac{\text{assetValue}_i}{\text{total}_T}
 $$
 
 每层做完后：
 
 $$
-\text{needed}\gets \text{needed}-\text{withdraw\_tier}
+\text{needed}\gets \text{needed}-\text{withdrawTier}
 $$
 
 #### 4.4.3 应用现金流 + 不允许资产为负
@@ -427,8 +429,8 @@ $$
 对每个资产：
 
 $$
-\text{asset\_value}_i\gets \text{asset\_value}_i+\text{flow}_i,\quad
-\text{asset\_value}_i\gets \max(0,\ \text{asset\_value}_i)
+\text{assetValue}_i\gets \text{assetValue}_i+\text{flow}_i,\quad
+\text{assetValue}_i\gets \max(0,\ \text{assetValue}_i)
 $$
 
 ### 4.5 年度再平衡（Rebalancing）
@@ -436,7 +438,7 @@ $$
 若 `enable_rebalancing == true`，且存在任意资产满足：
 
 $$
-\exists i:\ \left|\text{current\_allocation}_i-\text{target\_ratio}_i\right|>0.05
+\exists i:\ \left|\text{currentAllocation}_i-\text{targetRatio}_i\right|>0.05
 $$
 
 则触发再平衡。
@@ -444,10 +446,10 @@ $$
 再平衡交易量为：
 
 $$
-V=\sum_i \text{asset\_value}_i,\quad
-\text{target\_value}_i=V\cdot \text{target\_ratio}_i,\quad
-\text{trade}_i=\text{target\_value}_i-\text{asset\_value}_i,\quad
-\text{asset\_value}_i\gets \text{asset\_value}_i+\text{trade}_i
+V=\sum_i \text{assetValue}_i,\quad
+\text{targetValue}_i=V\cdot \text{targetRatio}_i,\quad
+\text{trade}_i=\text{targetValue}_i-\text{assetValue}_i,\quad
+\text{assetValue}_i\gets \text{assetValue}_i+\text{trade}_i
 $$
 
 注意：这里执行 trade 后**没有**再次做 `max(0, ...)` 的截断。
@@ -458,18 +460,18 @@ $$
 
 $$
 \begin{aligned}
-\text{net\_cash\_flow} &= \text{total\_income}-\text{total\_expense}\\
-\text{portfolio\_value} &= \sum_i \text{asset\_value}_i\quad(\text{年末})\\
-\text{fire\_number} &= 25\cdot \text{total\_expense}\\
-\text{fire\_progress} &=
+\text{netCashFlow} &= \text{totalIncome}-\text{totalExpense}\\
+\text{portfolioValue} &= \sum_i \text{assetValue}_i\quad(\text{年末})\\
+\text{fireNumber} &= 25\cdot \text{totalExpense}\\
+\text{fireProgress} &=
 \begin{cases}
-\dfrac{\text{portfolio\_value}}{\text{fire\_number}} & \text{fire\_number}>0\\
-0 & \text{fire\_number}\le 0
+\dfrac{\text{portfolioValue}}{\text{fireNumber}} & \text{fireNumber}>0\\
+0 & \text{fireNumber}\le 0
 \end{cases}
 \end{aligned}
 $$
 
-其中 $\text{investment\_return}$ 由上文“每年投资收益”一节给出。
+其中 $\text{investmentReturn}$ 由上文“每年投资收益”一节给出。
 
 #### 4.6.1 required_safety_buffer_months（桥接期会“变大”的安全缓冲月数）
 
@@ -478,15 +480,15 @@ $$
 令：
 
 $$
-\text{base\_months}=\text{safety\_buffer\_months}
+\text{baseMonths}=\text{safetyBufferMonths}
 $$
 
-并给定 $\text{expected\_fire\_age}$、$\text{legal\_retirement\_age}$、$\text{bridge\_discount\_rate\_percent}$。
+并给定 $\text{expectedFireAge}$、$\text{legalRetirementAge}$、$\text{bridgeDiscountRatePercent}$。
 
 注意：在 Core `UserProfile` 模型中 `legal_retirement_age` 是必填且有默认值（未提供时默认 65）。为了兼容 UI/导入配置的中间态缺失值，`getRequiredSafetyBufferMonths(...)` 在参数缺失时会使用一个 fallback：
 
 $$
-\text{legal\_retirement\_age}\gets \max(65,\ \text{expected\_fire\_age})
+\text{legalRetirementAge}\gets \max(65,\ \text{expectedFireAge})
 $$
 
 因此当其缺失时，桥接期逻辑不会被“直接禁用”，而是按上述 fallback 继续计算。
@@ -494,39 +496,39 @@ $$
 若满足任一条件：
 
 $$
-\text{age}<\text{expected\_fire\_age}\ \ \lor\ \ \text{age}\ge \text{legal\_retirement\_age}
+\text{age}<\text{expectedFireAge}\ \ \lor\ \ \text{age}\ge \text{legalRetirementAge}
 $$
 
 则：
 
 $$
-\text{required\_months}=\text{base\_months}
+\text{requiredMonths}=\text{baseMonths}
 $$
 
 否则（即 expected_fire_age ≤ age < legal_retirement_age），令：
 
 $$
-n=\text{legal\_retirement\_age}-\text{age},\quad
-r=\frac{\text{bridge\_discount\_rate\_percent}}{100}
+n=\text{legalRetirementAge}-\text{age},\quad
+r=\frac{\text{bridgeDiscountRatePercent}}{100}
 $$
 
 当 `r <= 0`：
 
 $$
-\text{required\_months}=\text{base\_months}+12n
+\text{requiredMonths}=\text{baseMonths}+12n
 $$
 
 当 `r > 0`：
 
 $$
-\text{annuity\_years}=\frac{1-(1+r)^{-n}}{r},\quad
-\text{required\_months}=\text{base\_months}+12\cdot \text{annuity\_years}
+\text{annuityYears}=\frac{1-(1+r)^{-n}}{r},\quad
+\text{requiredMonths}=\text{baseMonths}+12\cdot \text{annuityYears}
 $$
 
 #### 4.6.2 safety_threshold（安全阈值金额）
 
 $$
-\text{safety\_threshold}=\text{total\_expense}\cdot \frac{\text{required\_months}}{12}
+\text{safetyThreshold}=\text{totalExpense}\cdot \frac{\text{requiredMonths}}{12}
 $$
 
 #### 4.6.3 is_sustainable（引擎内的可持续性判断）
@@ -534,7 +536,7 @@ $$
 在 `FIREEngine.calculate_single_year()` 中：
 
 $$
-\text{is\_sustainable} \iff \text{portfolio\_value}\ge \text{safety\_threshold}
+\text{isSustainable} \iff \text{portfolioValue}\ge \text{safetyThreshold}
 $$
 
 ### 4.7 net_worth（注意：组合归零后会累计“债务”）
@@ -546,32 +548,32 @@ $$
 若本年 `portfolio_value > 0`：
 
 $$
-\text{net\_worth}=\text{portfolio\_value},\quad \text{cumulative\_debt}\gets 0
+\text{netWorth}=\text{portfolioValue},\quad \text{cumulativeDebt}\gets 0
 $$
 
 否则（portfolio_value <= 0）：
 
-当 $\text{net\_cash\_flow}<0$ 时（本年仍有资金缺口）：
+当 $\text{netCashFlow}<0$ 时（本年仍有资金缺口）：
 
 $$
 \begin{aligned}
-\text{required\_cash} &= \left|\text{net\_cash\_flow}\right|\\
-\text{available\_cash} &= \text{starting\_portfolio\_value}+\text{investment\_return}\\
-\text{shortfall} &= \text{required\_cash}-\text{available\_cash}\\
-\text{cumulative\_debt} &\gets \text{cumulative\_debt}+\max(0,\ \text{shortfall})
+\text{requiredCash} &= \left|\text{netCashFlow}\right|\\
+\text{availableCash} &= \text{startingPortfolioValue}+\text{investmentReturn}\\
+\text{shortfall} &= \text{requiredCash}-\text{availableCash}\\
+\text{cumulativeDebt} &\gets \text{cumulativeDebt}+\max(0,\ \text{shortfall})
 \end{aligned}
 $$
 
 并令：
 
 $$
-\text{net\_worth}=-\text{cumulative\_debt}
+\text{netWorth}=-\text{cumulativeDebt}
 $$
 
 然后令：
 
 $$
-\text{starting\_portfolio\_value}\gets \text{portfolio\_value}
+\text{startingPortfolioValue}\gets \text{portfolioValue}
 $$
 
 ---
@@ -583,7 +585,7 @@ $$
 ### 5.1 is_fire_achievable
 
 $$
-\text{is\_fire\_achievable} \iff \bigwedge_t \text{yearly\_states}[t].\text{is\_sustainable}
+\text{isFireAchievable} \iff \bigwedge_t \text{yearlyStates}[t].\text{isSustainable}
 $$
 
 ### 5.2 fire_net_worth（在 expected_fire_age 当年的净值）
@@ -591,14 +593,14 @@ $$
 令：
 
 $$
-\text{current\_age}=\text{as\_of\_year}-\text{birth\_year},\quad
-\text{index}=\text{expected\_fire\_age}-\text{current\_age}
+\text{currentAge}=\text{asOfYear}-\text{birthYear},\quad
+\text{index}=\text{expectedFireAge}-\text{currentAge}
 $$
 
 若 `index` 在 `[0, yearly_states.length)` 内：
 
 $$
-\text{fire\_net\_worth}=\text{yearly\_states}[\text{index}].\text{net\_worth}
+\text{fireNetWorth}=\text{yearlyStates}[\text{index}].\text{netWorth}
 $$
 
 否则为 0。
@@ -606,11 +608,11 @@ $$
 ### 5.3 min_net_worth_after_fire / final_net_worth
 
 $$
-\text{min\_net\_worth\_after\_fire}=\min_{t\ge \text{index}}\ \text{yearly\_states}[t].\text{net\_worth}
+\text{minNetWorthAfterFire}=\min_{t\ge \text{index}}\ \text{yearlyStates}[t].\text{netWorth}
 $$
 
 $$
-\text{final\_net\_worth}=\text{yearly\_states}[\text{last}].\text{net\_worth}
+\text{finalNetWorth}=\text{yearlyStates}[\text{last}].\text{netWorth}
 $$
 
 ### 5.4 min_safety_buffer_ratio（净值 / 安全阈值 的最小值）
@@ -618,11 +620,11 @@ $$
 对每年计算：
 
 $$
-\text{ratio}_t=\frac{\text{net\_worth}_t}{\text{safety\_threshold}_t}\quad(\text{仅当 } \text{safety\_threshold}_t>0 \text{ 时计入})
+\text{ratio}_t=\frac{\text{netWorth}_t}{\text{safetyThreshold}_t}\quad(\text{仅当 } \text{safetyThreshold}_t>0 \text{ 时计入})
 $$
 
 $$
-\text{min\_safety\_buffer\_ratio}=\min_t\ \text{ratio}_t
+\text{minSafetyBufferRatio}=\min_t\ \text{ratio}_t
 $$
 
 ### 5.5 traditional_fire_number（参考指标：前 5 年平均支出 × 25）
@@ -630,12 +632,12 @@ $$
 若模拟年数 ≥ 5：
 
 $$
-\text{traditional\_fire\_expenses}=\mathrm{mean}\left(\text{total\_expense}_{t=0..4}\right),\quad
-\text{traditional\_fire\_number}=25\cdot \text{traditional\_fire\_expenses}
+\text{traditionalFireExpenses}=\mathrm{mean}\left(\text{totalExpense}_{t=0..4}\right),\quad
+\text{traditionalFireNumber}=25\cdot \text{traditionalFireExpenses}
 $$
 
 $$
-\text{traditional\_fire\_achieved} \iff \exists t:\ \text{portfolio\_value}_t\ge \text{traditional\_fire\_number}
+\text{traditionalFireAchieved} \iff \exists t:\ \text{portfolioValue}_t\ge \text{traditionalFireNumber}
 $$
 
 若年数 < 5，则 `traditional_fire_expenses` 保持为 0，从而 `traditional_fire_number` 为 0。
@@ -651,31 +653,31 @@ Stage 3 的“计划可行性”（`Stage3Content.tsx` 里的 `feasibilityStatus
 对每年 $i$：
 
 $$
-\text{required\_months}_i
+\text{requiredMonths}_i
 =
-\mathrm{RequiredMonths}\!\left(\text{age}_i;\ \text{expected\_fire\_age},\ \text{legal\_retirement\_age},\ \text{base\_months},\ r\right)
+\mathrm{RequiredMonths}\!\left(\text{age}_i;\ \text{expectedFireAge},\ \text{legalRetirementAge},\ \text{baseMonths},\ r\right)
 $$
 
-其中 $\mathrm{RequiredMonths}(\cdot)$ 的精确定义为 `getRequiredSafetyBufferMonths(...)` 的分段公式（见上文 4.6.1；它会随 $\text{age}_i$ 变化，并在桥接期使用贴现率 $r=\text{bridge\_discount\_rate\_percent}/100$）。
+其中 $\mathrm{RequiredMonths}(\cdot)$ 的精确定义为 `getRequiredSafetyBufferMonths(...)` 的分段公式（见上文 4.6.1；它会随 $\text{age}_i$ 变化，并在桥接期使用贴现率 $r=\text{bridgeDiscountRatePercent}/100$）。
 
 然后安全阈值金额为：
 
 $$
-\text{safety\_threshold}_i=\text{total\_expense}_i\cdot \frac{\text{required\_months}_i}{12},
+\text{safetyThreshold}_i=\text{totalExpense}_i\cdot \frac{\text{requiredMonths}_i}{12},
 \quad
-\text{required\_months}_i=\mathrm{RequiredMonths}(\text{age}_i;\dots)
+\text{requiredMonths}_i=\mathrm{RequiredMonths}(\text{age}_i;\dots)
 $$
 
 逐年状态：
 
 $$
-\text{danger}_i:\ \text{net\_worth}_i<0
+\text{danger}_i:\ \text{netWorth}_i<0
 $$
 $$
-\text{warning}_i:\ \text{net\_worth}_i\ge 0\ \land\ \text{net\_worth}_i<\text{safety\_threshold}_i
+\text{warning}_i:\ \text{netWorth}_i\ge 0\ \land\ \text{netWorth}_i<\text{safetyThreshold}_i
 $$
 $$
-\text{safe}_i:\ \text{net\_worth}_i\ge \text{safety\_threshold}_i
+\text{safe}_i:\ \text{netWorth}_i\ge \text{safetyThreshold}_i
 $$
 
 整份计划的确定性可行性状态（优先级：danger > warning > safe）：
@@ -696,19 +698,19 @@ $$
 在 `YearlyDataTableSection.getRiskStatus()` 中（注意边界是 `<`）：
 
 $$
-\text{safety\_threshold}=\text{total\_expense}\cdot \frac{\text{required\_months}}{12},
+\text{safetyThreshold}=\text{totalExpense}\cdot \frac{\text{requiredMonths}}{12},
 \quad
-\text{required\_months}=\mathrm{RequiredMonths}(\text{age};\dots)
+\text{requiredMonths}=\mathrm{RequiredMonths}(\text{age};\dots)
 $$
 
 $$
-\text{danger}:\ \text{net\_worth}<0
+\text{danger}:\ \text{netWorth}<0
 $$
 $$
-\text{warning}:\ \text{net\_worth}\ge 0\ \land\ \text{net\_worth}<\text{safety\_threshold}
+\text{warning}:\ \text{netWorth}\ge 0\ \land\ \text{netWorth}<\text{safetyThreshold}
 $$
 $$
-\text{safe}:\ \text{net\_worth}\ge \text{safety\_threshold}
+\text{safe}:\ \text{netWorth}\ge \text{safetyThreshold}
 $$
 
 ### 6.2 净值轨迹图的分区（NetWorthTrajectoryChart.tsx）
@@ -744,17 +746,17 @@ $$
 对每年：
 
 $$
-\text{income\_multiplier}[i]=
+\text{incomeMultiplier}[i]=
 \begin{cases}
-\max(\text{income\_minimum\_factor},\ X), & \text{age}_i<\text{fire\_age},\ X\sim \mathcal N(1,\ \text{income\_base\_volatility})\\
-1, & \text{age}_i\ge \text{fire\_age}
+\max(\text{incomeMinimumFactor},\ X), & \text{age}_i<\text{fireAge},\ X\sim \mathcal N(1,\ \text{incomeBaseVolatility})\\
+1, & \text{age}_i\ge \text{fireAge}
 \end{cases}
 $$
 
 然后：
 
 $$
-\text{scenario\_income}_i=\text{base\_income}_i\cdot \text{income\_multiplier}[i]
+\text{scenarioIncome}_i=\text{baseIncome}_i\cdot \text{incomeMultiplier}[i]
 $$
 
 ### 7.2 随机扰动：支出 multiplier（全生命周期）
@@ -762,12 +764,12 @@ $$
 对每年：
 
 $$
-\text{expense\_multiplier}[i]=\max(\text{expense\_minimum\_factor},\ Y),\quad
-Y\sim \mathcal N(1,\ \text{expense\_base\_volatility})
+\text{expenseMultiplier}[i]=\max(\text{expenseMinimumFactor},\ Y),\quad
+Y\sim \mathcal N(1,\ \text{expenseBaseVolatility})
 $$
 
 $$
-\text{scenario\_expense}_i=\text{base\_expense}_i\cdot \text{expense\_multiplier}[i]
+\text{scenarioExpense}_i=\text{baseExpense}_i\cdot \text{expenseMultiplier}[i]
 $$
 
 ### 7.3 黑天鹅事件：触发、持续与恢复因子
@@ -792,17 +794,17 @@ income_impact / expense_impact  (可能为负/正的小数，例如 -0.4 表示 
 对当年 `row` 的影响公式（`_apply_event_impact()`）：
 
 $$
-\text{impact\_factor\_income}=\max\!\left(0,\ 1+\text{income\_impact}\cdot \text{recovery\_multiplier}\right)
+\text{impactFactorIncome}=\max\!\left(0,\ 1+\text{incomeImpact}\cdot \text{recoveryMultiplier}\right)
 $$
 
 $$
-\text{impact\_factor\_expense}=\max\!\left(0,\ 1+\text{expense\_impact}\cdot \text{recovery\_multiplier}\right)
+\text{impactFactorExpense}=\max\!\left(0,\ 1+\text{expenseImpact}\cdot \text{recoveryMultiplier}\right)
 $$
 
 $$
-\text{scenario\_income}\gets \text{scenario\_income}\cdot \text{impact\_factor\_income}
+\text{scenarioIncome}\gets \text{scenarioIncome}\cdot \text{impactFactorIncome}
 ,\quad
-\text{scenario\_expense}\gets \text{scenario\_expense}\cdot \text{impact\_factor\_expense}
+\text{scenarioExpense}\gets \text{scenarioExpense}\cdot \text{impactFactorExpense}
 $$
 
 ### 7.4 每次模拟的成功定义（safe / warning / danger）
@@ -810,25 +812,25 @@ $$
 对一次模拟跑完引擎得到的每年 `YearlyState`：
 
 $$
-\text{safety\_threshold}_i=\text{total\_expense}_i\cdot \frac{\text{required\_months}_i}{12},
+\text{safetyThreshold}_i=\text{totalExpense}_i\cdot \frac{\text{requiredMonths}_i}{12},
 \quad
-\text{required\_months}_i=\mathrm{RequiredMonths}(\text{age}_i;\dots)
+\text{requiredMonths}_i=\mathrm{RequiredMonths}(\text{age}_i;\dots)
 $$
 
 $$
-\text{danger}:\ \text{net\_worth}_i<0
+\text{danger}:\ \text{netWorth}_i<0
 $$
 $$
-\text{warning}:\ \text{net\_worth}_i\ge 0\ \land\ \text{net\_worth}_i<\text{safety\_threshold}_i
+\text{warning}:\ \text{netWorth}_i\ge 0\ \land\ \text{netWorth}_i<\text{safetyThreshold}_i
 $$
 $$
-\text{safe}:\ \text{net\_worth}_i\ge \text{safety\_threshold}_i
+\text{safe}:\ \text{netWorth}_i\ge \text{safetyThreshold}_i
 $$
 
 对整次计划（一次模拟）：
 
 $$
-\text{plan\_status}=
+\text{planStatus}=
 \begin{cases}
 \texttt{danger} & \exists i:\ \text{danger}_i\\
 \texttt{warning} & \left(\neg\exists i:\ \text{danger}_i\right)\land \left(\exists i:\ \text{warning}_i\right)\\
@@ -837,7 +839,7 @@ $$
 $$
 
 $$
-\text{is\_successful} \iff \text{plan\_status}=\texttt{safe}
+\text{isSuccessful} \iff \text{planStatus}=\texttt{safe}
 $$
 
 ### 7.5 success_rate、plan_status_rates、yearly_status_rates
@@ -845,23 +847,23 @@ $$
 设总模拟次数 `M = num_simulations`，成功次数 `S`：
 
 $$
-\text{success\_rate}=\frac{S}{M}
+\text{successRate}=\frac{S}{M}
 $$
 
 计划级别状态占比：
 
 $$
 \begin{aligned}
-\text{plan\_status\_rates.safe} &= \frac{\#\{\text{plan\_status}=\texttt{safe}\}}{M}\\
-\text{plan\_status\_rates.warning} &= \frac{\#\{\text{plan\_status}=\texttt{warning}\}}{M}\\
-\text{plan\_status\_rates.danger} &= \frac{\#\{\text{plan\_status}=\texttt{danger}\}}{M}
+\text{planStatusRates.safe} &= \frac{\#\lbrace\text{planStatus}=\texttt{safe}\rbrace}{M}\\
+\text{planStatusRates.warning} &= \frac{\#\lbrace\text{planStatus}=\texttt{warning}\rbrace}{M}\\
+\text{planStatusRates.danger} &= \frac{\#\lbrace\text{planStatus}=\texttt{danger}\rbrace}{M}
 \end{aligned}
 $$
 
 逐年状态占比（第 i 年）：
 
 $$
-\text{yearly\_status\_rates}[i].x=\frac{\text{x\_count}_i}{M}\quad (x\in\{\texttt{safe},\texttt{warning},\texttt{danger}\})
+\text{yearlyStatusRates}[i].x=\frac{\text{xCount}_i}{M}\quad (x\in\lbrace\texttt{safe},\texttt{warning},\texttt{danger}\rbrace)
 $$
 
 ### 7.6 minimum_net_worth（每次模拟的“全生命周期最小净值”）
@@ -869,7 +871,7 @@ $$
 对一次模拟的 `yearly_results`：
 
 $$
-\text{minimum\_net\_worth}=\min_i(\text{net\_worth}_i)
+\text{minimumNetWorth}=\min_i(\text{netWorth}_i)
 $$
 
 若 `yearly_results` 为空，则退化为 `final_net_worth`。
@@ -923,17 +925,17 @@ $$
 $$
 \text{cv}=
 \begin{cases}
-1 & \mathrm{mean}(\text{final\_net\_worths})=0\\
-\dfrac{\mathrm{std}(\text{final\_net\_worths})}{\left|\mathrm{mean}(\text{final\_net\_worths})\right|} & \text{否则}
+1 & \mathrm{mean}(\text{finalNetWorths})=0\\
+\dfrac{\mathrm{std}(\text{finalNetWorths})}{\left|\mathrm{mean}(\text{finalNetWorths})\right|} & \text{否则}
 \end{cases}
 $$
 
 $$
-\text{stability\_score}=\max(0,\ 1-\text{cv})
+\text{stabilityScore}=\max(0,\ 1-\text{cv})
 $$
 
 $$
-\text{resilience\_score}=\min\!\left(100,\ \max\!\left(0,\ (0.7\cdot \text{success\_rate}+0.3\cdot \text{stability\_score})\cdot 100\right)\right)
+\text{resilienceScore}=\min\!\left(100,\ \max\!\left(0,\ (0.7\cdot \text{successRate}+0.3\cdot \text{stabilityScore})\cdot 100\right)\right)
 $$
 
 ### 7.9 recommended_emergency_fund（基于成功率的建议应急金）
@@ -941,9 +943,9 @@ $$
 先估计年支出（平均值）：
 
 $$
-\text{annual\_expenses}=
+\text{annualExpenses}=
 \begin{cases}
-\mathrm{mean}(\text{base\_df.total\_expense}) & \text{若 base\_df 非空}\\
+\mathrm{mean}(\text{baseDf.totalExpense}) & \text{若 baseDf 非空}\\
 50000 & \text{否则}
 \end{cases}
 $$
@@ -953,14 +955,14 @@ $$
 $$
 \text{months}=
 \begin{cases}
-6 & \text{success\_rate}\ge 0.9\\
-12 & 0.7\le \text{success\_rate}<0.9\\
-18 & \text{success\_rate}<0.7
+6 & \text{successRate}\ge 0.9\\
+12 & 0.7\le \text{successRate}<0.9\\
+18 & \text{successRate}<0.7
 \end{cases}
 $$
 
 $$
-\text{recommended\_emergency\_fund}=\text{annual\_expenses}\cdot \frac{\text{months}}{12}
+\text{recommendedEmergencyFund}=\text{annualExpenses}\cdot \frac{\text{months}}{12}
 $$
 
 ---
@@ -971,7 +973,7 @@ $$
 
 对 `percentile` 以 5 为步长从 0 到 100：
 
-令 $q\in\{0,5,10,\dots,100\}$ 为图上横轴的 percentile（以 5 为步长），并令 $p_5,p_{25},p_{50},p_{75},p_{95}$ 分别是对应分位点的最小净值，则图中展示用的 $v(q)$ 为分段插值：
+令 $q\in\lbrace0,5,10,\dots,100\rbrace$ 为图上横轴的 percentile（以 5 为步长），并令 $p_5,p_{25},p_{50},p_{75},p_{95}$ 分别是对应分位点的最小净值，则图中展示用的 $v(q)$ 为分段插值：
 
 $$
 v(q)=
@@ -999,12 +1001,12 @@ percentile_95_minimum_net_worth
 
 ---
 
-## 附录：证明 $(\text{annuity\_years} \le n)$
+## 附录：证明 $(\text{annuityYears} \le n)$
 
 本附录对应 `getRequiredSafetyBufferMonths(...)` 在 \(r>0\) 时使用的公式：
 
 $$
-\text{annuity\_years}=\frac{1-(1+r)^{-n}}{r},
+\text{annuityYears}=\frac{1-(1+r)^{-n}}{r},
 \quad r>0,\ n\ge 1
 $$
 
@@ -1018,7 +1020,7 @@ $$
 
 $$
 \begin{aligned}
-\text{annuity\_years}
+\text{annuityYears}
 &=\frac{1-q^n}{(1/q)-1}
 =\frac{q(1-q^n)}{1-q}
 =\sum_{k=1}^{n} q^k
@@ -1028,7 +1030,7 @@ $$
 由于对每个 $(k)$ 都有 $(0<q^k\le 1)$，因此：
 
 $$
-\text{annuity\_years}=\sum_{k=1}^{n} q^k \le \sum_{k=1}^{n} 1 = n
+\text{annuityYears}=\sum_{k=1}^{n} q^k \le \sum_{k=1}^{n} 1 = n
 $$
 
-并且当 $(r>0)$ 时 $(q<1)$，所以实际上有严格不等式 \(\text{annuity\_years}<n\)；只有在极限 $(r\to 0^+)$ 时，$(\text{annuity\_years}\to n)$。
+并且当 $(r>0)$ 时 $(q<1)$，所以实际上有严格不等式 \(\text{annuityYears}<n\)；只有在极限 $(r\to 0^+)$ 时，$(\text{annuityYears}\to n)$。
