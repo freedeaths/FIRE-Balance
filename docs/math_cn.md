@@ -214,10 +214,10 @@ $$
 $$
 
 $$
-\text{cell\_value}=\operatorname{round}(\text{grown\_amount})
+\text{cell\_value}=\mathrm{round}(\text{grown\_amount})
 $$
 
-其中 $\operatorname{round}$ 对应 JavaScript 的 `Math.round`（按最近整数取整；正数的 $x.5$ 向上取整）。
+其中 $\mathrm{round}$ 对应 JavaScript 的 `Math.round`（按最近整数取整；正数的 $x.5$ 向上取整）。
 
 Stage 2 在 UI 里**默认把支出也显示为正数**（`expenseSign='positive'`），因此该单元格值对支出同样是正数。
 
@@ -630,7 +630,7 @@ $$
 若模拟年数 ≥ 5：
 
 $$
-\text{traditional\_fire\_expenses}=\operatorname{mean}\left(\text{total\_expense}_{t=0..4}\right),\quad
+\text{traditional\_fire\_expenses}=\mathrm{mean}\left(\text{total\_expense}_{t=0..4}\right),\quad
 \text{traditional\_fire\_number}=25\cdot \text{traditional\_fire\_expenses}
 $$
 
@@ -653,17 +653,17 @@ Stage 3 的“计划可行性”（`Stage3Content.tsx` 里的 `feasibilityStatus
 $$
 \text{required\_months}_i
 =
-\operatorname{RequiredMonths}\!\left(\text{age}_i;\ \text{expected\_fire\_age},\ \text{legal\_retirement\_age},\ \text{base\_months},\ r\right)
+\mathrm{RequiredMonths}\!\left(\text{age}_i;\ \text{expected\_fire\_age},\ \text{legal\_retirement\_age},\ \text{base\_months},\ r\right)
 $$
 
-其中 $\operatorname{RequiredMonths}(\cdot)$ 的精确定义为 `getRequiredSafetyBufferMonths(...)` 的分段公式（见上文 4.6.1；它会随 $\text{age}_i$ 变化，并在桥接期使用贴现率 $r=\text{bridge\_discount\_rate\_percent}/100$）。
+其中 $\mathrm{RequiredMonths}(\cdot)$ 的精确定义为 `getRequiredSafetyBufferMonths(...)` 的分段公式（见上文 4.6.1；它会随 $\text{age}_i$ 变化，并在桥接期使用贴现率 $r=\text{bridge\_discount\_rate\_percent}/100$）。
 
 然后安全阈值金额为：
 
 $$
 \text{safety\_threshold}_i=\text{total\_expense}_i\cdot \frac{\text{required\_months}_i}{12},
 \quad
-\text{required\_months}_i=\operatorname{RequiredMonths}(\text{age}_i;\dots)
+\text{required\_months}_i=\mathrm{RequiredMonths}(\text{age}_i;\dots)
 $$
 
 逐年状态：
@@ -698,7 +698,7 @@ $$
 $$
 \text{safety\_threshold}=\text{total\_expense}\cdot \frac{\text{required\_months}}{12},
 \quad
-\text{required\_months}=\operatorname{RequiredMonths}(\text{age};\dots)
+\text{required\_months}=\mathrm{RequiredMonths}(\text{age};\dots)
 $$
 
 $$
@@ -812,7 +812,7 @@ $$
 $$
 \text{safety\_threshold}_i=\text{total\_expense}_i\cdot \frac{\text{required\_months}_i}{12},
 \quad
-\text{required\_months}_i=\operatorname{RequiredMonths}(\text{age}_i;\dots)
+\text{required\_months}_i=\mathrm{RequiredMonths}(\text{age}_i;\dots)
 $$
 
 $$
@@ -879,7 +879,7 @@ $$
 对一个数列 `v[0..M-1]`（例如 final_net_worths 或 minimum_net_worths）：
 
 $$
-\operatorname{mean}(v)=\frac{1}{M}\sum_{k=0}^{M-1} v_k
+\mathrm{mean}(v)=\frac{1}{M}\sum_{k=0}^{M-1} v_k
 $$
 
 中位数（先排序）：
@@ -887,7 +887,7 @@ $$
 令 $s_0\le s_1\le \dots\le s_{M-1}$ 为 $v$ 排序后的结果，则：
 
 $$
-\operatorname{median}(v)=
+\mathrm{median}(v)=
 \begin{cases}
 s_{\frac{M-1}{2}} & M\ \text{为奇数}\\
 \dfrac{s_{\frac{M}{2}-1}+s_{\frac{M}{2}}}{2} & M\ \text{为偶数}
@@ -905,7 +905,7 @@ $$
 $$
 
 $$
-\operatorname{percentile}(v,p)=
+\mathrm{percentile}(v,p)=
 \begin{cases}
 s_{\text{lower}} & \text{lower}=\text{upper}\\
 s_{\text{lower}}(1-\text{weight})+s_{\text{upper}}\cdot \text{weight} & \text{否则}
@@ -915,7 +915,7 @@ $$
 标准差（总体标准差，分母为 M）：
 
 $$
-\operatorname{std}(v)=\sqrt{\frac{1}{M}\sum_{k=0}^{M-1}\left(v_k-\operatorname{mean}(v)\right)^2}
+\mathrm{std}(v)=\sqrt{\frac{1}{M}\sum_{k=0}^{M-1}\left(v_k-\mathrm{mean}(v)\right)^2}
 $$
 
 ### 7.8 resilience_score（0..100）
@@ -923,8 +923,8 @@ $$
 $$
 \text{cv}=
 \begin{cases}
-1 & \operatorname{mean}(\text{final\_net\_worths})=0\\
-\dfrac{\operatorname{std}(\text{final\_net\_worths})}{\left|\operatorname{mean}(\text{final\_net\_worths})\right|} & \text{否则}
+1 & \mathrm{mean}(\text{final\_net\_worths})=0\\
+\dfrac{\mathrm{std}(\text{final\_net\_worths})}{\left|\mathrm{mean}(\text{final\_net\_worths})\right|} & \text{否则}
 \end{cases}
 $$
 
@@ -943,7 +943,7 @@ $$
 $$
 \text{annual\_expenses}=
 \begin{cases}
-\operatorname{mean}(\text{base\_df.total\_expense}) & \text{若 base\_df 非空}\\
+\mathrm{mean}(\text{base\_df.total\_expense}) & \text{若 base\_df 非空}\\
 50000 & \text{否则}
 \end{cases}
 $$
