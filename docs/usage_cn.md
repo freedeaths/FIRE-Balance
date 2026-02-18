@@ -2,6 +2,8 @@
 
 **其他语言版本**：[English](./usage_en.md) | [日本語](./usage_ja.md)
 
+**公式说明**：[math_cn.md](./math_cn.md)
+
 ## 概述
 
 FIRE Balance 是一个全面的财务独立和提前退休（FIRE）规划工具，通过三阶段交互式分析帮助您制定和优化个人财务计划。

@@ -12,20 +12,19 @@ export function getRequiredSafetyBufferMonths(
   params: RequiredSafetyBufferMonthsParams
 ): Decimal {
   const baseMonths = new Decimal(params.baseSafetyBufferMonths);
-  const legalRetirementAge = params.legalRetirementAge;
+  const legalRetirementAge =
+    params.legalRetirementAge ?? Math.max(65, params.expectedFireAge);
 
-  if (
-    legalRetirementAge == null ||
-    params.age < params.expectedFireAge ||
-    params.age >= legalRetirementAge
-  ) {
+  if (params.age < params.expectedFireAge || params.age >= legalRetirementAge) {
     return baseMonths;
   }
 
   const yearsUntilLegal = legalRetirementAge - params.age;
   if (yearsUntilLegal <= 0) return baseMonths;
 
-  const discountRate = new Decimal(params.bridgeDiscountRatePercent).div(100);
+  const discountRate = new Decimal(params.bridgeDiscountRatePercent ?? 0).div(
+    100
+  );
   if (discountRate.lte(0)) {
     return baseMonths.add(new Decimal(yearsUntilLegal).mul(12));
   }

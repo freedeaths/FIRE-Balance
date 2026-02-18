@@ -14,7 +14,7 @@ import type {
 } from './data_models';
 import { getCurrentAgeAsOf } from './data_models';
 import { getRequiredSafetyBufferMonths } from './safety_buffer';
-import { LiquidityAwareFlowStrategy, PortfolioSimulator } from './portfolio';
+import { PortfolioSimulator } from './portfolio';
 
 // =============================================================================
 // Engine Input Data Structure
@@ -84,11 +84,7 @@ export class FIREEngine {
     this.projection_df = engineInput.annual_financial_projection;
 
     // Set up portfolio simulator
-    const cashFlowStrategy = new LiquidityAwareFlowStrategy();
-    this.portfolio_simulator = new PortfolioSimulator(
-      this.profile,
-      cashFlowStrategy
-    );
+    this.portfolio_simulator = new PortfolioSimulator(this.profile);
   }
 
   /**

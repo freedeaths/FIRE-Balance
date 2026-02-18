@@ -797,7 +797,10 @@ export class PortfolioSimulator {
     );
     this.strategy =
       cashFlowStrategy ||
-      new LiquidityAwareFlowStrategy(3, this.calculator.portfolio_config);
+      new LiquidityAwareFlowStrategy(
+        userProfile.safety_buffer_months.toNumber(),
+        this.calculator.portfolio_config
+      );
   }
 
   /**

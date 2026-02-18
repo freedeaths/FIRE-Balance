@@ -34,7 +34,7 @@ describe('getRequiredSafetyBufferMonths', () => {
         baseSafetyBufferMonths: baseMonths,
         bridgeDiscountRatePercent: new Decimal(0),
       }).toNumber()
-    ).toBe(12);
+    ).toBe(192); // fallback legal retirement age = max(65, expectedFireAge)
   });
 
   test('no-discount (0%) equals full remaining years', () => {

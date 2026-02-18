@@ -201,8 +201,13 @@ export class FIRECalculationService {
 
       const convertedUserProfile = {
         ...plannerData.user_profile,
+        birth_year: plannerData.user_profile.birth_year ?? 1990,
         as_of_year:
           plannerData.user_profile.as_of_year ?? new Date().getFullYear(),
+        expected_fire_age: plannerData.user_profile.expected_fire_age ?? 50,
+        legal_retirement_age:
+          plannerData.user_profile.legal_retirement_age ?? 65,
+        life_expectancy: plannerData.user_profile.life_expectancy ?? 85,
         current_net_worth: new Decimal(
           plannerData.user_profile.current_net_worth ?? 0
         ),

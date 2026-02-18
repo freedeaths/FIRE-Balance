@@ -331,10 +331,10 @@ export function createUserProfile(
     expected_fire_age: data.expected_fire_age || 50,
     legal_retirement_age: data.legal_retirement_age || 65,
     life_expectancy: data.life_expectancy || 85,
-    current_net_worth: new Decimal(data.current_net_worth || 0.0),
-    inflation_rate: new Decimal(data.inflation_rate || 3.0),
-    safety_buffer_months: new Decimal(data.safety_buffer_months || 6),
-    bridge_discount_rate: new Decimal(data.bridge_discount_rate || 1.0),
+    current_net_worth: new Decimal(data.current_net_worth ?? 0.0),
+    inflation_rate: new Decimal(data.inflation_rate ?? 3.0),
+    safety_buffer_months: new Decimal(data.safety_buffer_months ?? 6),
+    bridge_discount_rate: new Decimal(data.bridge_discount_rate ?? 1.0),
     portfolio: data.portfolio || createPortfolioConfiguration({}),
   };
 
