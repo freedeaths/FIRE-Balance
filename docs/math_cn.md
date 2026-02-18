@@ -106,8 +106,8 @@ $$
 最终写回条目：
 
 $$
-\text{start\_age}\leftarrow \max\!\bigl(0,\ \lfloor \text{start\_age}\rfloor \bigr),\quad
-\text{end\_age}\leftarrow \max\!\bigl(0,\ \lfloor \text{end\_age}\rfloor \bigr)
+\text{start\_age}\gets \max\!\bigl(0,\ \lfloor \text{start\_age}\rfloor \bigr),\quad
+\text{end\_age}\gets \max\!\bigl(0,\ \lfloor \text{end\_age}\rfloor \bigr)
 $$
 
 ---
@@ -325,7 +325,7 @@ $$
 然后按 `w_i` 将该收益“按比例”加回每个资产（注意：这里不是每个资产按自身 r_i 增长，而是把组合总收益按 w_i 分摊）：
 
 $$
-\text{asset\_value}_i \leftarrow \text{asset\_value}_i + \text{investment\_return}\cdot w_i
+\text{asset\_value}_i \gets \text{asset\_value}_i + \text{investment\_return}\cdot w_i
 $$
 
 ### 4.4 现金流注入/支出（LiquidityAwareFlowStrategy）
@@ -419,7 +419,7 @@ $$
 每层做完后：
 
 $$
-\text{needed}\leftarrow \text{needed}-\text{withdraw\_tier}
+\text{needed}\gets \text{needed}-\text{withdraw\_tier}
 $$
 
 #### 4.4.3 应用现金流 + 不允许资产为负
@@ -427,8 +427,8 @@ $$
 对每个资产：
 
 $$
-\text{asset\_value}_i\leftarrow \text{asset\_value}_i+\text{flow}_i,\quad
-\text{asset\_value}_i\leftarrow \max(0,\ \text{asset\_value}_i)
+\text{asset\_value}_i\gets \text{asset\_value}_i+\text{flow}_i,\quad
+\text{asset\_value}_i\gets \max(0,\ \text{asset\_value}_i)
 $$
 
 ### 4.5 年度再平衡（Rebalancing）
@@ -447,7 +447,7 @@ $$
 V=\sum_i \text{asset\_value}_i,\quad
 \text{target\_value}_i=V\cdot \text{target\_ratio}_i,\quad
 \text{trade}_i=\text{target\_value}_i-\text{asset\_value}_i,\quad
-\text{asset\_value}_i\leftarrow \text{asset\_value}_i+\text{trade}_i
+\text{asset\_value}_i\gets \text{asset\_value}_i+\text{trade}_i
 $$
 
 注意：这里执行 trade 后**没有**再次做 `max(0, ...)` 的截断。
@@ -486,7 +486,7 @@ $$
 注意：在 Core `UserProfile` 模型中 `legal_retirement_age` 是必填且有默认值（未提供时默认 65）。为了兼容 UI/导入配置的中间态缺失值，`getRequiredSafetyBufferMonths(...)` 在参数缺失时会使用一个 fallback：
 
 $$
-\text{legal\_retirement\_age}\leftarrow \max(65,\ \text{expected\_fire\_age})
+\text{legal\_retirement\_age}\gets \max(65,\ \text{expected\_fire\_age})
 $$
 
 因此当其缺失时，桥接期逻辑不会被“直接禁用”，而是按上述 fallback 继续计算。
@@ -546,7 +546,7 @@ $$
 若本年 `portfolio_value > 0`：
 
 $$
-\text{net\_worth}=\text{portfolio\_value},\quad \text{cumulative\_debt}\leftarrow 0
+\text{net\_worth}=\text{portfolio\_value},\quad \text{cumulative\_debt}\gets 0
 $$
 
 否则（portfolio_value <= 0）：
@@ -558,7 +558,7 @@ $$
 \text{required\_cash} &= \left|\text{net\_cash\_flow}\right|\\
 \text{available\_cash} &= \text{starting\_portfolio\_value}+\text{investment\_return}\\
 \text{shortfall} &= \text{required\_cash}-\text{available\_cash}\\
-\text{cumulative\_debt} &\leftarrow \text{cumulative\_debt}+\max(0,\ \text{shortfall})
+\text{cumulative\_debt} &\gets \text{cumulative\_debt}+\max(0,\ \text{shortfall})
 \end{aligned}
 $$
 
@@ -571,7 +571,7 @@ $$
 然后令：
 
 $$
-\text{starting\_portfolio\_value}\leftarrow \text{portfolio\_value}
+\text{starting\_portfolio\_value}\gets \text{portfolio\_value}
 $$
 
 ---
@@ -800,9 +800,9 @@ $$
 $$
 
 $$
-\text{scenario\_income}\leftarrow \text{scenario\_income}\cdot \text{impact\_factor\_income}
+\text{scenario\_income}\gets \text{scenario\_income}\cdot \text{impact\_factor\_income}
 ,\quad
-\text{scenario\_expense}\leftarrow \text{scenario\_expense}\cdot \text{impact\_factor\_expense}
+\text{scenario\_expense}\gets \text{scenario\_expense}\cdot \text{impact\_factor\_expense}
 $$
 
 ### 7.4 每次模拟的成功定义（safe / warning / danger）
