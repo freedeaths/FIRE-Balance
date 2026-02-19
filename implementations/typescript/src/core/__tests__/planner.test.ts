@@ -225,7 +225,7 @@ describe('FIREPlanner', () => {
       expect(projectionData[0]).toHaveProperty('year');
       expect(projectionData[0]).toHaveProperty('total_income');
       expect(projectionData[0]).toHaveProperty('total_expense');
-      expect(planner.data.projection_df).toBe(projectionData);
+      expect(planner.data.projection_data).toBe(projectionData);
     });
 
     test('generate projection table with missing data', () => {
@@ -520,14 +520,14 @@ describe('FIREPlanner', () => {
       planner.addExpenseItem(sampleExpenseItem);
       planner.generateProjectionTable();
 
-      expect(planner.data.projection_df).toBeDefined();
+      expect(planner.data.projection_data).toBeDefined();
 
       // Remove income item should clear projection if regeneration fails
       planner.data.user_profile = undefined; // Force regeneration to fail
       planner.removeIncomeItem('work-income');
 
       // Should have cleared projection due to error
-      expect(planner.data.projection_df).toBeUndefined();
+      expect(planner.data.projection_data).toBeUndefined();
     });
 
     test('override cleanup on profile change', () => {

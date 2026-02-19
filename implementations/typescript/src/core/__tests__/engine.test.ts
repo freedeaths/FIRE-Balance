@@ -97,7 +97,7 @@ describe('FIREEngine', () => {
   test('engine initialization', () => {
     expect(fireEngine.input).toBeDefined();
     expect(fireEngine.profile).toBeDefined();
-    expect(fireEngine.projection_df).toBeDefined();
+    expect(fireEngine.projection_data).toBeDefined();
     expect(fireEngine.portfolio_simulator).toBeDefined();
     // PortfolioSimulator should be self-contained with internal calculator
     expect(fireEngine.portfolio_simulator.calculator).toBeDefined();

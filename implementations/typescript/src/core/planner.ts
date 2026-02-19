@@ -112,12 +112,12 @@ export class FIREPlanner {
       this._removeOverridesForItem(itemId);
 
       // If we had a projection, try to regenerate it
-      if (this.data.projection_df) {
+      if (this.data.projection_data) {
         try {
-          this.data.projection_df = this._generateInitialProjection();
+          this.data.projection_data = this._generateInitialProjection();
         } catch (error) {
           // If regeneration fails, clear projection
-          this.data.projection_df = undefined;
+          this.data.projection_data = undefined;
         }
       }
 
@@ -139,12 +139,12 @@ export class FIREPlanner {
       this._removeOverridesForItem(itemId);
 
       // If we had a projection, try to regenerate it
-      if (this.data.projection_df) {
+      if (this.data.projection_data) {
         try {
-          this.data.projection_df = this._generateInitialProjection();
+          this.data.projection_data = this._generateInitialProjection();
         } catch (error) {
           // If regeneration fails, clear projection
-          this.data.projection_df = undefined;
+          this.data.projection_data = undefined;
         }
       }
 
@@ -162,12 +162,12 @@ export class FIREPlanner {
    * Get current projection DataFrame with overrides applied
    */
   getProjectionDataFrame(): AnnualProjectionRow[] | undefined {
-    if (!this.data.projection_df) {
+    if (!this.data.projection_data) {
       return undefined;
     }
 
     // Return projection with overrides applied for display
-    const displayData = [...this.data.projection_df];
+    const displayData = [...this.data.projection_data];
     this._applyOverridesToProjection(displayData);
     return displayData;
   }
@@ -244,7 +244,7 @@ export class FIREPlanner {
     progressCallback?: (progress: number) => void,
     numSimulations?: number
   ): Promise<PlannerResults> {
-    if (!this.data.projection_df) {
+    if (!this.data.projection_data) {
       throw new Error('No projection data available for calculation');
     }
 
@@ -282,7 +282,7 @@ export class FIREPlanner {
 
     // Generate and store base projection
     const projectionData = this._generateInitialProjection();
-    this.data.projection_df = projectionData;
+    this.data.projection_data = projectionData;
     this.data = updatePlannerDataTimestamp(this.data);
 
     return projectionData;
@@ -296,10 +296,10 @@ export class FIREPlanner {
     overrides?: Override[]
   ): AnnualProjectionRow[] {
     if (!baseData) {
-      if (!this.data.projection_df) {
+      if (!this.data.projection_data) {
         throw new Error('No base projection data available');
       }
-      baseData = this.data.projection_df;
+      baseData = this.data.projection_data;
     }
 
     if (!overrides) {
@@ -327,15 +327,15 @@ export class FIREPlanner {
     numSimulations?: number
   ): Promise<PlannerResults> {
     if (!projectionData) {
-      if (!this.data.projection_df) {
+      if (!this.data.projection_data) {
         throw new Error('No projection data available for calculation');
       }
-      projectionData = this.data.projection_df;
+      projectionData = this.data.projection_data;
     }
 
     // Store original projection temporarily
-    const originalProjection = this.data.projection_df;
-    this.data.projection_df = projectionData;
+    const originalProjection = this.data.projection_data;
+    this.data.projection_data = projectionData;
 
     const results = await this._runCalculations(
       progressCallback,
@@ -343,7 +343,7 @@ export class FIREPlanner {
     );
 
     // Restore original projection
-    this.data.projection_df = originalProjection;
+    this.data.projection_data = originalProjection;
 
     return results;
   }
@@ -571,12 +571,12 @@ export class FIREPlanner {
     progressCallback?: (progress: number) => void,
     numSimulations?: number
   ): Promise<PlannerResults> {
-    if (!this.data.projection_df || !this.data.user_profile) {
+    if (!this.data.projection_data || !this.data.user_profile) {
       throw new Error('Missing data for calculations');
     }
 
     // Create a copy of projection and apply overrides for calculation
-    const calculationData = [...this.data.projection_df];
+    const calculationData = [...this.data.projection_data];
     this._applyOverridesToProjection(calculationData);
 
     // Create engine input - convert AnnualProjectionRow to AnnualFinancialProjection

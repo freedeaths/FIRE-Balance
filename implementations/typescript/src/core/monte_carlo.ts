@@ -119,7 +119,7 @@ export class MonteCarloSimulator {
         expense_base_volatility: new Decimal(0.05),
         expense_minimum_factor: new Decimal(0.5),
       });
-    this.base_df = [...engine.projection_df];
+    this.base_df = [...engine.projection_data];
     this.seed = seed || null;
     this._rng_state = seed || Date.now();
 

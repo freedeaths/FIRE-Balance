@@ -75,13 +75,13 @@ export interface DetailedProjection {
 export class FIREEngine {
   public readonly input: EngineInput;
   public readonly profile: UserProfile;
-  public readonly projection_df: AnnualFinancialProjection[];
+  public readonly projection_data: AnnualFinancialProjection[];
   public readonly portfolio_simulator: PortfolioSimulator;
 
   constructor(engineInput: EngineInput) {
     this.input = engineInput;
     this.profile = engineInput.user_profile;
-    this.projection_df = engineInput.annual_financial_projection;
+    this.projection_data = engineInput.annual_financial_projection;
 
     // Set up portfolio simulator
     this.portfolio_simulator = new PortfolioSimulator(this.profile);
@@ -181,7 +181,7 @@ export class FIREEngine {
     this.portfolio_simulator.reset_to_initial();
 
     // Process each year atomically - DataFrame already has final computed values
-    for (const row of this.projection_df) {
+    for (const row of this.projection_data) {
       const yearly_state = this.calculate_single_year(
         row.age,
         row.year,
