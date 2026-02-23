@@ -10,6 +10,7 @@
 
 import React from 'react';
 import { Container, Group, Title, Menu, ActionIcon } from '@mantine/core';
+import { useMediaQuery } from '@mantine/hooks';
 import { IconFlame, IconLanguage, IconBook } from '@tabler/icons-react';
 import { useAppStore } from '../../stores/appStore';
 import { usePlannerStore } from '../../stores/plannerStore';
@@ -53,6 +54,13 @@ export function Layout() {
   const { currentLanguage, setLanguage } = useAppStore();
   const currentStage = usePlannerStore(state => state.currentStage);
   const syncPlannerLanguage = usePlannerStore(state => state.syncLanguage);
+  const koFiUrl = import.meta.env.VITE_KOFI_URL?.trim() || '';
+  const afdianUrl = import.meta.env.VITE_AFDIAN_URL?.trim() || '';
+  const sponsorUrl = currentLanguage === 'zh-CN' ? afdianUrl : koFiUrl;
+  const showSponsorLink = sponsorUrl.length > 0;
+  const isMobile = useMediaQuery('(max-width: 639.98px)', undefined, {
+    getInitialValueInEffect: false,
+  });
 
   // 全局跟踪上一次的 stage，避免组件卸载导致的状态丢失
   const prevStageRef = React.useRef<PlannerStage | undefined>(undefined);
@@ -103,6 +111,44 @@ export function Layout() {
         return <div>Unknown stage</div>;
     }
   };
+
+  const footerLinkStyle: React.CSSProperties = {
+    color: '#6b7280',
+    textDecoration: 'none',
+  };
+
+  const githubLink = (
+    <a
+      href='https://github.com/freedeaths/FIRE-Balance'
+      target='_blank'
+      rel='noopener noreferrer'
+      style={{
+        ...footerLinkStyle,
+        display: 'flex',
+        alignItems: 'center',
+        gap: '4px',
+      }}
+      className='hover:text-blue-600 transition-colors'
+    >
+      <svg width='16' height='16' fill='currentColor' viewBox='0 0 16 16'>
+        <path d='M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8z' />
+      </svg>
+      GitHub
+    </a>
+  );
+
+  const sponsorLink = showSponsorLink ? (
+    <a
+      href={sponsorUrl}
+      target='_blank'
+      rel='noopener noreferrer'
+      style={footerLinkStyle}
+      className='hover:text-blue-600 transition-colors'
+      aria-label={t('footer_sponsor_coffee')}
+    >
+      {t('footer_sponsor_coffee')}
+    </a>
+  ) : null;
 
   return (
     <div
@@ -270,42 +316,44 @@ export function Layout() {
         style={{ backgroundColor: '#f8fafc', borderTop: '1px solid #e5e7eb' }}
       >
         <Container size='xl' py='sm'>
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              gap: '16px',
-              fontSize: '0.875rem',
-              color: '#6b7280',
-            }}
-          >
-            <a
-              href='https://github.com/freedeaths/FIRE-Balance'
-              target='_blank'
-              rel='noopener noreferrer'
+          {isMobile ? (
+            <div
               style={{
-                color: '#6b7280',
-                textDecoration: 'none',
                 display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
                 alignItems: 'center',
-                gap: '4px',
+                gap: '8px',
+                fontSize: '0.875rem',
+                color: '#6b7280',
               }}
-              className='hover:text-blue-600 transition-colors'
             >
-              <svg
-                width='16'
-                height='16'
-                fill='currentColor'
-                viewBox='0 0 16 16'
-              >
-                <path d='M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8z' />
-              </svg>
-              GitHub
-            </a>
-            <span>•</span>
-            <span>© 2025 FIRE Balance</span>
-          </div>
+              {githubLink}
+              {sponsorLink}
+              <span>© 2025-2026 FIRE Balance</span>
+            </div>
+          ) : (
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                gap: '16px',
+                fontSize: '0.875rem',
+                color: '#6b7280',
+              }}
+            >
+              {githubLink}
+              {sponsorLink ? (
+                <>
+                  <span>•</span>
+                  {sponsorLink}
+                </>
+              ) : null}
+              <span>•</span>
+              <span>© 2025-2026 FIRE Balance</span>
+            </div>
+          )}
         </Container>
       </footer>
 

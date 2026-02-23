@@ -6,6 +6,7 @@
     "install_app": "アプリをインストール"
   },
   "app_caption": "あなたの経済的自立と早期退職のための個人ツール。概念と使用方法については [使用ガイド](https://github.com/freedeaths/FIRE-Balance/blob/main/docs/usage_ja.md) をご参照ください",
+  "footer_sponsor_coffee": "コーヒー代をご支援ください",
   "navigation": "ナビゲーション",
   "language": "言語",
   "session_management": "セッション管理",

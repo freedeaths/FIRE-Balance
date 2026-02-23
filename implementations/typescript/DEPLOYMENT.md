@@ -42,6 +42,16 @@ CLOUDFLARE_API_TOKEN=你的API令牌
 CLOUDFLARE_ACCOUNT_ID=你的账户ID
 ```
 
+此外，赞助入口使用 Vite 的 `VITE_*` 环境变量（会被打包进前端，不要放敏感信息），并且在当前部署流程中由 GitHub Actions 在构建阶段注入：
+
+- `VITE_AFDIAN_URL`：中文界面（`zh-CN`）使用的爱发电链接
+- `VITE_KOFI_URL`：非中文界面使用的 Ko-fi 链接
+
+在 GitHub Actions 里统一配置为 **Variables**：
+
+- `VITE_AFDIAN_URL=https://afdian.net/a/<your-id>`
+- `VITE_KOFI_URL=https://ko-fi.com/<your-id>`
+
 ### 3. 在 Cloudflare 创建 Pages 项目
 
 1. 进入 [Cloudflare Pages](https://dash.cloudflare.com/pages)

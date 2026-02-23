@@ -6,6 +6,7 @@
     "install_app": "Install App"
   },
   "app_caption": "Your personal tool for Financial Independence, Retire Early. For concepts and usage guide, please refer to [User Guide](https://github.com/freedeaths/FIRE-Balance/blob/main/docs/usage_en.md)",
+  "footer_sponsor_coffee": "Buy me a coffee",
   "navigation": "Navigation",
   "language": "Language",
   "session_management": "Session Management",

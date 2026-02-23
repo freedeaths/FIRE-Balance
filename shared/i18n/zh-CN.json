@@ -6,6 +6,7 @@
     "install_app": "安装应用"
   },
   "app_caption": "您的个人财务自由提前退休规划工具。概念和使用方法请参考 [使用说明](https://github.com/freedeaths/FIRE-Balance/blob/main/docs/usage_cn.md)",
+  "footer_sponsor_coffee": "赞助作者喝咖啡",
   "navigation": "导航",
   "language": "语言",
   "session_management": "会话管理",
