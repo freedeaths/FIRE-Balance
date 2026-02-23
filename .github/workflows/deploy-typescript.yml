@@ -53,6 +53,9 @@ jobs:
 
       - name: 🏗️ Build application
         working-directory: ${{ env.WORKING_DIRECTORY }}
+        env:
+          VITE_AFDIAN_URL: ${{ vars.VITE_AFDIAN_URL }}
+          VITE_KOFI_URL: ${{ vars.VITE_KOFI_URL }}
         run: |
           echo "Building application for production..."
           # Use build:cf command which uses Vite directly and includes checks
