@@ -539,7 +539,7 @@ export class LiquidityAwareFlowStrategy implements CashFlowStrategy {
   ): void {
     const investmentTargets: Record<string, Decimal> = {};
     Object.entries(targetAllocation).forEach(([k, v]) => {
-      if (k !== 'Cash') {
+      if (k !== 'cash') {
         investmentTargets[k] = v;
       }
     });

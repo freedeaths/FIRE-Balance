@@ -167,7 +167,7 @@ export interface PlannerData {
 
   // Stage 2: Adjustments
   /** Financial projection data as array of annual rows */
-  projection_df?: AnnualProjectionRow[];
+  projection_data?: AnnualProjectionRow[];
 
   /** User overrides for specific ages/items */
   overrides: Override[];
@@ -229,7 +229,7 @@ export function createPlannerData(
     user_profile: data.user_profile,
     income_items: data.income_items ?? [],
     expense_items: data.expense_items ?? [],
-    projection_df: data.projection_df,
+    projection_data: data.projection_data,
     overrides: data.overrides ?? [],
     results: data.results,
     session_id: data.session_id ?? generateUUID(),
@@ -494,8 +494,8 @@ export function isReadyForStage(
     case PlannerStage.STAGE3_ANALYSIS:
       return (
         isReadyForStage(data, PlannerStage.STAGE2_ADJUSTMENT) &&
-        data.projection_df !== undefined &&
-        data.projection_df.length > 0
+        data.projection_data !== undefined &&
+        data.projection_data.length > 0
       );
 
     default:

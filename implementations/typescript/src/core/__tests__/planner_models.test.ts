@@ -212,7 +212,7 @@ describe('PlannerModels', () => {
       expect(data.user_profile).toBeUndefined();
       expect(data.income_items).toEqual([]);
       expect(data.expense_items).toEqual([]);
-      expect(data.projection_df).toBeUndefined();
+      expect(data.projection_data).toBeUndefined();
       expect(data.overrides).toEqual([]);
       expect(data.results).toBeUndefined();
       expect(data.session_id).toMatch(/^[0-9a-f-]{36}$/); // UUID format
@@ -500,7 +500,7 @@ describe('PlannerModels', () => {
         user_profile: mockUserProfile,
         income_items: mockIncomeItems,
         expense_items: mockExpenseItems,
-        projection_df: projectionData,
+        projection_data: projectionData,
       });
 
       expect(isReadyForStage(stage2Data, PlannerStage.STAGE1_INPUT)).toBe(true);

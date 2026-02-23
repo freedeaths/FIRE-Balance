@@ -141,13 +141,13 @@ export class FIRECalculationService {
           plannerData.simulation_settings.income_base_volatility ?? 0.1
         ),
         income_minimum_factor: new Decimal(
-          plannerData.simulation_settings.income_minimum_factor ?? 0.5
+          plannerData.simulation_settings.income_minimum_factor ?? 0.1
         ),
         expense_base_volatility: new Decimal(
           plannerData.simulation_settings.expense_base_volatility ?? 0.05
         ),
         expense_minimum_factor: new Decimal(
-          plannerData.simulation_settings.expense_minimum_factor ?? 0.8
+          plannerData.simulation_settings.expense_minimum_factor ?? 0.5
         ),
       };
 
@@ -249,7 +249,7 @@ export class FIRECalculationService {
         expense_items: convertedExpenseItems,
         overrides: convertedOverrides,
         user_profile: convertedUserProfile,
-        projection_df: convertedProjectionData,
+        projection_data: convertedProjectionData,
       };
     } catch (error) {
       console.error('❌ 数据转换失败:', error);
@@ -264,7 +264,7 @@ export class FIRECalculationService {
     planner.data = convertedData;
 
     // If Stage2 didn't provide a final table, fall back to generating one from items.
-    if (!planner.data.projection_df) {
+    if (!planner.data.projection_data) {
       planner.generateProjectionTable();
     }
 

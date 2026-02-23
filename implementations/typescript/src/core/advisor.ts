@@ -60,8 +60,8 @@ export interface SimpleRecommendation {
 export class FIREAdvisor {
   public readonly engine_input: EngineInput;
   public readonly profile: UserProfile;
-  public readonly projection_df: AnnualFinancialProjection[];
-  public readonly detailed_projection_df:
+  public readonly projection_data: AnnualFinancialProjection[];
+  public readonly detailed_projection_data:
     | AnnualFinancialProjection[]
     | DetailedProjection[];
   public readonly income_items: IncomeExpenseItem[];
@@ -70,8 +70,10 @@ export class FIREAdvisor {
     // language parameter is deprecated but kept for backward compatibility
     this.engine_input = engine_input;
     this.profile = engine_input.user_profile;
-    this.projection_df = engine_input.annual_financial_projection;
-    this.detailed_projection_df = [...engine_input.annual_financial_projection]; // Create a copy
+    this.projection_data = engine_input.annual_financial_projection;
+    this.detailed_projection_data = [
+      ...engine_input.annual_financial_projection,
+    ]; // Create a copy
     this.income_items = engine_input.income_items || [];
   }
 
@@ -345,7 +347,7 @@ export class FIREAdvisor {
     if (required_multiplier && required_multiplier.gt(new Decimal(1.001))) {
       // Calculate additional income needed (matching Python logic)
       const original_income =
-        this.projection_df[0]?.total_income || new Decimal(0);
+        this.projection_data[0]?.total_income || new Decimal(0);
       const additional_income = original_income.mul(
         required_multiplier.sub(new Decimal(1.0))
       );
@@ -408,7 +410,7 @@ export class FIREAdvisor {
       let original_expense = new Decimal(0);
 
       // Try to find first non-zero expense
-      for (const row of this.projection_df) {
+      for (const row of this.projection_data) {
         if (row.total_expense && row.total_expense.gt(0)) {
           original_expense = row.total_expense;
           break;
@@ -417,7 +419,7 @@ export class FIREAdvisor {
 
       // If still zero, calculate average expense from all non-zero rows
       if (original_expense.eq(0)) {
-        const nonZeroExpenses = this.projection_df
+        const nonZeroExpenses = this.projection_data
           .map(row => row.total_expense)
           .filter(exp => exp && exp.gt(0));
 
@@ -464,7 +466,7 @@ export class FIREAdvisor {
     }
 
     // Create deep copy to avoid modifying original data
-    const extended_projection = this.detailed_projection_df.map(row => ({
+    const extended_projection = this.detailed_projection_data.map(row => ({
       ...row,
     }));
     const current_fire_age = this.profile.expected_fire_age;
@@ -519,7 +521,7 @@ export class FIREAdvisor {
     target_fire_age: number
   ): AnnualFinancialProjection[] {
     // Create deep copy to avoid modifying original data
-    const modified_projection = this.detailed_projection_df.map(row => ({
+    const modified_projection = this.detailed_projection_data.map(row => ({
       ...row,
     }));
     const current_age = getCurrentAgeAsOf(
@@ -545,7 +547,7 @@ export class FIREAdvisor {
   private _apply_income_multiplier(
     multiplier: Decimal
   ): AnnualFinancialProjection[] {
-    return this.projection_df.map(row => ({
+    return this.projection_data.map(row => ({
       ...row,
       total_income: row.total_income.mul(multiplier),
       net_cash_flow: row.total_income.mul(multiplier).sub(row.total_expense),
@@ -558,7 +560,7 @@ export class FIREAdvisor {
   private _apply_expense_multiplier(
     multiplier: Decimal
   ): AnnualFinancialProjection[] {
-    return this.projection_df.map(row => ({
+    return this.projection_data.map(row => ({
       ...row,
       total_expense: row.total_expense.mul(multiplier),
       net_cash_flow: row.total_income.sub(row.total_expense.mul(multiplier)),
