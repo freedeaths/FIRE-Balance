@@ -61,7 +61,7 @@ export class FIREAdvisor {
   public readonly engine_input: EngineInput;
   public readonly profile: UserProfile;
   public readonly projection_data: AnnualFinancialProjection[];
-  public readonly detailed_projection_df:
+  public readonly detailed_projection_data:
     | AnnualFinancialProjection[]
     | DetailedProjection[];
   public readonly income_items: IncomeExpenseItem[];
@@ -71,7 +71,9 @@ export class FIREAdvisor {
     this.engine_input = engine_input;
     this.profile = engine_input.user_profile;
     this.projection_data = engine_input.annual_financial_projection;
-    this.detailed_projection_df = [...engine_input.annual_financial_projection]; // Create a copy
+    this.detailed_projection_data = [
+      ...engine_input.annual_financial_projection,
+    ]; // Create a copy
     this.income_items = engine_input.income_items || [];
   }
 
@@ -464,7 +466,7 @@ export class FIREAdvisor {
     }
 
     // Create deep copy to avoid modifying original data
-    const extended_projection = this.detailed_projection_df.map(row => ({
+    const extended_projection = this.detailed_projection_data.map(row => ({
       ...row,
     }));
     const current_fire_age = this.profile.expected_fire_age;
@@ -519,7 +521,7 @@ export class FIREAdvisor {
     target_fire_age: number
   ): AnnualFinancialProjection[] {
     // Create deep copy to avoid modifying original data
-    const modified_projection = this.detailed_projection_df.map(row => ({
+    const modified_projection = this.detailed_projection_data.map(row => ({
       ...row,
     }));
     const current_age = getCurrentAgeAsOf(

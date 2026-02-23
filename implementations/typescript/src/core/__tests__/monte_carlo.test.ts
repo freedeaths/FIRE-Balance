@@ -22,7 +22,6 @@ import { FinancialCrisisEvent } from '../black_swan_events';
 
 describe('MonteCarloSimulatorSetup', () => {
   let profile: UserProfile;
-  let projection_df: AnnualFinancialProjection[];
   let engine_input: EngineInput;
   let engine: FIREEngine;
 
@@ -46,8 +45,7 @@ describe('MonteCarloSimulatorSetup', () => {
       );
     }
 
-    projection_df = projection_data;
-    engine_input = createEngineInput(profile, projection_df);
+    engine_input = createEngineInput(profile, projection_data);
     engine = new FIREEngine(engine_input);
   });
 
@@ -89,7 +87,6 @@ describe('MonteCarloSimulatorSetup', () => {
 
 describe('BasicVariations', () => {
   let profile: UserProfile;
-  let projection_df: AnnualFinancialProjection[];
   let engine_input: EngineInput;
   let engine: FIREEngine;
   let settings: SimulationSettings;
@@ -114,8 +111,7 @@ describe('BasicVariations', () => {
       );
     }
 
-    projection_df = projection_data;
-    engine_input = createEngineInput(profile, projection_df);
+    engine_input = createEngineInput(profile, projection_data);
     engine = new FIREEngine(engine_input);
 
     // Settings without black swan events
@@ -219,7 +215,6 @@ describe('BasicVariations', () => {
 
 describe('BlackSwanEventApplication', () => {
   let profile: UserProfile;
-  let projection_df: AnnualFinancialProjection[];
   let engine_input: EngineInput;
   let engine: FIREEngine;
   let settings: SimulationSettings;
@@ -244,8 +239,7 @@ describe('BlackSwanEventApplication', () => {
       );
     }
 
-    projection_df = projection_data;
-    engine_input = createEngineInput(profile, projection_df);
+    engine_input = createEngineInput(profile, projection_data);
     engine = new FIREEngine(engine_input);
 
     // Settings with black swan events
@@ -411,8 +405,8 @@ describe('MonteCarloAnalysis', () => {
       inflation_rate: new Decimal(3.0),
       safety_buffer_months: new Decimal(12.0),
     });
-    const projection_df = [createProjectionRow(35, 2025, 100000, 50000)];
-    const engine_input = createEngineInput(profile, projection_df);
+    const projection_data = [createProjectionRow(35, 2025, 100000, 50000)];
+    const engine_input = createEngineInput(profile, projection_data);
     const engine = new FIREEngine(engine_input);
     simulator = new MonteCarloSimulator(engine);
   });
@@ -494,11 +488,11 @@ describe('SensitivityAnalysis', () => {
       inflation_rate: new Decimal(3.0),
       safety_buffer_months: new Decimal(12.0),
     });
-    const projection_df = [
+    const projection_data = [
       createProjectionRow(35, 2025, 100000, 50000),
       createProjectionRow(36, 2026, 100000, 50000),
     ];
-    const engine_input = createEngineInput(profile, projection_df);
+    const engine_input = createEngineInput(profile, projection_data);
     const engine = new FIREEngine(engine_input);
 
     const settings = createSimulationSettings({
@@ -581,11 +575,11 @@ describe('SeedReproducibility', () => {
       inflation_rate: new Decimal(3.0),
       safety_buffer_months: new Decimal(12.0),
     });
-    const projection_df = [
+    const projection_data = [
       createProjectionRow(35, 2025, 100000, 50000),
       createProjectionRow(36, 2026, 100000, 50000),
     ];
-    const engine_input = createEngineInput(profile, projection_df);
+    const engine_input = createEngineInput(profile, projection_data);
     engine = new FIREEngine(engine_input);
 
     settings = createSimulationSettings({
@@ -692,8 +686,7 @@ describe('MonteCarloIntegration', () => {
       );
     }
 
-    const projection_df = projection_data;
-    const engine_input = createEngineInput(profile, projection_df);
+    const engine_input = createEngineInput(profile, projection_data);
     engine = new FIREEngine(engine_input);
   });
 
